@@ -31,7 +31,7 @@ class Robot:
 
     def _readline(self) -> str:
         l = self.serial.readline()
-        print((b"> " + l).decode("ascii"), file=sys.stderr)
+        # print((b"> " + l).decode("ascii"), file=sys.stderr)
         return l
 
     def _parse_floats(self, line) -> list[float]:

@@ -1,49 +1,60 @@
 import serial
-import time
+import sys
 from commands import EffectorLocation, Robot
 from controller import handle_input
 
+class Main:
+    serial_device: str = "/dev/tty.usbserial-10"
+    ser: serial.Serial = None
+    robot: Robot = None
 
-def _main():
-    serial_device = "/dev/tty.usbserial-10"
-    ser = serial.Serial(
-        serial_device,
-        9600,
-        timeout=5,
-        bytesize=8,
-        parity=serial.PARITY_NONE,
-        stopbits=1,
-    )
-    robot = Robot(ser)
+    def __init__(self):
+        pass
 
-    print(robot.where())
-    robot.speed(30)
+    def initialize(self):
+        self.ser = serial.Serial(
+            self.serial_device,
+            9600,
+            timeout=5,
+            bytesize=8,
+            parity=serial.PARITY_NONE,
+            stopbits=1,
+        )
+        self.robot = Robot(self.ser)
+        self.robot.speed(100)
 
-    print("jog z down!")
-    robot.jogTransform(EffectorLocation(0, 0, -50, 0, 0, 0))
-    print("jog z up!")
-    robot.jogTransform(EffectorLocation(0, 0, 50, 0, 0, 0))
+    def loop(self):
+        d = ControllerDelegate(self.robot, self.ser)
+        handle_input(d)
 
-    ser.close()
 
 
 class ControllerDelegate:
+    def __init__(self, robot, ser):
+        self.robot = robot
+        self.ser = ser
+
     def onUp(self):
-        print("up")
+        self.robot.jogTransform(EffectorLocation(0, 0, 10, 0, 0, 0))
 
     def onDown(self):
-        print("down")
+        self.robot.jogTransform(EffectorLocation(0, 0, -10, 0, 0, 0))
 
     def onLeft(self):
-        print("left")
+        self.robot.jogTransform(EffectorLocation(-10, 0, 0, 0, 0, 0))
 
     def onRight(self):
-        print("right")
+        self.robot.jogTransform(EffectorLocation(10, 0, 0, 0, 0, 0))
+
+    def onQuit(self):
+        self.ser.close()
+        sys.exit()
 
 
 def main():
-    d = ControllerDelegate()
-    handle_input(d)
+    main = Main()
+    main.initialize()
+    main.loop()
 
 
 if __name__ == "__main__":

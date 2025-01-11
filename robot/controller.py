@@ -12,6 +12,8 @@ def handle_char(b, delegate):
         delegate.onDown()
     elif b == "d":
         delegate.onRight()
+    elif b == "q":
+        delegate.onQuit()
 
 
 def handle_chunk(chunk, delegate):
