@@ -3,6 +3,7 @@ import sys
 from commands import EffectorLocation, Robot
 from controller import handle_input
 
+
 class Main:
     serial_device: str = "/dev/tty.usbserial-10"
     ser: serial.Serial = None
@@ -28,23 +29,39 @@ class Main:
         handle_input(d)
 
 
-
 class ControllerDelegate:
     def __init__(self, robot, ser):
         self.robot = robot
         self.ser = ser
+        self.distance = 10
 
     def onUp(self):
-        self.robot.jogTransform(EffectorLocation(0, 0, 10, 0, 0, 0))
+        self.robot.jogTransform(EffectorLocation(0, 0, self.distance, 0, 0, 0))
 
     def onDown(self):
-        self.robot.jogTransform(EffectorLocation(0, 0, -10, 0, 0, 0))
+        self.robot.jogTransform(EffectorLocation(0, 0, -self.distance, 0, 0, 0))
 
     def onLeft(self):
-        self.robot.jogTransform(EffectorLocation(-10, 0, 0, 0, 0, 0))
+        self.robot.jogTransform(EffectorLocation(-self.distance, 0, 0, 0, 0, 0))
 
     def onRight(self):
-        self.robot.jogTransform(EffectorLocation(10, 0, 0, 0, 0, 0))
+        self.robot.jogTransform(EffectorLocation(self.distance, 0, 0, 0, 0, 0))
+
+    def onForward(self):
+        self.robot.jogTransform(EffectorLocation(0, self.distance, 0, 0, 0, 0))
+
+    def onBack(self):
+        self.robot.jogTransform(EffectorLocation(0, -self.distance, 0, 0, 0, 0))
+
+    def onMinus(self):
+        self.distance -= 10
+        if (self.distance < 10):
+            self.distance = 10
+
+    def onPlus(self):
+        self.distance += 10
+        if (self.distance > 100):
+            self.distance = 100
 
     def onQuit(self):
         self.ser.close()

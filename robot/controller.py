@@ -4,16 +4,24 @@ import terminal
 
 
 def handle_char(b, delegate):
-    if b == "w":
+    if b == "e":
         delegate.onUp()
+    elif b == "c":
+        delegate.onDown()
     elif b == "a":
         delegate.onLeft()
-    elif b == "s":
-        delegate.onDown()
     elif b == "d":
         delegate.onRight()
+    elif b == "w":
+        delegate.onForward()
+    elif b == "s":
+        delegate.onBack()
     elif b == "q":
         delegate.onQuit()
+    elif b == "-":
+        delegate.onMinus()
+    elif b == "=":
+        delegate.onPlus()
 
 
 def handle_chunk(chunk, delegate):
