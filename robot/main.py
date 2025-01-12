@@ -1,6 +1,6 @@
 import serial
 import sys
-from commands import EffectorLocation, Robot
+from machine import EffectorLocation, Robot
 from controller import handle_input
 import data
 

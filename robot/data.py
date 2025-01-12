@@ -1,12 +1,14 @@
 import json
 import os
 
-from commands import EffectorLocation
+from machine import EffectorLocation
 
 
 def write(items: list[(str, EffectorLocation)]):
     with open("points.json", "w") as f:
-        json.dump([{"name": x[0], "location": x[1].to_list()} for x in items], f, indent=4)
+        json.dump(
+            [{"name": x[0], "location": x[1].to_list()} for x in items], f, indent=4
+        )
 
 
 def read() -> list[(str, EffectorLocation)]:
