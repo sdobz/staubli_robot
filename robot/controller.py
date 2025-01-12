@@ -34,6 +34,10 @@ def handle_char(b, delegate):
         delegate.on_minus()
     elif b == "=":
         delegate.on_plus()
+    elif b == "_":
+        delegate.on_angle_minus()
+    elif b == "+":
+        delegate.on_angle_plus()
     elif b == "r":
         delegate.on_reset()
     elif b == "f":
@@ -42,8 +46,10 @@ def handle_char(b, delegate):
         delegate.on_elbow()
     elif b == "p":
         delegate.on_print_position()
-    elif b == "n":
+    elif b == ".":
         delegate.on_next_position()
+    elif b == ",":
+        delegate.on_previous_position()
 
 
 def handle_chunk(chunk, delegate):

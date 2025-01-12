@@ -37,11 +37,11 @@ class ControllerDelegate:
         self.robot = robot
         self.ser = ser
         self.distance = 100
-        self.rotation = 15
+        self.angle_step = 15
         self.elbow = "above"
         self.positions = data.read()
         print(self.positions)
-        self.positions_index = -1
+        self.positions_index = 0
 
     def on_up(self):
         self.robot.jog_transform(EffectorLocation(0, 0, self.distance, 0, 0, 0))
@@ -62,22 +62,22 @@ class ControllerDelegate:
         self.robot.jog_transform(EffectorLocation(0, -self.distance, 0, 0, 0, 0))
 
     def on_yaw_left(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, -self.rotation, 0, 0))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, -self.angle_step, 0, 0))
 
     def on_yaw_right(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, self.rotation, 0, 0))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, self.angle_step, 0, 0))
 
     def on_pitch_up(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, self.rotation, 0))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, self.angle_step, 0))
 
     def on_pitch_down(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, -self.rotation, 0))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, -self.angle_step, 0))
 
     def on_roll_left(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, -self.rotation))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, -self.angle_step))
 
     def on_roll_right(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, self.rotation))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, self.angle_step))
 
     def on_minus(self):
         self.distance -= 10
@@ -90,6 +90,18 @@ class ControllerDelegate:
         print("distance = " + str(self.distance))
         if self.distance >= 1000:
             self.distance = 1000
+
+    def on_angle_minus(self):
+        self.angle_step -= 1
+        print("angle_step = " + str(self.angle_step))
+        if self.angle_step <= 1:
+            self.angle_step = 1
+
+    def on_angle_plus(self):
+        self.angle_step += 1
+        print("on_angle_plus = " + str(self.angle_step))
+        if self.angle_step >= 45:
+            self.angle_step = 45
 
     def on_elbow(self):
         if self.elbow == "above":
@@ -105,17 +117,28 @@ class ControllerDelegate:
 
     def on_print_position(self):
         position = self.robot.where()[0]
-        self.positions.append(position)
+        self.positions.append(("position " + str(len(self.positions) + 1), position))
         data.write(self.positions)
         print("positions: " + str(self.positions))
+
+    def _jog_to_position(self):
+        p: tuple[str, EffectorLocation] = self.positions[self.positions_index]
+        print("jogging to position " + str(self.positions_index) + ": '" + p[0] + "'")
+        self.robot.jog_absolute(p[1])
 
     def on_next_position(self):
         self.positions_index = self.positions_index + 1
         if self.positions_index == len(self.positions):
-            self.positions_index = -1
-            print("wrapped on positions!")
-        else:
-            self.robot.jog_absolute(self.positions[self.positions_index])
+            self.positions_index = 0
+
+        self._jog_to_position()
+
+    def on_previous_position(self):
+        self.positions_index = self.positions_index - 1
+        if self.positions_index == -1:
+            self.positions_index = len(self.positions) - 1
+
+        self._jog_to_position()
 
     def on_reset(self):
         print("resetting robot, expect 'press HIGH POWER button' message")
