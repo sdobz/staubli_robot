@@ -2,6 +2,7 @@ import serial
 import sys
 from commands import EffectorLocation, Robot
 from controller import handle_input
+import data
 
 
 class Main:
@@ -30,13 +31,16 @@ class Main:
 
 
 class ControllerDelegate:
+    positions: list[EffectorLocation] = None
+
     def __init__(self, robot, ser):
         self.robot = robot
         self.ser = ser
         self.distance = 100
         self.rotation = 15
         self.elbow = "above"
-        self.positions = []
+        self.positions = data.read()
+        print(self.positions)
         self.positions_index = -1
 
     def on_up(self):
@@ -100,8 +104,9 @@ class ControllerDelegate:
         self.robot.flail()
 
     def on_print_position(self):
-        position = self.robot.where()
+        position = self.robot.where()[0]
         self.positions.append(position)
+        data.write(self.positions)
         print("positions: " + str(self.positions))
 
     def on_next_position(self):
@@ -110,7 +115,7 @@ class ControllerDelegate:
             self.positions_index = -1
             print("wrapped on positions!")
         else:
-            self.robot.jog_absolute(self.positions[self.positions_index][0])
+            self.robot.jog_absolute(self.positions[self.positions_index])
 
     def on_reset(self):
         print("resetting robot, expect 'press HIGH POWER button' message")

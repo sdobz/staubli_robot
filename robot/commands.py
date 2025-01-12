@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import sys
+import time
 
 
 @dataclass
@@ -13,6 +14,10 @@ class EffectorLocation:
 
     def to_list(self) -> list[float]:
         return [self.x, self.y, self.z, self.yaw, self.pitch, self.roll]
+
+    @staticmethod
+    def from_list(l: list[float]):
+        return EffectorLocation(l[0], l[1], l[2], l[3], l[4], l[5])
 
     def format(self) -> str:
         return f"{self.x:3f}, {self.y:3f}, {self.z:3f}, {self.yaw:3f}, {self.pitch:3f}, {self.roll:3f}"
@@ -37,6 +42,19 @@ class Robot:
         print((b"> " + l.strip()).decode("ascii"), file=sys.stderr)
         return l
 
+    def _read_dot(self):
+        while True:
+            l = self.serial.read(1)
+            if l == b".":
+                print("> .")
+                return True
+            elif l == b"*":
+                print("got error, flailing.")
+                self.flail()
+                return False
+            else:
+                time.sleep(0.01)
+
     def _parse_floats(self, line) -> list[float]:
         return [float(x.decode("ascii")) for x in line.split()]
 
@@ -46,7 +64,7 @@ class Robot:
     def speed(self, speed):
         self._write_command(f"speed {speed:2f}")
         self._readline()
-        self.serial.read()
+        self._read_dot()
 
     def where(self) -> tuple[EffectorLocation, JointLocation]:
         self._write_command("where")
@@ -55,7 +73,7 @@ class Robot:
         effector_line = self._readline()
         self._readline()
         joint_line = self._readline()
-        self.serial.read()
+        self._read_dot()
 
         effector_split = self._parse_floats(effector_line)
         joint_split = self._parse_floats(joint_line)
@@ -84,10 +102,10 @@ class Robot:
         effector_location_string = effector_location.format()
         self._write_command("do set jog0 = trans(" + effector_location_string + ")")
         self._readline()
-        self.serial.read()
-        self._write_command("do move jog0")
+        self._read_dot()
+        self._write_command("do moves jog0")
         self._readline()
-        self.serial.read()
+        self._read_dot()
 
     def jog_transform(self, effector_location: EffectorLocation):
         effector_location_string = effector_location.format()
@@ -95,26 +113,26 @@ class Robot:
             "do set jog0 = HERE:trans(" + effector_location_string + ")"
         )
         self._readline()
-        self.serial.read()
-        self._write_command("do move jog0")
+        self._read_dot()
+        self._write_command("do moves jog0")
         self._readline()
-        self.serial.read()
+        self._read_dot()
 
     def above(self):
         self._write_command("do above")
         self._readline()
-        self.serial.read()
+        self._read_dot()
 
     def below(self):
         self._write_command("do below")
         self._readline()
-        self.serial.read()
+        self._read_dot()
 
     def enable_power(self):
         self._write_command("en po")
         self._readline()
         self._readline()
-        self.serial.read()
+        self._read_dot()
 
     def flail(self):
         self._readline()
