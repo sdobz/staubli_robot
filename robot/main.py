@@ -16,13 +16,13 @@ class Main:
         self.ser = serial.Serial(
             self.serial_device,
             9600,
-            timeout=5,
+            timeout=1,
             bytesize=8,
             parity=serial.PARITY_NONE,
             stopbits=1,
         )
         self.robot = Robot(self.ser)
-        self.robot.speed(100)
+        self.robot.speed(20)
 
     def loop(self):
         d = ControllerDelegate(self.robot, self.ser)
@@ -33,37 +33,90 @@ class ControllerDelegate:
     def __init__(self, robot, ser):
         self.robot = robot
         self.ser = ser
-        self.distance = 10
+        self.distance = 100
+        self.rotation = 15
+        self.elbow = "above"
+        self.positions = []
+        self.positions_index = -1
 
-    def onUp(self):
-        self.robot.jogTransform(EffectorLocation(0, 0, self.distance, 0, 0, 0))
+    def on_up(self):
+        self.robot.jog_transform(EffectorLocation(0, 0, self.distance, 0, 0, 0))
 
-    def onDown(self):
-        self.robot.jogTransform(EffectorLocation(0, 0, -self.distance, 0, 0, 0))
+    def on_down(self):
+        self.robot.jog_transform(EffectorLocation(0, 0, -self.distance, 0, 0, 0))
 
-    def onLeft(self):
-        self.robot.jogTransform(EffectorLocation(-self.distance, 0, 0, 0, 0, 0))
+    def on_left(self):
+        self.robot.jog_transform(EffectorLocation(-self.distance, 0, 0, 0, 0, 0))
 
-    def onRight(self):
-        self.robot.jogTransform(EffectorLocation(self.distance, 0, 0, 0, 0, 0))
+    def on_right(self):
+        self.robot.jog_transform(EffectorLocation(self.distance, 0, 0, 0, 0, 0))
 
-    def onForward(self):
-        self.robot.jogTransform(EffectorLocation(0, self.distance, 0, 0, 0, 0))
+    def on_forward(self):
+        self.robot.jog_transform(EffectorLocation(0, self.distance, 0, 0, 0, 0))
 
-    def onBack(self):
-        self.robot.jogTransform(EffectorLocation(0, -self.distance, 0, 0, 0, 0))
+    def on_back(self):
+        self.robot.jog_transform(EffectorLocation(0, -self.distance, 0, 0, 0, 0))
 
-    def onMinus(self):
+    def on_yaw_left(self):
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, -self.rotation, 0, 0))
+
+    def on_yaw_right(self):
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, self.rotation, 0, 0))
+
+    def on_pitch_up(self):
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, self.rotation, 0))
+
+    def on_pitch_down(self):
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, -self.rotation, 0))
+
+    def on_roll_left(self):
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, -self.rotation))
+
+    def on_roll_right(self):
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, self.rotation))
+
+    def on_minus(self):
         self.distance -= 10
-        if (self.distance < 10):
+        print("distance = " + str(self.distance))
+        if self.distance <= 10:
             self.distance = 10
 
-    def onPlus(self):
+    def on_plus(self):
         self.distance += 10
-        if (self.distance > 100):
-            self.distance = 100
+        print("distance = " + str(self.distance))
+        if self.distance >= 1000:
+            self.distance = 1000
 
-    def onQuit(self):
+    def on_elbow(self):
+        if self.elbow == "above":
+            self.robot.below()
+            self.elbow = "below"
+        else:
+            self.robot.above()
+            self.elbow = "above"
+
+    def on_flail(self):
+        print("flailing!")
+        self.robot.flail()
+
+    def on_print_position(self):
+        position = self.robot.where()
+        self.positions.append(position)
+        print("positions: " + str(self.positions))
+
+    def on_next_position(self):
+        self.positions_index = self.positions_index + 1
+        if self.positions_index == len(self.positions):
+            self.positions_index = -1
+            print("wrapped on positions!")
+        else:
+            self.robot.jog_absolute(self.positions[self.positions_index][0])
+
+    def on_reset(self):
+        print("resetting robot, expect 'press HIGH POWER button' message")
+        self.robot.enable_power()
+
+    def on_quit(self):
         self.ser.close()
         sys.exit()
 

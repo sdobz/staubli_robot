@@ -4,24 +4,46 @@ import terminal
 
 
 def handle_char(b, delegate):
-    if b == "e":
-        delegate.onUp()
-    elif b == "c":
-        delegate.onDown()
-    elif b == "a":
-        delegate.onLeft()
-    elif b == "d":
-        delegate.onRight()
-    elif b == "w":
-        delegate.onForward()
+    if b == "w":
+        delegate.on_up()
     elif b == "s":
-        delegate.onBack()
+        delegate.on_down()
+    elif b == "a":
+        delegate.on_forward()
+    elif b == "d":
+        delegate.on_back()
+    elif b == "e":
+        delegate.on_left()
+    elif b == "c":
+        delegate.on_right()
+    elif b == "j":
+        delegate.on_yaw_left()
+    elif b == "l":
+        delegate.on_yaw_right()
+    elif b == "i":
+        delegate.on_pitch_down()
+    elif b == "k":
+        delegate.on_pitch_up()
+    elif b == "u":
+        delegate.on_roll_left()
+    elif b == "o":
+        delegate.on_roll_right()
     elif b == "q":
-        delegate.onQuit()
+        delegate.on_quit()
     elif b == "-":
-        delegate.onMinus()
+        delegate.on_minus()
     elif b == "=":
-        delegate.onPlus()
+        delegate.on_plus()
+    elif b == "r":
+        delegate.on_reset()
+    elif b == "f":
+        delegate.on_flail()
+    elif b == "b":
+        delegate.on_elbow()
+    elif b == "p":
+        delegate.on_print_position()
+    elif b == "n":
+        delegate.on_next_position()
 
 
 def handle_chunk(chunk, delegate):

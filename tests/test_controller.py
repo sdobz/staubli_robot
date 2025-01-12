@@ -8,16 +8,16 @@ class TestDelegate:
     def __init__(self):
         self.commands = []
 
-    def onUp(self):
+    def on_up(self):
         self.commands.append("up")
 
-    def onDown(self):
+    def on_down(self):
         self.commands.append("down")
 
-    def onLeft(self):
+    def on_left(self):
         self.commands.append("left")
 
-    def onRight(self):
+    def on_right(self):
         self.commands.append("right")
 
 
