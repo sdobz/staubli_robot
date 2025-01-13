@@ -29,6 +29,7 @@ class Main:
         d = ControllerDelegate(self.robot, self.ser)
         handle_input(d)
 
+angles = [5,10,15,30,45]
 
 class ControllerDelegate:
     positions: list[EffectorLocation] = None
@@ -37,11 +38,14 @@ class ControllerDelegate:
         self.robot = robot
         self.ser = ser
         self.distance = 100
-        self.angle_step = 15
+        self.angle_index = 4
         self.elbow = "above"
         self.positions = data.read()
         print(self.positions)
         self.positions_index = 0
+
+    def angle_step(self):
+        return angles[self.angle_index]
 
     def on_up(self):
         self.robot.jog_transform(EffectorLocation(0, 0, self.distance, 0, 0, 0))
@@ -62,22 +66,22 @@ class ControllerDelegate:
         self.robot.jog_transform(EffectorLocation(0, -self.distance, 0, 0, 0, 0))
 
     def on_yaw_left(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, -self.angle_step, 0, 0))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, -self.angle_step(), 0, 0))
 
     def on_yaw_right(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, self.angle_step, 0, 0))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, self.angle_step(), 0, 0))
 
     def on_pitch_up(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, self.angle_step, 0))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, self.angle_step(), 0))
 
     def on_pitch_down(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, -self.angle_step, 0))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, -self.angle_step(), 0))
 
     def on_roll_left(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, -self.angle_step))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, -self.angle_step()))
 
     def on_roll_right(self):
-        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, self.angle_step))
+        self.robot.jog_transform(EffectorLocation(0, 0, 0, 0, 0, self.angle_step()))
 
     def on_minus(self):
         self.distance -= 10
@@ -92,16 +96,16 @@ class ControllerDelegate:
             self.distance = 1000
 
     def on_angle_minus(self):
-        self.angle_step -= 1
-        print("angle_step = " + str(self.angle_step))
-        if self.angle_step <= 1:
-            self.angle_step = 1
+        self.angle_index -= 1
+        if self.angle_index <= 0:
+            self.angle_index = 0
+        print("angle_step = " + str(angles[self.angle_index]))
 
     def on_angle_plus(self):
-        self.angle_step += 1
-        print("on_angle_plus = " + str(self.angle_step))
-        if self.angle_step >= 45:
-            self.angle_step = 45
+        self.angle_index += 1
+        if self.angle_index >= len(angles) - 1:
+            self.angle_index = len(angles) - 1
+        print("angle_step = " + str(angles[self.angle_index]))
 
     def on_elbow(self):
         if self.elbow == "above":
