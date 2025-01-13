@@ -103,7 +103,7 @@ class Robot:
         self._write_command("do set jog0 = trans(" + effector_location_string + ")")
         self._readline()
         self._read_dot()
-        self._write_command("do moves jog0")
+        self._write_command("do move jog0")
         self._readline()
         self._read_dot()
 
@@ -114,7 +114,7 @@ class Robot:
         )
         self._readline()
         self._read_dot()
-        self._write_command("do moves jog0")
+        self._write_command("do move jog0")
         self._readline()
         self._read_dot()
 
