@@ -26,22 +26,20 @@
         packages.devPythonEnv
       ];
       shellHook = ''
-        if [ -e .venv/bin ] && [ ! -L .venv/bin ]; then
-          echo ".venv/bin exists and is not a symlink. Exiting."
+        if [ -e .venv ] && [ ! -L .venv ]; then
+          echo ".venv exists and is not a symlink. Exiting."
           exit 1
         fi
-        if [ -e .venv-dev/bin ] && [ ! -L .venv-dev/bin ]; then
-          echo ".venv-dev/bin exists and is not a symlink. Exiting."
+        if [ -e .venv-dev ] && [ ! -L .venv-dev ]; then
+          echo ".venv-dev exists and is not a symlink. Exiting."
           exit 1
         fi
 
         rm -rf .venv \
-          && mkdir -p .venv \
-          && ln -s ${packages.pythonEnv}/bin .venv/bin
+          && ln -s ${packages.pythonEnv} .venv
 
         rm -rf .venv-dev \
-          && mkdir -p .venv-dev \
-          && ln -s ${packages.devPythonEnv}/bin .venv-dev/bin
+          && ln -s ${packages.devPythonEnv} .venv-dev
 
         echo "Linked nix python env to .venv and .venv-dev"
       '';
