@@ -1,5 +1,6 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from staubli.config import Config, env_exists
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -26,11 +27,15 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         # Send response body
         self.wfile.write(json.dumps(response).encode('utf-8'))
 
-def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler, port=8000):
+def run(server_class: HTTPServer, handler_class: SimpleHTTPRequestHandler, config: Config=Config()):
+    port = int(config.http_port)
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
     print(f'Starting server on port {port}')
     httpd.serve_forever()
 
 if __name__ == '__main__':
-    run()
+    env_file = ".env"
+    config = Config.from_env(env_file) if env_exists(env_file) else Config()
+
+    run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler, config=config)
