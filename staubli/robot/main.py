@@ -4,7 +4,7 @@ from .machine import EffectorLocation, Robot
 from .controller import handle_input
 from staubli.config import Config, env_exists
 from .data import write, read
-
+from .serial_emulator import SerialEmulator
 
 class Main:
     config: Config
@@ -15,14 +15,20 @@ class Main:
         self.config = config
 
     def initialize(self):
-        self.ser = serial.Serial(
-            self.config.serial_device,
-            9600,
-            timeout=1,
-            bytesize=8,
-            parity=serial.PARITY_NONE,
-            stopbits=1,
-        )
+        try:
+            self.ser = serial.Serial(
+                self.config.serial_device,
+                9600,
+                timeout=1,
+                bytesize=8,
+                parity=serial.PARITY_NONE,
+                stopbits=1,
+            )
+        except Exception as e:
+            print(e)
+            print("Exception starting serial, starting emulator")
+            self.ser = SerialEmulator()
+    
         self.robot = Robot(self.ser)
         self.robot.speed(20)
 
@@ -37,6 +43,7 @@ angles = [5, 10, 15, 30, 45]
 
 
 class ControllerDelegate:
+    robot: Robot
     positions: list[EffectorLocation] = None
 
     def __init__(self, robot, ser):
