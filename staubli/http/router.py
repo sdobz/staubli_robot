@@ -16,13 +16,6 @@ class RoutingStaticHTTPRequestHandler(SimpleHTTPRequestHandler):
         '': 'application/octet-stream', # Default
     }
 
-    def __init__(self, base_path, *args, **kwargs):
-        self.base_path = base_path
-        # https://stackoverflow.com/a/52046062
-        # BaseHTTPRequestHandler calls do_GET **inside** __init__ !!!
-        # So we have to call super().__init__ after setting attributes
-        super().__init__(*args, directory=base_path, **kwargs)
-
     def do_GET(self):
         parsed_path = urlparse(self.path)
 

@@ -27,8 +27,10 @@ class Main:
         self.robot.speed(20)
 
     def loop(self):
-        d = ControllerDelegate(self.robot, self.ser)
-        handle_input(d)
+        handle_input(self.controller())
+    
+    def controller(self):
+        return ControllerDelegate(self.robot, self.ser)
 
 
 angles = [5, 10, 15, 30, 45]

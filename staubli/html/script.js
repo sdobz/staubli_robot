@@ -1,8 +1,7 @@
 console.log("js loaded, running network request")
 
-async function download() {
-    const response = await fetch("/api/hello")
-
-    console.log(await response.json())
+async function get(url) {
+    return await (await fetch(url)).json()
 }
-download()
+
+get("/api/robot").then(console.log)
