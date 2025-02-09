@@ -1,6 +1,6 @@
 import sys
 import time
-import terminal
+from .terminal import raw, nonblocking
 
 
 def handle_char(b, delegate):
@@ -58,8 +58,8 @@ def handle_chunk(chunk, delegate):
 
 
 def handle_input(delegate):
-    with terminal.raw(sys.stdin):
-        with terminal.nonblocking(sys.stdin):
+    with raw(sys.stdin):
+        with nonblocking(sys.stdin):
             while True:
                 c = sys.stdin.read(1)
                 if c:

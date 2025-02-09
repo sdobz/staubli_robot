@@ -1,6 +1,5 @@
 import os
 
-
 class Config:
     serial_device: str
 
