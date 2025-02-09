@@ -1,3 +1,4 @@
+from textwrap import dedent
 class SerialEmulator:
     buffer = ""
     def readline(self):
@@ -23,8 +24,35 @@ class SerialEmulator:
         if cmd.startswith("do set jog0"):
             print(">>> setting jog0")
             self.buffer = "<emulator set jog0 response>\n."
+            return
         if cmd.startswith("do move jog0"):
             print(">>> moving to jog0")
             self.buffer = "<emulator move jog0 response>\n."
+            return
+        if cmd.startswith("where"):
+            print(">>> concocting where")
+            self.buffer = dedent("""\
+                X   Y   Z   P   Y   R
+                J0  J1  J2  J3  J4  J5
+                0.0 0.0 0.0 0.0 0.0 0.0
+
+                0.0 0.0 0.0 0.0 0.0 0.0
+                .""")
+            return
+        if cmd.startswith("do above"):
+            print(">>> elbow above")
+            self.buffer = "<above>\n."
+            return
+        if cmd.startswith("do below"):
+            print(">>> elbow below")
+            self.buffer = "<below>\n."
+            return
+        if cmd.startswith("en po"):
+            print(">>> enabling high power")
+            self.buffer = dedent("""\
+                <high power line 1>
+                <high power line 2>
+                .""")
+
     def close(self):
         pass

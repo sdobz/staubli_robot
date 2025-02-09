@@ -1,9 +1,55 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Hello World!</title>
-    <script src="./script.js"></script>
-  </head>
-  <body>Hello World!</body>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Hello World!</title>
+  <script type="text/javascript" src="./script.js"></script>
+  <script>
+    const robot = new Robot()
+    robot.load()
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="horizontal-stack">
+    <div class="vertical-stack">
+      <h1>Position</h1>
+      <button onclick="robot.up()">Up</button>
+      <button onclick="robot.down()"> Down </button>
+      <button onclick="robot.left()"> Left </button>
+      <button onclick="robot.right()"> Right </button>
+      <button onclick="robot.forward()"> Forward </button>
+      <button onclick="robot.back()"> Back </button>
+    </div>
+    <div class="vertical-stack">
+      <h1>Orientation</h1>
+      <button onclick="robot.yaw_left()"> Yaw_left </button>
+      <button onclick="robot.yaw_right()"> Yaw_right </button>
+      <button onclick="robot.pitch_up()"> Pitch_up </button>
+      <button onclick="robot.pitch_down()"> Pitch_down </button>
+      <button onclick="robot.roll_left()"> Roll_left </button>
+      <button onclick="robot.roll_right()"> Roll_right </button>
+    </div>
+    <div class="vertical-stack">
+      <h2>Config</h2>
+      <button onclick="robot.minus()"> Minus </button>
+      <button onclick="robot.plus()"> Plus </button>
+      <button onclick="robot.angle_minus()"> Angle_minus </button>
+      <button onclick="robot.angle_plus()"> Angle_plus </button>
+    </div>
+    <div class="vertical-stack">
+      <h2>Playback</h2>
+      <button onclick="robot.print_position()"> Print_position </button>
+      <button onclick="robot.next_position()"> Next_position </button>
+      <button onclick="robot.previous_position()"> Previous_position </button>
+      <h2>Control</h2>
+      <button onclick="robot.elbow()"> Elbow </button>
+      <button onclick="robot.flail()"> Flail </button>
+      <button onclick="robot.reset()"> Reset </button>
+    </div>
+  </div>
+</body>
+
 </html>
