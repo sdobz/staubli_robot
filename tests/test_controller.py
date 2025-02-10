@@ -22,7 +22,6 @@ class TestDelegate:
 
 
 class TestController(unittest.TestCase):
-
     def test_handles_input(self):
         delegate = TestDelegate()
         handle_chunk(b"wasd", delegate)

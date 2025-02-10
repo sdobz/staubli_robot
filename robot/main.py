@@ -2,20 +2,21 @@ import serial
 import sys
 from machine import EffectorLocation, Robot
 from controller import handle_input
+from config import Config, env_exists
 import data
 
 
 class Main:
-    serial_device: str = "/dev/tty.usbserial-10"
+    config: Config
     ser: serial.Serial = None
     robot: Robot = None
 
-    def __init__(self):
-        pass
+    def __init__(self, config=Config()):
+        self.config = config
 
     def initialize(self):
         self.ser = serial.Serial(
-            self.serial_device,
+            self.config.serial_device,
             9600,
             timeout=1,
             bytesize=8,
@@ -29,7 +30,9 @@ class Main:
         d = ControllerDelegate(self.robot, self.ser)
         handle_input(d)
 
-angles = [5,10,15,30,45]
+
+angles = [5, 10, 15, 30, 45]
+
 
 class ControllerDelegate:
     positions: list[EffectorLocation] = None
@@ -153,11 +156,13 @@ class ControllerDelegate:
         sys.exit()
 
 
-def main():
-    main = Main()
+def main(config: Config):
+    main = Main(config=config)
     main.initialize()
     main.loop()
 
 
 if __name__ == "__main__":
-    main()
+    env_file = ".env"
+    config = Config.from_env(env_file) if env_exists(env_file) else Config()
+    main(config)
