@@ -13,8 +13,23 @@ Updates attrs for values
 
 import { createEffect, createSignal } from "./state.js";
 
-export function createComponent(templateId, stateFn, attrsFn) {
-    console.log("Create component")
+/** @type {(strings: string[]) => HTMLTemplateElement} */
+export function html(strings) {
+  const templateElement = document.createElement("template")
+  templateElement.innerHTML = strings.join("")
+  return templateElement
+}
+
+/**
+ * @typedef {Record<string, {
+ *   innerHTML?: string,
+ *   eventListeners: Record<string, (e: Event) => void>,
+ *   [attr: string]: string
+ * }>} AttrMap
+ */
+
+/** @type {<S>(tag: string, template: HTMLTemplateElement, stateFn: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap) => void} */
+export function createComponent(tag, template, stateFn, attrsFn) {
     class Component extends HTMLElement {
         eventListeners = [];
 
@@ -27,7 +42,6 @@ export function createComponent(templateId, stateFn, attrsFn) {
             this.attrsSignal = attrs;
             this.setAttrsSignal = setAttrs;
 
-            const template = document.getElementById(templateId);
             const templateContent = template.content;
 
             const shadowRoot = this.attachShadow({ mode: "open" });
@@ -44,7 +58,6 @@ export function createComponent(templateId, stateFn, attrsFn) {
         }
         connectedCallback() {
             const attrs = this.getAllAttributes()
-            console.log(templateId, attrs)
             this.setAttrsSignal(attrs)
         }
     
@@ -98,5 +111,5 @@ export function createComponent(templateId, stateFn, attrsFn) {
         }
     }
 
-    customElements.define(templateId, Component);
+    customElements.define(tag, Component);
 }

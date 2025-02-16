@@ -1,19 +1,27 @@
-import { createComponent } from "./component.js";
-import { createSignal, createEffect, createMemo } from "./state.js"
+import { createComponent, html } from "./component.js";
+import { createSignal } from "./state.js";
 
-createComponent('robot-button', () => {
-    const [count, setCount] = createSignal(0)
+const robotButton = html`
+    <button>SET button-text</button>
+`;
 
-    return { count, setCount }
-}, ({ count, setCount }, attrs) => {
+createComponent(
+  "robot-button", robotButton,
+  () => {
+    const [count, setCount] = createSignal(0);
+
+    return { count, setCount };
+  },
+  ({ count, setCount }, attrs) => {
     const click = () => {
-        setCount(count() + 1)
-    }
+      setCount(count() + 1);
+    };
 
     return {
-        "button": {
-            innerHTML: `${attrs['button-text']} (${count()})`,
-            eventListeners: { click }
-        }
-    }
-})
+      button: {
+        innerHTML: `${attrs["button-text"]} (${count()})`,
+        eventListeners: { click },
+      },
+    };
+  }
+);

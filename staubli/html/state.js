@@ -22,6 +22,7 @@ function subscribe(observer, subscriptions) {
     observer.dependencies.add(subscriptions);
 }
 
+/** @type {<T>(value: T) => readonly [() => T, (value: T) => void]} */
 export function createSignal(value) {
     const subscriptions = new Set();
 
