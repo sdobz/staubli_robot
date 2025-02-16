@@ -1,18 +1,22 @@
 <!doctype html>
 <html lang="en">
 
+<template id="robot-button">
+  <button>Unset Content</button>
+</template>
+
 <head>
   <meta charset="UTF-8" />
-  <title>Hello World!</title>
-  <script type="text/javascript" src="./script.js"></script>
-  <script>
-    const robot = new Robot()
-    robot.load()
-  </script>
+  <title>Staubli control</title>
+  <script type="module" src="./app.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+  <div class="horizontal-stack">
+    <robot-button button-text="Counter 1"></robot-button>
+    <robot-button button-text="Counter 2"></robot-button>
+  </div>
   <div class="horizontal-stack">
     <div class="vertical-stack">
       <h1>Position</h1>

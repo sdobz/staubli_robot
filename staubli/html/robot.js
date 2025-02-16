@@ -1,5 +1,3 @@
-console.log("js loaded, running network request")
-
 async function get(url) {
     return await (await fetch(url)).json()
 }
@@ -7,7 +5,7 @@ async function put(url) {
     return await (await fetch(url, { method: "PUT" })).json()
 }
 
-class Robot {
+export class Robot {
     state = {
         "position": {
             effector: {
