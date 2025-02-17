@@ -13,9 +13,9 @@ import {
     Box3,
     LoadingManager,
     MathUtils,
-} from './vendor/three/three.js';
-import { OrbitControls } from './vendor/three/OrbitControls.js';
-import URDFLoader from './vendor/urdf/URDFLoader.js';
+} from '../../three/three.js';
+import { OrbitControls } from '../../three/OrbitControls.js';
+import URDFLoader from '../URDFLoader.js';
 
 let scene, camera, renderer, robot, controls;
 

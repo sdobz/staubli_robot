@@ -1,9 +1,9 @@
 /* globals */
-import * as THREE from './vendor/three/three.js';
-import { registerDragEvents } from './vendor/urdf/dragAndDrop.js';
-import { STLLoader } from './vendor/three/STLLoader.js';
-import { ColladaLoader } from './vendor/three/ColladaLoader.js';
-import URDFManipulator from './vendor/urdf/urdf-manipulator-element.js';
+import * as THREE from '../../three/three.js';
+import { registerDragEvents } from '../dragAndDrop.js';
+import { STLLoader } from '../../three/STLLoader.js';
+import { ColladaLoader } from '../../three/ColladaLoader.js';
+import URDFManipulator from '../urdf-manipulator-element.js';
 
 customElements.define('urdf-viewer', URDFManipulator);
 
