@@ -3,6 +3,10 @@ button {
     padding: 1rem;
 }
 
+.robot-button {
+  font-size: 1.5rem;
+}
+
 .vertical-stack {
   display: flex;
   flex-direction: column;

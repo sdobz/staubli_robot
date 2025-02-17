@@ -23,20 +23,23 @@ export function html(strings) {
 /**
  * @typedef {Record<string, {
  *   innerHTML?: string,
- *   eventListeners: Record<string, (e: Event) => void>,
- *   [attr: string]: string
+ *   attributes?: Record<string, string>,
+ *   eventListeners?: Record<string, (e: Event) => void>,
+ *   properties?: Record<string, any>
  * }>} AttrMap
  */
 
-/** @type {<S>(tag: string, template: HTMLTemplateElement, stateFn: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap) => void} */
-export function createComponent(tag, template, stateFn, attrsFn) {
+/** @type {<S>(setup: {tag: string, observedAttributes?: string[], template: HTMLTemplateElement, stateFn: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap}) => void} */
+export function createComponent({tag, observedAttributes, template, stateFn, attrsFn}) {
     class Component extends HTMLElement {
+        static observedAttributes = observedAttributes
         eventListeners = [];
 
         constructor() {
             super();
 
-            const state = stateFn()
+            const boundAttrsFn = attrsFn.bind(this);
+            const state = stateFn();
 
             const [attrs, setAttrs] = createSignal();
             this.attrsSignal = attrs;
@@ -52,7 +55,7 @@ export function createComponent(tag, template, stateFn, attrsFn) {
                 if (!effectAttrs) {
                     return
                 }
-                const attrsMap = attrsFn(state, effectAttrs)
+                const attrsMap = boundAttrsFn(state, effectAttrs)
                 this.handleAttrMap(attrsMap)
             })
         }
@@ -70,6 +73,7 @@ export function createComponent(tag, template, stateFn, attrsFn) {
         }
     
         attributeChangedCallback(name, oldValue, newValue) {
+            console.log(this, name, newValue)
             const attrs = this.getAllAttributes()
             this.setAttrsSignal(attrs)
         }
@@ -84,6 +88,7 @@ export function createComponent(tag, template, stateFn, attrsFn) {
             return attrs
         }
 
+        /** @type {(attrMap: AttrMap) => void} */
         handleAttrMap(attrMap) {
             for (const {element, type, listener} of this.eventListeners) {
                 element.removeEventListener(type, listener);
@@ -92,19 +97,31 @@ export function createComponent(tag, template, stateFn, attrsFn) {
             this.eventListeners = []
             for (const [selector, updates] of Object.entries(attrMap)) {
                 const elements = this.shadowRoot.querySelectorAll(selector)
-                const { eventListeners, innerHTML, ...attrs } = updates
+                console.log(selector, elements)
+                const { eventListeners, innerHTML, attributes, properties } = updates
 
                 for (const element of elements) {
                     if (innerHTML) {
                         element.innerHTML = innerHTML;
                     }
-                    for (const [type, listener] of Object.entries(eventListeners)) {
-                        this.eventListeners.push({element, type, listener})
-                        element.addEventListener(type, listener)
+                    if (eventListeners) {
+                        for (const [type, listener] of Object.entries(eventListeners)) {
+                            this.eventListeners.push({element, type, listener})
+                            element.addEventListener(type, listener)
+                        }
                     }
 
-                    for (const [attr, attrValue] of Object.entries(attrs)) {
-                        element.setAttribute(attr, attrValue)
+                    if (properties) {
+                        for (const [property, propertyValue] of Object.entries(properties)) {
+                            element[property] = propertyValue
+                        }
+                    }
+
+                    if (attributes) {
+                        for (const [attr, attrValue] of Object.entries(attributes)) {
+                            console.log(attr, attrValue)
+                            element.setAttribute(attr, attrValue)
+                        }
                     }
                 }
             }
