@@ -5,7 +5,7 @@ import { robot, robotState } from "./robot.js";
 createComponent({
   tag: "robot-button",
   template: html` <button class="robot-button"></button> `,
-  observedAttributes: ['label'],
+  observedAttributes: ["label"],
   stateFn: () => {
     return {};
   },
@@ -27,23 +27,63 @@ createComponent({
         eventListeners: { click },
       },
     };
-  }
+  },
 });
 
 createComponent({
   tag: "elbow-button",
   template: html` <robot-button method="elbow" label="..."></robot-button> `,
   stateFn: () => {},
-  attrsFn: (attrs) => {
-    const state = robotState()?.["elbow"] || "Elbow...";
-    console.log("Elbot button robot state", robotState(), state)
+  attrsFn: (_state, _attrs) => {
+    const label = robotState()?.["elbow"] || "Elbow...";
 
     return {
       "robot-button": {
         attributes: {
-          label: state,
+          label
         },
       },
     };
-  }
+  },
+});
+
+createComponent({
+  tag: "step-control",
+  template: html`
+    <div class="horizontal-stack">
+      <robot-button method="minus" label="(-)"></robot-button>
+      <pre id="step"></pre>
+      <robot-button method="plus" label="(+)"></robot-button>
+    </div>
+  `,
+  attrsFn: (_state, _attrs) => {
+    const distance = robotState()?.["distance"] || "?";
+
+    return {
+      "#step": {
+        innerHTML: `${distance}mm`,
+      },
+    };
+  },
+});
+
+
+createComponent({
+  tag: "angle-control",
+  template: html`
+    <div class="horizontal-stack">
+      <robot-button method="angle_minus" label="(-)"></robot-button>
+      <pre id="step"></pre>
+      <robot-button method="angle_plus" label="(+)"></robot-button>
+    </div>
+  `,
+  attrsFn: (_state, _attrs) => {
+    const angleStep = robotState()?.["angle_step"] || "?";
+
+    return {
+      "#step": {
+        innerHTML: `${angleStep}°`,
+      },
+    };
+  },
 });

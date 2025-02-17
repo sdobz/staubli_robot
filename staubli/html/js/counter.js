@@ -5,6 +5,7 @@ const counterTemplate = html` <button>SET button-text</button> `;
 
 createComponent({
   tag: "counter-button",
+  observedAttributes: ['button-text'],
   template: counterTemplate,
   stateFn: () => {
     const [count, setCount] = createSignal(0);

@@ -29,7 +29,7 @@ export function html(strings) {
  * }>} AttrMap
  */
 
-/** @type {<S>(setup: {tag: string, observedAttributes?: string[], template: HTMLTemplateElement, stateFn: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap}) => void} */
+/** @type {<S>(setup: {tag: string, observedAttributes?: string[], template: HTMLTemplateElement, stateFn?: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap}) => void} */
 export function createComponent({tag, observedAttributes, template, stateFn, attrsFn}) {
     class Component extends HTMLElement {
         static observedAttributes = observedAttributes
@@ -39,7 +39,7 @@ export function createComponent({tag, observedAttributes, template, stateFn, att
             super();
 
             const boundAttrsFn = attrsFn.bind(this);
-            const state = stateFn();
+            const state = stateFn ? stateFn() : undefined;
 
             const [attrs, setAttrs] = createSignal();
             this.attrsSignal = attrs;
@@ -97,7 +97,6 @@ export function createComponent({tag, observedAttributes, template, stateFn, att
             this.eventListeners = []
             for (const [selector, updates] of Object.entries(attrMap)) {
                 const elements = this.shadowRoot.querySelectorAll(selector)
-                console.log(selector, elements)
                 const { eventListeners, innerHTML, attributes, properties } = updates
 
                 for (const element of elements) {

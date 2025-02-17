@@ -13,11 +13,11 @@
     <div class="vertical-stack">
       <h1>Position</h1>
       <robot-button method="up" label="Up"></robot-button>
-      <button onclick="robot.down()"> Down </button>
-      <button onclick="robot.left()"> Left </button>
-      <button onclick="robot.right()"> Right </button>
-      <button onclick="robot.forward()"> Forward </button>
-      <button onclick="robot.back()"> Back </button>
+      <robot-button method="down" label="Down"></robot-button>
+      <robot-button method="left" label="Left"></robot-button>
+      <robot-button method="right" label="Right"></robot-button>
+      <robot-button method="forward" label="Forward"></robot-button>
+      <robot-button method="back" label="Back"></robot-button>
     </div>
     <div class="vertical-stack">
       <h1>Orientation</h1>
@@ -30,10 +30,8 @@
     </div>
     <div class="vertical-stack">
       <h2>Config</h2>
-      <button onclick="robot.minus()"> Minus </button>
-      <button onclick="robot.plus()"> Plus </button>
-      <button onclick="robot.angle_minus()"> Angle_minus </button>
-      <button onclick="robot.angle_plus()"> Angle_plus </button>
+      <step-control></step-control>
+      <angle-control></angle-control>
     </div>
     <div class="vertical-stack">
       <h2>Playback</h2>
