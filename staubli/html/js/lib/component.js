@@ -73,7 +73,6 @@ export function createComponent({tag, observedAttributes, template, stateFn, att
         }
     
         attributeChangedCallback(name, oldValue, newValue) {
-            console.log(this, name, newValue)
             const attrs = this.getAllAttributes()
             this.setAttrsSignal(attrs)
         }
@@ -118,7 +117,6 @@ export function createComponent({tag, observedAttributes, template, stateFn, att
 
                     if (attributes) {
                         for (const [attr, attrValue] of Object.entries(attributes)) {
-                            console.log(attr, attrValue)
                             element.setAttribute(attr, attrValue)
                         }
                     }

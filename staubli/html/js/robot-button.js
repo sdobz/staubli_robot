@@ -5,11 +5,8 @@ import { robot, robotState } from "./robot.js";
 createComponent({
   tag: "robot-button",
   template: html` <button class="robot-button"></button> `,
-  observedAttributes: ["label"],
-  stateFn: () => {
-    return {};
-  },
-  attrsFn: ({}, attrs) => {
+  observedAttributes: ["method", "label"],
+  attrsFn: (_state, attrs) => {
     const instance = robot();
     const method = attrs.method;
 
@@ -33,7 +30,6 @@ createComponent({
 createComponent({
   tag: "elbow-button",
   template: html` <robot-button method="elbow" label="..."></robot-button> `,
-  stateFn: () => {},
   attrsFn: (_state, _attrs) => {
     const label = robotState()?.["elbow"] || "Elbow...";
 
