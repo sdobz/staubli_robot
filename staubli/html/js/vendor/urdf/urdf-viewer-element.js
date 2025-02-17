@@ -1,6 +1,6 @@
-import * as THREE from 'three';
-import { MeshPhongMaterial } from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import * as THREE from '../three/three.js';
+import { MeshPhongMaterial } from '../three/three.js';
+import { OrbitControls } from '../three/OrbitControls.js';
 import URDFLoader from './URDFLoader.js';
 
 const tempVec2 = new THREE.Vector2();

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../three/three.js';
 import URDFViewer from './urdf-viewer-element.js';
 import { PointerURDFDragControls } from './URDFDragControls.js';
 
