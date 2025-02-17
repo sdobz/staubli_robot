@@ -5,7 +5,7 @@ const counterTemplate = html` <button>SET button-text</button> `;
 
 createComponent({
   tag: "counter-button",
-  observedAttributes: ['button-text'],
+  observedAttributes: ["button-text"],
   template: counterTemplate,
   stateFn: () => {
     const [count, setCount] = createSignal(0);
@@ -19,9 +19,9 @@ createComponent({
 
     return {
       button: {
-        innerHTML: `${attrs["button-text"]} (${count()})`,
+        properties: { innerHTML: `${attrs["button-text"]} (${count()})` },
         eventListeners: { click },
       },
     };
-  }
+  },
 });

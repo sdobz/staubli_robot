@@ -21,12 +21,12 @@
     </div>
     <div class="vertical-stack">
       <h1>Orientation</h1>
-      <button onclick="robot.yaw_left()"> Yaw_left </button>
-      <button onclick="robot.yaw_right()"> Yaw_right </button>
-      <button onclick="robot.pitch_up()"> Pitch_up </button>
-      <button onclick="robot.pitch_down()"> Pitch_down </button>
-      <button onclick="robot.roll_left()"> Roll_left </button>
-      <button onclick="robot.roll_right()"> Roll_right </button>
+      <robot-button method="yaw_left" label="Yaw Left"></robot-button>
+      <robot-button method="yaw_right" label="Yaw Right"></robot-button>
+      <robot-button method="pitch_up" label="Pitch Up"></robot-button>
+      <robot-button method="pitch_down" label="Pitch Down"></robot-button>
+      <robot-button method="roll_left" label="Roll Left"></robot-button>
+      <robot-button method="roll_right" label="Roll Right"></robot-button>
     </div>
     <div class="vertical-stack">
       <h2>Config</h2>
@@ -35,13 +35,11 @@
     </div>
     <div class="vertical-stack">
       <h2>Playback</h2>
-      <button onclick="robot.print_position()"> Print_position </button>
-      <button onclick="robot.next_position()"> Next_position </button>
-      <button onclick="robot.previous_position()"> Previous_position </button>
+      <sequence-control></sequence-control>
       <h2>Control</h2>
       <elbow-button></elbow-button>
-      <button onclick="robot.flail()"> Flail </button>
-      <button onclick="robot.reset()"> Reset </button>
+      <robot-button method="flail" label="Flail">Flail</button>
+      <robot-button method="reset" label="Reset">Reset</button>
     </div>
   </div>
 </body>

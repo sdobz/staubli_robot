@@ -14,6 +14,12 @@ async function put(url) {
  */
 
 /**
+ * @typedef {Object} StoredPosition
+ * @property {string} name - The name of the position
+ * @property {EffectorPosition} position - The position and orientation of the end effector.
+ */
+
+/**
  * @typedef {Object} EffectorPosition
  * @property {number} x - X coordinate.
  * @property {number} y - Y coordinate.
@@ -39,7 +45,7 @@ async function put(url) {
  * @property {number} distance - The distance value.
  * @property {number} angle_step - The step size for angle increments.
  * @property {"above" | "below"} elbow - The elbow position or angle.
- * @property {any} positions - The number of stored positions.
+ * @property {StoredPosition[]} positions - The number of stored positions.
  * @property {number} positions_index - The index of the current position.
  */
 

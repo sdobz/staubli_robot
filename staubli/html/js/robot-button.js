@@ -19,8 +19,8 @@ createComponent({
     }
     return {
       button: {
-        innerHTML: attrs.label,
-        properties: { disabled: !instance },
+        attributes: { disabled: instance ? "" : "disabled" },
+        properties: { innerHTML: attrs.label },
         eventListeners: { click },
       },
     };
@@ -36,7 +36,7 @@ createComponent({
     return {
       "robot-button": {
         attributes: {
-          label
+          label,
         },
       },
     };
@@ -48,7 +48,7 @@ createComponent({
   template: html`
     <div class="horizontal-stack">
       <robot-button method="minus" label="(-)"></robot-button>
-      <pre id="step"></pre>
+      <pre class="step"></pre>
       <robot-button method="plus" label="(+)"></robot-button>
     </div>
   `,
@@ -56,20 +56,19 @@ createComponent({
     const distance = robotState()?.["distance"] || "?";
 
     return {
-      "#step": {
-        innerHTML: `${distance}mm`,
+      ".step": {
+        properties: { innerHTML: `${distance}mm` },
       },
     };
   },
 });
-
 
 createComponent({
   tag: "angle-control",
   template: html`
     <div class="horizontal-stack">
       <robot-button method="angle_minus" label="(-)"></robot-button>
-      <pre id="step"></pre>
+      <pre class="step"></pre>
       <robot-button method="angle_plus" label="(+)"></robot-button>
     </div>
   `,
@@ -77,8 +76,56 @@ createComponent({
     const angleStep = robotState()?.["angle_step"] || "?";
 
     return {
-      "#step": {
-        innerHTML: `${angleStep}°`,
+      ".step": {
+        properties: { innerHTML: `${angleStep}°` },
+      },
+    };
+  },
+});
+
+createComponent({
+  tag: "sequence-position",
+  observedAttributes: ["name", "current"],
+  template: html` <pre></pre> `,
+  attrsFn: (_state, attrs) => {
+    const isCurrent = attrs.current === "true";
+    return {
+      pre: {
+        properties: { innerHTML: attrs.name },
+        attributes: { class: `${isCurrent ? "current" : ""}` },
+      },
+    };
+  },
+});
+
+createComponent({
+  tag: "sequence-control",
+  template: html`
+    <robot-button method="previous_position" label="<- Prev"></robot-button>
+    <robot-button method="print_position" label="Append"></robot-button>
+    <robot-button method="next_position" label="Next ->"></robot-button>
+    <div class="vertical-stack positions"><div></div></div>
+  `,
+  attrsFn: (_state, _attrs) => {
+    const state = robotState();
+    const positions = state?.["positions"] || [];
+    const positionIndex =
+      state?.["positions_index"] !== undefined
+        ? state?.["positions_index"]
+        : -1;
+
+    const children = positions
+      .map(
+        ({ name, position }, index) =>
+          `<sequence-position name="${name}" current="${
+            index === positionIndex
+          }"></sequence-position>`
+      )
+      .join("\n");
+
+    return {
+      ".positions": {
+        properties: { innerHTML: children },
       },
     };
   },
