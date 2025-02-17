@@ -1,11 +1,9 @@
 /* globals */
-import * as THREE from 'three';
-import { registerDragEvents } from './dragAndDrop.js';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import URDFManipulator from '../../src/urdf-manipulator-element.js';
+import * as THREE from './vendor/three/three.js';
+import { registerDragEvents } from './vendor/urdf/dragAndDrop.js';
+import { STLLoader } from './vendor/three/STLLoader.js';
+import { ColladaLoader } from './vendor/three/ColladaLoader.js';
+import URDFManipulator from './vendor/urdf/urdf-manipulator-element.js';
 
 customElements.define('urdf-viewer', URDFManipulator);
 
@@ -242,24 +240,6 @@ document.addEventListener('WebComponentsReady', () => {
 
         const ext = path.split(/\./g).pop().toLowerCase();
         switch (ext) {
-
-            case 'gltf':
-            case 'glb':
-                new GLTFLoader(manager).load(
-                    path,
-                    result => done(result.scene),
-                    null,
-                    err => done(null, err),
-                );
-                break;
-            case 'obj':
-                new OBJLoader(manager).load(
-                    path,
-                    result => done(result),
-                    null,
-                    err => done(null, err),
-                );
-                break;
             case 'dae':
                 new ColladaLoader(manager).load(
                     path,
@@ -286,10 +266,6 @@ document.addEventListener('WebComponentsReady', () => {
     };
 
     document.querySelector('li[urdf]').dispatchEvent(new Event('click'));
-
-    if (/javascript\/example\/bundle/i.test(window.location)) {
-        viewer.package = '../../../urdf';
-    }
 
     registerDragEvents(viewer, () => {
         setColor('#263238');
