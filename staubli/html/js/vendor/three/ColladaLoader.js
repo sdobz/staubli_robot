@@ -38,8 +38,8 @@ import {
 	Vector3,
 	VectorKeyframeTrack,
 	SRGBColorSpace
-} from 'three';
-import { TGALoader } from '../loaders/TGALoader.js';
+} from './three.js';
+import { TGALoader } from './TGALoader.js';
 
 class ColladaLoader extends Loader {
 
