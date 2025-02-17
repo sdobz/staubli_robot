@@ -148,6 +148,7 @@ class URDFLoader {
 
         // Resolves the path of mesh files
         function resolvePath(path) {
+            console.log("Resolving", path)
 
             if (!/^package:\/\//.test(path)) {
 
