@@ -3,14 +3,18 @@
   padding: 1rem;
 }
 
+pre.current {
+  background-color: red;
+}
+
 .vertical-stack {
   display: flex;
   flex-direction: column;
-  gap: 1rem; /* Adjust spacing between elements */
+  gap: 1rem;
 }
 
 .horizontal-stack {
   display: flex;
   flex-direction: row;
-  gap: 2rem; /* Adjust spacing between elements */
+  gap: 2rem;
 }

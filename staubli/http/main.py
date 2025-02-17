@@ -127,11 +127,11 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
 
     def api_next_position(self):
         self.controller.on_next_position()
-        return { "position_index": self.controller.positions_index }
+        return { "positions_index": self.controller.positions_index }
 
     def api_previous_position(self):
         self.controller.on_previous_position()
-        return { "position_index": self.controller.positions_index }
+        return { "positions_index": self.controller.positions_index }
 
     def api_reset(self):
         self.controller.on_reset()
