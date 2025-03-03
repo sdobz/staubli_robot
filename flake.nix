@@ -2,7 +2,7 @@
   description = "Staubli Robot Control";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
     nixos-hardware.url = "github:nixos/nixos-hardware";
   };
