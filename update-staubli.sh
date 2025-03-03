@@ -12,7 +12,8 @@ SYSTEM=$(nix build \
 nix copy --no-check-sigs --to ssh-ng://root@$HOST $SYSTEM
 
 # lol this is a trip
-ssh root@$HOST "$SYSTEM/activate \
+ssh root@$HOST " \
+    nix-env -p /nix/var/nix/profiles/system --set ${SYSTEM} \
+    && ${SYSTEM}/bin/switch-to-configuration switch \
     && nix-collect-garbage \
-    && systemctl daemon-reexec \
     && systemctl restart staubli-http"

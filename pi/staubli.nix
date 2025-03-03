@@ -2,7 +2,6 @@
   pythonPackages = ps: with ps; [
     pyserial
     setuptools
-    # Add more dependencies here
   ];
 in rec {
   env = pkgs.python3.withPackages pythonPackages;
