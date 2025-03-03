@@ -9,18 +9,21 @@
 
   outputs = { self, nixpkgs, nixos-hardware, utils }: {
     images = {
-      pi = (self.nixosConfigurations.pi.extendModules {
+      staubli = (self.nixosConfigurations.staubli.extendModules {
         modules = [
           "${nixpkgs}/nixos/modules/installer/sd-card/sd-image-aarch64.nix"
           {
-            disabledModules = [ "profiles/base.nix" ];
+            disabledModules = [
+              "profiles/base.nix"
+              "profiles/all-hardware.nix"
+            ];
             sdImage.compressImage = false;
           }
         ];
       }).config.system.build.sdImage;
     };
     nixosConfigurations = {
-      pi = nixpkgs.lib.nixosSystem {
+      staubli = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
         modules = [
           nixos-hardware.nixosModules.raspberry-pi-4
@@ -34,7 +37,7 @@
     pkgs = nixpkgs.legacyPackages.${system};
   in rec {
     packages = {
-      pi-image = self.images.pi;
+      pi-image = self.images.staubli;
       pythonEnv = pkgs.python3.withPackages(ps: with ps; [
         pyserial
       ]);

@@ -27,3 +27,8 @@ cp "$(./build-remote.sh)" /mnt/c/Users/vince/Dropbox/StaubliRX90/raspberry-pi
 ```
 ssh staubli
 ```
+
+This tends to take about 10 minutes when on the same network as serverbox.zone
+1. 3:30 to build the image
+2. 5:00 to burn the SD
+3. 1:30 to operate the computer
