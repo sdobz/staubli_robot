@@ -16,12 +16,14 @@ in {
     serviceConfig = {
       ExecStart = "${staubli.package}/bin/staubli-http";
       WorkingDirectory = "${staubli.package}";
-      SecureBits = "keep-caps";
-      AmbientCapabilities = "CAP_NET_BIND_SERVICE CAP_NET_ADMIN";
-      CapabilityBoundingSet = "CAP_NET_BIND_SERVICE CAP_NET_ADMIN";
       Restart = "always";
       User = "staubli";
       Group = "staubli";
+
+      # allow binding port 80
+      SecureBits = "keep-caps";
+      AmbientCapabilities = "CAP_NET_BIND_SERVICE CAP_NET_ADMIN";
+      CapabilityBoundingSet = "CAP_NET_BIND_SERVICE CAP_NET_ADMIN";
     };
     wantedBy = ["multi-user.target"];
   };

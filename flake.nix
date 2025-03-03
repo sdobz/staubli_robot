@@ -53,6 +53,7 @@
       buildInputs = [
         packages.pythonEnv
         packages.devPythonEnv
+        pkgs.rsync
       ];
       shellHook = ''
         if [ -e .venv ] && [ ! -L .venv ]; then
