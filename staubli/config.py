@@ -4,7 +4,7 @@ class Config:
     serial_device: str
     http_port: str
 
-    def __init__(self, serial_device: str = "/dev/tty.usbserial-10", http_port: str = "8000"):
+    def __init__(self, serial_device: str = "/dev/tty.usbserial-10", http_port: str = "80"):
         self.serial_device = serial_device
         self.http_port = http_port
 

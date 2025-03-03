@@ -30,17 +30,18 @@
           "${nixpkgs}/nixos/modules/profiles/minimal.nix"
           ./pi/configuration.nix
           ./pi/base.nix
+          ./pi/service.nix
         ];
       };
     };
   } // (utils.lib.eachSystem [ "x86_64-linux" ] (system: let
     pkgs = nixpkgs.legacyPackages.${system};
+    staubli = import ./pi/staubli.nix { inherit pkgs; };
   in rec {
     packages = {
       pi-image = self.images.staubli;
-      pythonEnv = pkgs.python3.withPackages(ps: with ps; [
-        pyserial
-      ]);
+      staubli = staubli.package;
+      pythonEnv = staubli.env;
       devPythonEnv = pkgs.python3.withPackages(ps: with ps; [
         black
       ]);

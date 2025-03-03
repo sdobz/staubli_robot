@@ -12,4 +12,7 @@ SYSTEM=$(nix build \
 nix copy --no-check-sigs --to ssh-ng://root@$HOST $SYSTEM
 
 # lol this is a trip
-ssh root@$HOST "$SYSTEM/activate && nix-collect-garbage"
+ssh root@$HOST "$SYSTEM/activate \
+    && nix-collect-garbage \
+    && systemctl daemon-reexec \
+    && systemctl restart staubli-http"
