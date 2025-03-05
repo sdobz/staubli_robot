@@ -18,3 +18,9 @@ pre.current {
   flex-direction: row;
   gap: 2rem;
 }
+
+#robot-3d {
+  width: 50vw;
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+}
