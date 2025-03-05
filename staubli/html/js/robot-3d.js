@@ -19,6 +19,8 @@ import { html } from './lib/component.js'
 import { createEffect } from "./lib/state.js";
 import { robotState } from "./robot.js";
 
+const jointOffset = [ -1, 0, -90, 90, 0, 0, 0 ];
+
 const robot3DTemplate = html`
 <div id="robot-3d"></div>
 `
@@ -90,7 +92,7 @@ class Robot3D extends HTMLElement {
         }
 
         for (let i = 1; i <= 6; i++) {
-            robot.joints[`joint_${i}`].setJointValue(MathUtils.degToRad(state.position.joints[`j${i}`]));
+            robot.joints[`joint_${i}`].setJointValue(MathUtils.degToRad(state.position.joints[`j${i}`] - jointOffset[i]));
         }
 
         robot.updateMatrixWorld(true);

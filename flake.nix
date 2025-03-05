@@ -1,18 +1,47 @@
 {
-  description = "Volcandle dev env";
+  description = "Staubli Robot Control";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
+    nixos-hardware.url = "github:nixos/nixos-hardware";
   };
 
-  outputs = { self, nixpkgs, utils }: (utils.lib.eachSystem ["x86_64-linux" ] (system: let
+  outputs = { self, nixpkgs, nixos-hardware, utils }: {
+    images = {
+      staubli = (self.nixosConfigurations.staubli.extendModules {
+        modules = [
+          "${nixpkgs}/nixos/modules/installer/sd-card/sd-image-aarch64.nix"
+          {
+            disabledModules = [
+              "profiles/base.nix"
+              "profiles/all-hardware.nix"
+            ];
+            sdImage.compressImage = false;
+          }
+        ];
+      }).config.system.build.sdImage;
+    };
+    nixosConfigurations = {
+      staubli = nixpkgs.lib.nixosSystem {
+        system = "aarch64-linux";
+        modules = [
+          nixos-hardware.nixosModules.raspberry-pi-4
+          "${nixpkgs}/nixos/modules/profiles/minimal.nix"
+          ./pi/configuration.nix
+          ./pi/base.nix
+          ./pi/service.nix
+        ];
+      };
+    };
+  } // (utils.lib.eachSystem [ "x86_64-linux" ] (system: let
     pkgs = nixpkgs.legacyPackages.${system};
+    staubli = import ./pi/staubli.nix { inherit pkgs; };
   in rec {
     packages = {
-      pythonEnv = pkgs.python3.withPackages(ps: with ps; [
-        pyserial
-      ]);
+      pi-image = self.images.staubli;
+      staubli = staubli.package;
+      pythonEnv = staubli.env;
       devPythonEnv = pkgs.python3.withPackages(ps: with ps; [
         black
       ]);
@@ -24,6 +53,7 @@
       buildInputs = [
         packages.pythonEnv
         packages.devPythonEnv
+        pkgs.rsync
       ];
       shellHook = ''
         if [ -e .venv ] && [ ! -L .venv ]; then

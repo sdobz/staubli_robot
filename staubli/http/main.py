@@ -151,9 +151,12 @@ def run(server_class: HTTPServer, handler_class: RobotHTTPRequestHandler, config
     print(f'Starting server on port {port}')
     httpd.serve_forever()
 
-if __name__ == '__main__':
+def main():
     env_file = ".env"
     config = Config.from_env(env_file) if env_exists(env_file) else Config()
 
 
     run(server_class=HTTPServer, handler_class=RobotHTTPRequestHandler, config=config)
+
+if __name__ == '__main__':
+    main()
