@@ -2,10 +2,10 @@
 
 set -e
 
-HOST=staubli
+source .env
 
 SYSTEM=$(nix build \
-    .#nixosConfigurations.$HOST.config.system.build.toplevel \
+    .#nixosConfigurations.staubli.config.system.build.toplevel \
     --builders "ssh://serverbox.zone aarch64-linux" \
     --no-link --print-out-paths)
 

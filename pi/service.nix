@@ -5,6 +5,7 @@ in {
   users.users.staubli = {
     isSystemUser = true;
     group = "staubli";
+    extraGroups = [ "dialout" ];
   };
 
   users.groups.staubli = {};
