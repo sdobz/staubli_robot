@@ -32,6 +32,7 @@ class SerialEmulator:
         if cmd.startswith("where"):
             print(">>> concocting where")
             self.buffer = dedent("""\
+                
                 X         Y         Z         y         p         r       Hand
                 -0.077     0.000   985.000   179.999     0.008   179.995     0.000
                 J1        J2        J3        J4        J5        J6

@@ -14,6 +14,7 @@ import {
   MathUtils,
 } from "./vendor/three/three.js";
 import { OrbitControls } from "./vendor/three/OrbitControls.js";
+import { TransformControls } from "./vendor/three/TransformControls.js";
 import URDFLoader from "./vendor/urdf/URDFLoader.js";
 import { html } from './lib/component.js'
 import { createEffect } from "./lib/state.js";
@@ -29,7 +30,7 @@ class Robot3D extends HTMLElement {
   constructor() {
     super();
 
-    let scene, camera, renderer, robot, controls;
+    let scene, camera, renderer, robot, orbit, control;
     scene = new Scene();
     scene.background = new Color(0x263238);
 
@@ -60,10 +61,16 @@ class Robot3D extends HTMLElement {
     ground.receiveShadow = true;
     scene.add(ground);
 
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.minDistance = 0.5;
-    controls.target.y = 1;
-    controls.update();
+    orbit = new OrbitControls(camera, renderer.domElement);
+    orbit.minDistance = 0.5;
+    orbit.target.y = 1;
+    orbit.update();
+
+    control = new TransformControls( camera, renderer.domElement );
+    control.addEventListener( 'change', () => this.render() );
+    control.addEventListener( 'dragging-changed', function ( event ) {
+      orbit.enabled = !event.value;
+    } );
 
     // Load robot
     const manager = new LoadingManager();
@@ -84,6 +91,16 @@ class Robot3D extends HTMLElement {
         robot.joints[`joint_${i}`].setJointValue(MathUtils.degToRad(0));
       }
       robot.updateMatrixWorld(true);
+
+      console.log("Control attached", robot.joints['joint_2']);
+      control.attach(robot.joints['joint_2']);
+      const gizmo = control.getHelper();
+      scene.add( gizmo );
+      control.setMode( 'rotate' );
+      control.setSpace('local');
+      control.showX = false;
+      control.showY = false;
+
 
       createEffect(() => {
         const state = robotState();
