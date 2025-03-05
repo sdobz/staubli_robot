@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Staubli control</title>
+  <script type="module" defer src="./js/app.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <robot-3d></robot-3d>
+  <div class="horizontal-stack">
+    <div class="vertical-stack">
+      <h1>Position</h1>
+      <robot-button method="up" label="Up"></robot-button>
+      <robot-button method="down" label="Down"></robot-button>
+      <robot-button method="left" label="Left"></robot-button>
+      <robot-button method="right" label="Right"></robot-button>
+      <robot-button method="forward" label="Forward"></robot-button>
+      <robot-button method="back" label="Back"></robot-button>
+    </div>
+    <div class="vertical-stack">
+      <h1>Orientation</h1>
+      <robot-button method="yaw_left" label="Yaw Left"></robot-button>
+      <robot-button method="yaw_right" label="Yaw Right"></robot-button>
+      <robot-button method="pitch_up" label="Pitch Up"></robot-button>
+      <robot-button method="pitch_down" label="Pitch Down"></robot-button>
+      <robot-button method="roll_left" label="Roll Left"></robot-button>
+      <robot-button method="roll_right" label="Roll Right"></robot-button>
+    </div>
+    <div class="vertical-stack">
+      <h2>Config</h2>
+      <step-control></step-control>
+      <angle-control></angle-control>
+    </div>
+    <div class="vertical-stack">
+      <h2>Playback</h2>
+      <sequence-control></sequence-control>
+      <h2>Control</h2>
+      <elbow-button></elbow-button>
+      <robot-button method="flail" label="Flail">Flail</robot-button>
+      <robot-button method="reset" label="Reset">Reset</robot-button>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -1,10 +1,10 @@
 import serial
 import sys
-from machine import EffectorLocation, Robot
-from controller import handle_input
-from config import Config, env_exists
-import data
-
+from .machine import EffectorLocation, Robot
+from .controller import handle_input
+from staubli.config import Config, env_exists
+from .data import write, read
+from .serial_emulator import SerialEmulator
 
 class Main:
     config: Config
@@ -15,26 +15,35 @@ class Main:
         self.config = config
 
     def initialize(self):
-        self.ser = serial.Serial(
-            self.config.serial_device,
-            9600,
-            timeout=1,
-            bytesize=8,
-            parity=serial.PARITY_NONE,
-            stopbits=1,
-        )
+        try:
+            self.ser = serial.Serial(
+                self.config.serial_device,
+                9600,
+                timeout=1,
+                bytesize=8,
+                parity=serial.PARITY_NONE,
+                stopbits=1,
+            )
+        except Exception as e:
+            print(e)
+            print("Exception starting serial, starting emulator")
+            self.ser = SerialEmulator()
+    
         self.robot = Robot(self.ser)
         self.robot.speed(20)
 
     def loop(self):
-        d = ControllerDelegate(self.robot, self.ser)
-        handle_input(d)
+        handle_input(self.controller())
+    
+    def controller(self):
+        return ControllerDelegate(self.robot, self.ser)
 
 
 angles = [5, 10, 15, 30, 45]
 
 
 class ControllerDelegate:
+    robot: Robot
     positions: list[EffectorLocation] = None
 
     def __init__(self, robot, ser):
@@ -43,7 +52,7 @@ class ControllerDelegate:
         self.distance = 100
         self.angle_index = 4
         self.elbow = "above"
-        self.positions = data.read()
+        self.positions = read()
         print(self.positions)
         self.positions_index = 0
 
@@ -125,7 +134,7 @@ class ControllerDelegate:
     def on_print_position(self):
         position = self.robot.where()[0]
         self.positions.append(("position " + str(len(self.positions) + 1), position))
-        data.write(self.positions)
+        write(self.positions)
         print("positions: " + str(self.positions))
 
     def _jog_to_position(self):
