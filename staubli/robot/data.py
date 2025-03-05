@@ -1,7 +1,7 @@
 import json
 import os
 
-from machine import EffectorLocation
+from .machine import EffectorLocation
 
 
 def write(items: list[(str, EffectorLocation)]):
