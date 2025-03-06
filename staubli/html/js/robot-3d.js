@@ -12,25 +12,24 @@ import {
   AmbientLight,
   LoadingManager,
   MathUtils,
+  MeshPhongMaterial,
 } from "./vendor/three/three.js";
 import { OrbitControls } from "./vendor/three/OrbitControls.js";
-import { TransformControls } from "./vendor/three/TransformControls.js";
 import URDFLoader from "./vendor/urdf/URDFLoader.js";
-import { html } from './lib/component.js'
+import { PointerURDFDragControls } from "./vendor/urdf/URDFDragControls.js";
+import { html } from "./lib/component.js";
 import { createEffect } from "./lib/state.js";
 import { robotState } from "./robot.js";
 
-const jointOffset = [ -1, 0, -90, 90, 0, 0, 0 ];
+const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
 
-const robot3DTemplate = html`
-<div id="robot-3d"></div>
-`
+const robot3DTemplate = html` <div id="robot-3d"></div> `;
 
 class Robot3D extends HTMLElement {
   constructor() {
     super();
 
-    let scene, camera, renderer, robot, orbit, control;
+    let scene, camera, renderer, robot, orbit;
     scene = new Scene();
     scene.background = new Color(0x263238);
 
@@ -66,11 +65,80 @@ class Robot3D extends HTMLElement {
     orbit.target.y = 1;
     orbit.update();
 
-    control = new TransformControls( camera, renderer.domElement );
-    control.addEventListener( 'change', () => this.render() );
-    control.addEventListener( 'dragging-changed', function ( event ) {
-      orbit.enabled = !event.value;
-    } );
+    const highlightColor = "#FFFFFF";
+    // The highlight material
+    this.highlightMaterial = new MeshPhongMaterial({
+      shininess: 10,
+      color: highlightColor,
+      emissive: highlightColor,
+      emissiveIntensity: 0.25,
+    });
+
+    const isJoint = (j) => {
+      return j.isURDFJoint && j.jointType !== "fixed";
+    };
+
+    // Highlight the link geometry under a joint
+    const highlightLinkGeometry = (m, revert) => {
+      const traverse = (c) => {
+        // Set or revert the highlight color
+        if (c.type === "Mesh") {
+          if (revert) {
+            c.material = c.__origMaterial;
+            delete c.__origMaterial;
+          } else {
+            c.__origMaterial = c.material;
+            c.material = this.highlightMaterial;
+          }
+        }
+
+        // Look into the children and stop if the next child is
+        // another joint
+        if (c === m || !isJoint(c)) {
+          for (let i = 0; i < c.children.length; i++) {
+            const child = c.children[i];
+            if (!child.isURDFCollider) {
+              traverse(c.children[i]);
+            }
+          }
+        }
+      };
+
+      traverse(m);
+    };
+
+    const dragControls = new PointerURDFDragControls(
+      scene,
+      camera,
+      renderer.domElement
+    );
+    dragControls.onDragStart = (joint) => {
+      this.dispatchEvent(
+        new CustomEvent("manipulate-start", {
+          bubbles: true,
+          cancelable: true,
+          detail: joint.name,
+        })
+      );
+      orbit.enabled = false;
+      this.render();
+    };
+    dragControls.onDragEnd = (joint) => {
+      orbit.enabled = true;
+      this.render();
+    };
+    dragControls.updateJoint = (joint, angle) => {
+      this.setJointValue(joint.name, angle);
+    };
+    dragControls.onHover = (joint) => {
+      highlightLinkGeometry(joint, false);
+      this.render();
+    };
+    dragControls.onUnhover = (joint) => {
+      highlightLinkGeometry(joint, true);
+      this.render();
+    };
+    this.dragControls = dragControls;
 
     // Load robot
     const manager = new LoadingManager();
@@ -79,43 +147,35 @@ class Robot3D extends HTMLElement {
       staubli_tx90_support: "/urdf/staubli_tx90_support",
     };
     loader.load("/urdf/staubli_tx90_support/urdf/tx90.urdf", (result) => {
-      robot = result;
+      this.robot = result;
     });
 
     manager.onLoad = () => {
-      robot.rotation.x = -Math.PI / 2;
-      robot.traverse((c) => {
+      this.robot.rotation.x = -Math.PI / 2;
+      this.robot.traverse((c) => {
         c.castShadow = true;
       });
       for (let i = 1; i <= 6; i++) {
-        robot.joints[`joint_${i}`].setJointValue(MathUtils.degToRad(0));
+        this.robot.joints[`joint_${i}`].setJointValue(MathUtils.degToRad(0));
       }
-      robot.updateMatrixWorld(true);
-
-      console.log("Control attached", robot.joints['joint_2']);
-      control.attach(robot.joints['joint_2']);
-      const gizmo = control.getHelper();
-      scene.add( gizmo );
-      control.setMode( 'rotate' );
-      control.setSpace('local');
-      control.showX = false;
-      control.showY = false;
-
+      this.robot.updateMatrixWorld(true);
 
       createEffect(() => {
         const state = robotState();
         if (!state) {
-            return
+          return;
         }
 
         for (let i = 1; i <= 6; i++) {
-            robot.joints[`joint_${i}`].setJointValue(MathUtils.degToRad(state.position.joints[`j${i}`] - jointOffset[i]));
+          this.robot.joints[`joint_${i}`].setJointValue(
+            MathUtils.degToRad(state.position.joints[`j${i}`] - jointOffset[i])
+          );
         }
 
-        robot.updateMatrixWorld(true);
-      })
+        this.robot.updateMatrixWorld(true);
+      });
 
-      scene.add(robot);
+      scene.add(this.robot);
     };
 
     const shadowRoot = this.attachShadow({ mode: "open" });
@@ -123,8 +183,8 @@ class Robot3D extends HTMLElement {
       shadowRoot.appendChild(linkElement.cloneNode());
     });
     const templateContents = robot3DTemplate.content.cloneNode(true);
-    this.container = templateContents.querySelector("#robot-3d")
-    this.container.appendChild(renderer.domElement)
+    this.container = templateContents.querySelector("#robot-3d");
+    this.container.appendChild(renderer.domElement);
 
     shadowRoot.appendChild(templateContents);
 
@@ -136,10 +196,18 @@ class Robot3D extends HTMLElement {
     window.addEventListener("resize", this.onResize.bind(this));
   }
 
+  setJointValue(name, angle) {
+    this.robot.joints[name].setJointValue(angle);
+  }
+
   onResize() {
-    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+    this.renderer.setSize(
+      this.container.clientWidth,
+      this.container.clientHeight
+    );
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+    this.camera.aspect =
+      this.container.clientWidth / this.container.clientHeight;
     this.camera.updateProjectionMatrix();
   }
 
@@ -158,6 +226,7 @@ class Robot3D extends HTMLElement {
 
   disconnectedCallback() {
     this.attached = false;
+    //this.dragControls.dispose();
   }
 
   adoptedCallback() {
@@ -170,4 +239,4 @@ class Robot3D extends HTMLElement {
   }
 }
 
-customElements.define('robot-3d', Robot3D);
+customElements.define("robot-3d", Robot3D);
