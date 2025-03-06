@@ -13,13 +13,15 @@ import {
   LoadingManager,
   MathUtils,
   MeshPhongMaterial,
+  Vector3,
+  Box3,
 } from "./vendor/three/three.js";
 import { OrbitControls } from "./vendor/three/OrbitControls.js";
 import URDFLoader from "./vendor/urdf/URDFLoader.js";
 import { PointerURDFDragControls } from "./vendor/urdf/URDFDragControls.js";
 import { html } from "./lib/component.js";
 import { createEffect } from "./lib/state.js";
-import { robotState } from "./robot.js";
+import { jogSequence, robotState, setJogSequence } from "./robot.js";
 
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
 
@@ -29,13 +31,25 @@ class Robot3D extends HTMLElement {
   constructor() {
     super();
 
-    let scene, camera, renderer, robot, orbit;
+    // The highlight material
+    const ghostColor = "#FFFFFF";
+    this.ghostMaterial = new MeshPhongMaterial({
+      shininess: 10,
+      color: ghostColor,
+      emissive: ghostColor,
+      emissiveIntensity: 0.25,
+      opacity: 0.2,
+      transparent: true,
+    });
+
+    let scene, camera, renderer, orbit;
     scene = new Scene();
     scene.background = new Color(0x263238);
 
     camera = new PerspectiveCamera();
     camera.position.set(2, 2, 2);
     camera.lookAt(0, 0, 0);
+    camera.layers.enable(1);
 
     renderer = new WebGLRenderer({ antialias: true });
     renderer.outputEncoding = SRGBColorSpace;
@@ -65,6 +79,105 @@ class Robot3D extends HTMLElement {
     orbit.target.y = 1;
     orbit.update();
 
+    this.dragControls = this.setupURDFControl(scene, camera, orbit, renderer);
+
+    // Load robot
+    const manager = new LoadingManager();
+    const loader = new URDFLoader(manager);
+    loader.packages = {
+      staubli_tx90_support: "/urdf/staubli_tx90_support",
+    };
+    loader.load("/urdf/staubli_tx90_support/urdf/tx90.urdf", (result) => {
+      this.robot = result;
+    });
+
+    manager.onLoad = () => {
+      this.robot.rotation.x = -Math.PI / 2;
+      this.robot.traverse((c) => {
+        c.castShadow = true;
+      });
+      for (let i = 1; i <= 6; i++) {
+        this.robot.joints[`joint_${i}`].setJointValue(MathUtils.degToRad(0));
+      }
+      this.robot.updateMatrixWorld(true);
+
+      fitCameraToSelection(camera, orbit, [this.robot]);
+
+      scene.add(this.robot);
+    };
+
+    const shadowRoot = this.attachShadow({ mode: "open" });
+    document.querySelectorAll("link").forEach((linkElement) => {
+      shadowRoot.appendChild(linkElement.cloneNode());
+    });
+    const templateContents = robot3DTemplate.content.cloneNode(true);
+    this.container = templateContents.querySelector("#robot-3d");
+    this.container.appendChild(renderer.domElement);
+
+    shadowRoot.appendChild(templateContents);
+
+    this.renderer = renderer;
+    this.camera = camera;
+    this.scene = scene;
+
+    this.onResize();
+    this.bindState();
+    window.addEventListener("resize", this.onResize.bind(this));
+  }
+
+  bindState() {
+    createEffect(() => {
+      const state = robotState();
+      if (!this.robot || !state) {
+        return;
+      }
+
+      const robotToMove = this.ghostRobot || this.robot;
+
+      for (let i = 1; i <= 6; i++) {
+        robotToMove.joints[`joint_${i}`].setJointValue(
+          MathUtils.degToRad(state.position.joints[`j${i}`] - jointOffset[i])
+        );
+      }
+
+      robotToMove.updateMatrixWorld(true);
+    });
+
+    createEffect(() => {
+      const currentSequence = jogSequence();
+
+      if (currentSequence.length === 0 && this.ghostRobot) {
+        this.destroyGhostRobot();
+      }
+    });
+  }
+
+  createGhostRobot() {
+    if (!this.robot) {
+      return;
+    }
+    this.destroyGhostRobot();
+
+    this.ghostRobot = this.robot.clone();
+    this.ghostRobot.traverse((c) => {
+      c.castShadow = false;
+      c.material = this.ghostMaterial;
+      c.layers.set(1);
+    });
+
+    this.scene.add(this.ghostRobot)
+  }
+
+  destroyGhostRobot() {
+    if (!this.ghostRobot) {
+      return;
+    }
+    console.log("Destroying")
+    this.scene.remove(this.ghostRobot);
+    delete this.ghostRobot;
+  }
+
+  setupURDFControl(scene, camera, orbit, renderer) {
     const highlightColor = "#FFFFFF";
     // The highlight material
     this.highlightMaterial = new MeshPhongMaterial({
@@ -113,18 +226,15 @@ class Robot3D extends HTMLElement {
       renderer.domElement
     );
     dragControls.onDragStart = (joint) => {
-      this.dispatchEvent(
-        new CustomEvent("manipulate-start", {
-          bubbles: true,
-          cancelable: true,
-          detail: joint.name,
-        })
-      );
       orbit.enabled = false;
+      if (!this.ghostRobot) {
+        this.createGhostRobot();
+      }
       this.render();
     };
     dragControls.onDragEnd = (joint) => {
       orbit.enabled = true;
+      this.appendJogSequence(joint.name, joint.angle);
       this.render();
     };
     dragControls.updateJoint = (joint, angle) => {
@@ -138,62 +248,22 @@ class Robot3D extends HTMLElement {
       highlightLinkGeometry(joint, true);
       this.render();
     };
-    this.dragControls = dragControls;
 
-    // Load robot
-    const manager = new LoadingManager();
-    const loader = new URDFLoader(manager);
-    loader.packages = {
-      staubli_tx90_support: "/urdf/staubli_tx90_support",
-    };
-    loader.load("/urdf/staubli_tx90_support/urdf/tx90.urdf", (result) => {
-      this.robot = result;
-    });
+    return dragControls;
+  }
 
-    manager.onLoad = () => {
-      this.robot.rotation.x = -Math.PI / 2;
-      this.robot.traverse((c) => {
-        c.castShadow = true;
-      });
-      for (let i = 1; i <= 6; i++) {
-        this.robot.joints[`joint_${i}`].setJointValue(MathUtils.degToRad(0));
-      }
-      this.robot.updateMatrixWorld(true);
+  appendJogSequence(name, angle) {
+    const jointId = parseInt(name.split("_")[1])
+    const jointPositionKey = `j${jointId}`;
 
-      createEffect(() => {
-        const state = robotState();
-        if (!state) {
-          return;
-        }
+    const offsetAngleDeg = MathUtils.radToDeg(angle) + jointOffset[jointId];
 
-        for (let i = 1; i <= 6; i++) {
-          this.robot.joints[`joint_${i}`].setJointValue(
-            MathUtils.degToRad(state.position.joints[`j${i}`] - jointOffset[i])
-          );
-        }
-
-        this.robot.updateMatrixWorld(true);
-      });
-
-      scene.add(this.robot);
+    /** @type {Position} */
+    const nextPosition = {
+      joint: { [jointPositionKey]: offsetAngleDeg },
     };
 
-    const shadowRoot = this.attachShadow({ mode: "open" });
-    document.querySelectorAll("link").forEach((linkElement) => {
-      shadowRoot.appendChild(linkElement.cloneNode());
-    });
-    const templateContents = robot3DTemplate.content.cloneNode(true);
-    this.container = templateContents.querySelector("#robot-3d");
-    this.container.appendChild(renderer.domElement);
-
-    shadowRoot.appendChild(templateContents);
-
-    this.renderer = renderer;
-    this.camera = camera;
-    this.scene = scene;
-
-    this.onResize();
-    window.addEventListener("resize", this.onResize.bind(this));
+    setJogSequence([...jogSequence(), nextPosition]);
   }
 
   setJointValue(name, angle) {
@@ -237,6 +307,44 @@ class Robot3D extends HTMLElement {
     const attrs = this.getAllAttributes();
     this.setAttrsSignal(attrs);
   }
+}
+
+const size = new Vector3();
+const center = new Vector3();
+const box = new Box3();
+
+// https://codepen.io/discoverthreejs/full/vwVeZB
+function fitCameraToSelection(camera, controls, selection, fitOffset = 1.2) {
+  box.makeEmpty();
+  for (const object of selection) {
+    box.expandByObject(object);
+  }
+
+  box.getSize(size);
+  box.getCenter(center);
+
+  const maxSize = Math.max(size.x, size.y, size.z);
+  const fitHeightDistance =
+    maxSize / (2 * Math.atan((Math.PI * camera.fov) / 360));
+  const fitWidthDistance = fitHeightDistance / camera.aspect;
+  const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
+
+  const direction = controls.target
+    .clone()
+    .sub(camera.position)
+    .normalize()
+    .multiplyScalar(distance);
+
+  controls.maxDistance = distance * 10;
+  controls.target.copy(center);
+
+  camera.near = distance / 100;
+  camera.far = distance * 100;
+  camera.updateProjectionMatrix();
+
+  camera.position.copy(controls.target).sub(direction);
+
+  controls.update();
 }
 
 customElements.define("robot-3d", Robot3D);

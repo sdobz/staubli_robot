@@ -54,6 +54,11 @@ const initialRobotState = undefined;
 
 const [robotState, setRobotState] = createSignal(initialRobotState);
 
+/** @type {Position[]} */
+const initialJogSequence = [];
+const [jogSequence, setJogSequence] = createSignal(initialJogSequence);
+export { jogSequence, setJogSequence };
+
 function loadRobot() {
   get("/api/robot").then(setRobotState);
 }
