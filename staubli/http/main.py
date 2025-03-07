@@ -63,8 +63,6 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
         }
     
     def api_jog(self, data):
-        print("API_JOG PLS")
-        print(data)
         if "effector" in data:
             el = data["effector"]
             effector_location = EffectorLocation(
