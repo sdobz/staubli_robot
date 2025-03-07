@@ -15,7 +15,8 @@ import {
   MeshPhongMaterial,
   Vector3,
   Box3,
-  ArrowHelper
+  ArrowHelper,
+  Euler,
 } from "./vendor/three/three.js";
 import { OrbitControls } from "./vendor/three/OrbitControls.js";
 import URDFLoader from "./vendor/urdf/URDFLoader.js";
@@ -24,10 +25,12 @@ import { html } from "./lib/component.js";
 import { createEffect } from "./lib/state.js";
 import { robotState } from "./robot.js";
 import { jogSequence, sequenceState, setJogSequence } from "./jog-sequence.js";
+import { STLLoader } from "./vendor/three/STLLoader.js";
 
 /** @import { URDFJoint, URDFRobot } from "./vendor/urdf/URDFClasses.js"; */
 /** @import { Position, JointPosition } from './robot.js' */
 
+const mmToM = 1 / 1000;
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
 
 const robot3DTemplate = html` <div id="robot-3d"></div> `;
@@ -62,6 +65,9 @@ class Robot3D extends HTMLElement {
     /** @type {ArrowHelper[]} */
     this.arrows = [];
 
+    /** @type {Mesh | undefined} */
+    this.effector = undefined;
+
     let scene, camera, renderer, orbit;
     scene = new Scene();
     scene.background = new Color(0x263238);
@@ -71,6 +77,7 @@ class Robot3D extends HTMLElement {
     camera.position.set(2, 2, 2);
     camera.lookAt(0, 0, 0);
     camera.layers.enable(1);
+    camera.up.set(0, 0, 1);
 
     renderer = new WebGLRenderer({ antialias: true });
     renderer.outputEncoding = SRGBColorSpace;
@@ -80,7 +87,7 @@ class Robot3D extends HTMLElement {
     const directionalLight = new DirectionalLight(0xffffff, 1.0);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.setScalar(1024);
-    directionalLight.position.set(5, 30, 5);
+    directionalLight.position.set(5, 5, 30);
     scene.add(directionalLight);
 
     const ambientLight = new AmbientLight(0xffffff, 0.2);
@@ -90,7 +97,6 @@ class Robot3D extends HTMLElement {
       new PlaneGeometry(),
       new ShadowMaterial({ opacity: 0.25 })
     );
-    ground.rotation.x = -Math.PI / 2;
     ground.scale.setScalar(30);
     ground.receiveShadow = true;
     scene.add(ground);
@@ -109,13 +115,16 @@ class Robot3D extends HTMLElement {
       staubli_tx90_support: "/urdf/staubli_tx90_support",
     };
     loader.load("/urdf/staubli_tx90_support/urdf/tx90.urdf", (result) => {
-      /** @type {URDFRobot} */
+      /** @type {URDFRobot | undefined} */
       this.robot = result;
     });
 
     manager.onLoad = () => {
+      if (!this.robot) {
+        console.error("Manager load without robot")
+        return
+      }
       const state = robotState();
-      this.robot.rotation.x = -Math.PI / 2;
       this.robot.traverse((c) => {
         c.castShadow = true;
       });
@@ -126,7 +135,39 @@ class Robot3D extends HTMLElement {
       fitCameraToSelection(camera, orbit, [this.robot]);
 
       scene.add(this.robot);
+      this.updateRobots();
     };
+
+    const effectorColor = "#00FF00";
+    this.effectorMaterial = new MeshPhongMaterial({
+      shininess: 10,
+      color: effectorColor,
+      emissive: effectorColor,
+      emissiveIntensity: 0.25,
+      opacity: 0.75,
+      transparent: true,
+      depthTest: false,
+    });
+
+    const stlLoader = new STLLoader();
+    stlLoader.load(
+      "effectors/flange.stl",
+      (geometry) => {
+        const mesh = new Mesh(geometry, this.effectorMaterial);
+        mesh.scale.x = mmToM;
+        mesh.scale.y = mmToM;
+        mesh.scale.z = mmToM;
+        this.effector = mesh;
+        scene.add(mesh);
+        this.updateRobots();
+      },
+      (xhr) => {
+        console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+      },
+      (error) => {
+        console.log(error);
+      }
+    );
 
     const shadowRoot = this.attachShadow({ mode: "open" });
     document.querySelectorAll("link").forEach((linkElement) => {
@@ -166,17 +207,40 @@ class Robot3D extends HTMLElement {
       return;
     }
 
+    if (!this.robot) {
+      console.error("Robot not loaded")
+      return
+    }
+
+    if (currentRobotState.position.effector && this.effector) {
+      const { x, y, z, pitch, yaw, roll } = currentRobotState.position.effector;
+      // rpy = ZYX
+      // pyr = YXZ
+      this.effector.position.x = x * mmToM;
+      this.effector.position.y = y * mmToM;
+      this.effector.position.z = z * mmToM;
+      this.effector.setRotationFromEuler(
+        new Euler(
+          MathUtils.degToRad(pitch),
+          MathUtils.degToRad(yaw),
+          MathUtils.degToRad(roll),
+          "YXZ"
+        )
+      );
+      this.effector.updateMatrixWorld(true);
+    }
+
     // This was one of those bits of code that was way harder to write than it looks
     // The goal is that there is a trail of ghosts behind the "intended position", where the "current position" looks different
     // If there is no sequence then the "intended position" is the real robot
     this.purgeGhosts();
-    this.purgeArrows()
+    this.purgeArrows();
 
     const currentPosition = currentRobotState.position;
     let sequenceToRender = [currentPosition, ...currentSequence];
 
     if (this.dragging) {
-      sequenceToRender.push(sequenceToRender[sequenceToRender.length - 1])
+      sequenceToRender.push(sequenceToRender[sequenceToRender.length - 1]);
     }
 
     /** @type {Array<readonly [URDFRobot, Position]>} */
@@ -206,6 +270,9 @@ class Robot3D extends HTMLElement {
    * @param {JointPosition} jointPosition
    */
   updateRobot(robot, jointPosition) {
+    if (!robot.joints) {
+      console.error("Robot no joints");
+    }
     /** @type {Record<string, URDFJoint>} */
     const robotJoints = /** @type{any} */ (robot.joints);
     for (let i = 1; i <= 6; i++) {
@@ -221,10 +288,10 @@ class Robot3D extends HTMLElement {
 
   purgeArrows() {
     this.arrows.forEach((arrow) => {
-      this.scene.remove(arrow)
-      arrow.dispose()
-    })
-    this.arrows = []
+      this.scene.remove(arrow);
+      arrow.dispose();
+    });
+    this.arrows = [];
   }
   purgeGhosts() {
     this.ghosts.forEach((ghost) => {
@@ -252,19 +319,19 @@ class Robot3D extends HTMLElement {
   }
 
   /**
-   * 
-   * @param {Vector3} from 
-   * @param {Vector3} to 
+   *
+   * @param {Vector3} from
+   * @param {Vector3} to
    */
   createArrow(from, to) {
-    const direction = to.copy()
-    direction.sub(from)
-    const length = direction.length()
-    direction.normalize()
+    const direction = to.copy();
+    direction.sub(from);
+    const length = direction.length();
+    direction.normalize();
 
-    const arrow = new ArrowHelper(direction, from, length, 0xFFFFFF)
-    this.arrows.push(arrow)
-    this.scene.add(arrow)
+    const arrow = new ArrowHelper(direction, from, length, 0xffffff);
+    this.arrows.push(arrow);
+    this.scene.add(arrow);
   }
 
   setupURDFControl(scene, camera, orbit, renderer) {
