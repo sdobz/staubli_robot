@@ -23,3 +23,7 @@ pre.current {
   width: 50vw;
   aspect-ratio: 16 / 9;
 }
+
+button:is([aria-current]:not([aria-current=false])) {
+  border-bottom: 0.2rem solid var(--pico-color);
+}

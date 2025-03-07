@@ -120,7 +120,7 @@ createComponent({
   tag: "jog-sequence-control",
   template: html`
     <div class="vertical-stack">
-      <div class="horizontal-stack">
+      <div class="grid">
         <button class="sequence-purge">X</button>
         <button class="sequence-active">&amp;</button>
       </div>
@@ -132,6 +132,7 @@ createComponent({
     const currentSequence = jogSequence();
 
     const isActive = currentState.active;
+    const isEmpty = currentSequence.length === 0
 
     function purgeSequence() {
       if (isActive) {
@@ -156,6 +157,9 @@ createComponent({
 
     return {
       ".sequence-purge": {
+        attributes: {
+            disabled: isEmpty ? "true" : undefined
+        },
         eventListeners: {
           click: purgeSequence,
         },
@@ -163,6 +167,9 @@ createComponent({
       ".sequence-active": {
         properties: {
           innerHTML: isActive ? "||" : ">",
+        },
+        attributes: {
+            disabled: isEmpty ? "true" : undefined
         },
         eventListeners: {
           click: toggleActive,
