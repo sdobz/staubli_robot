@@ -242,6 +242,9 @@ export class PointerURDFDragControls extends URDFDragControls {
         }
 
         this._mouseDown = e => {
+            if (!this.enabled) {
+                return
+            }
 
             updateMouse(e);
             raycaster.setFromCamera(mouse, this.camera);
@@ -251,6 +254,9 @@ export class PointerURDFDragControls extends URDFDragControls {
         };
 
         this._mouseMove = e => {
+            if (!this.enabled) {
+                return
+            }
 
             updateMouse(e);
             raycaster.setFromCamera(mouse, this.camera);
@@ -259,6 +265,9 @@ export class PointerURDFDragControls extends URDFDragControls {
         };
 
         this._mouseUp = e => {
+            if (!this.enabled) {
+                return
+            }
 
             updateMouse(e);
             raycaster.setFromCamera(mouse, this.camera);
