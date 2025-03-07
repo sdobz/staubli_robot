@@ -15,13 +15,18 @@ import {
   MeshPhongMaterial,
   Vector3,
   Box3,
+  ArrowHelper
 } from "./vendor/three/three.js";
 import { OrbitControls } from "./vendor/three/OrbitControls.js";
 import URDFLoader from "./vendor/urdf/URDFLoader.js";
 import { PointerURDFDragControls } from "./vendor/urdf/URDFDragControls.js";
 import { html } from "./lib/component.js";
 import { createEffect } from "./lib/state.js";
-import { jogSequence, robotState, setJogSequence } from "./robot.js";
+import { robotState } from "./robot.js";
+import { jogSequence, sequenceState, setJogSequence } from "./jog-sequence.js";
+
+/** @import { URDFJoint, URDFRobot } from "./vendor/urdf/URDFClasses.js"; */
+/** @import { Position, JointPosition } from './robot.js' */
 
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
 
@@ -41,12 +46,28 @@ class Robot3D extends HTMLElement {
       opacity: 0.2,
       transparent: true,
     });
+    const followColor = "#FFFF00";
+    this.followMaterial = new MeshPhongMaterial({
+      shininess: 10,
+      color: followColor,
+      emissive: followColor,
+      emissiveIntensity: 0.25,
+      opacity: 0.2,
+      transparent: true,
+    });
+
+    this.dragging = false;
+    /** @type {URDFRobot[]} */
+    this.ghosts = [];
+    /** @type {ArrowHelper[]} */
+    this.arrows = [];
 
     let scene, camera, renderer, orbit;
     scene = new Scene();
     scene.background = new Color(0x263238);
 
     camera = new PerspectiveCamera();
+    // @ts-ignore
     camera.position.set(2, 2, 2);
     camera.lookAt(0, 0, 0);
     camera.layers.enable(1);
@@ -88,18 +109,19 @@ class Robot3D extends HTMLElement {
       staubli_tx90_support: "/urdf/staubli_tx90_support",
     };
     loader.load("/urdf/staubli_tx90_support/urdf/tx90.urdf", (result) => {
+      /** @type {URDFRobot} */
       this.robot = result;
     });
 
     manager.onLoad = () => {
+      const state = robotState();
       this.robot.rotation.x = -Math.PI / 2;
       this.robot.traverse((c) => {
         c.castShadow = true;
       });
-      for (let i = 1; i <= 6; i++) {
-        this.robot.joints[`joint_${i}`].setJointValue(MathUtils.degToRad(0));
+      if (state?.position.joints) {
+        this.updateRobot(this.robot, state.position.joints);
       }
-      this.robot.updateMatrixWorld(true);
 
       fitCameraToSelection(camera, orbit, [this.robot]);
 
@@ -127,54 +149,122 @@ class Robot3D extends HTMLElement {
 
   bindState() {
     createEffect(() => {
-      const state = robotState();
-      if (!this.robot || !state) {
+      // todo: what happens if this happens in the middle of a drag?
+      this.updateRobots();
+    });
+  }
+
+  updateRobots() {
+    const currentRobotState = robotState();
+    const currentSequenceState = sequenceState();
+    const currentSequence = jogSequence();
+
+    this.dragControls.enabled = !currentSequenceState.active;
+
+    if (!currentRobotState?.position) {
+      console.error("Unable to get current position");
+      return;
+    }
+
+    // This was one of those bits of code that was way harder to write than it looks
+    // The goal is that there is a trail of ghosts behind the "intended position", where the "current position" looks different
+    // If there is no sequence then the "intended position" is the real robot
+    this.purgeGhosts();
+    this.purgeArrows()
+
+    const currentPosition = currentRobotState.position;
+    let sequenceToRender = [currentPosition, ...currentSequence];
+
+    if (this.dragging) {
+      sequenceToRender.push(sequenceToRender[sequenceToRender.length - 1])
+    }
+
+    /** @type {Array<readonly [URDFRobot, Position]>} */
+    sequenceToRender.forEach((position, index) => {
+      if (!position.joints) {
+        console.error("Position without joints");
         return;
       }
+      const isFirst = index === 0;
+      const isLast = index === sequenceToRender.length - 1;
 
-      const robotToMove = this.ghostRobot || this.robot;
+      const robotToUpdate = isLast
+        ? this.robot
+        : this.createGhostRobot(
+            isFirst ? this.followMaterial : this.ghostMaterial
+          );
 
-      for (let i = 1; i <= 6; i++) {
-        robotToMove.joints[`joint_${i}`].setJointValue(
-          MathUtils.degToRad(state.position.joints[`j${i}`] - jointOffset[i])
-        );
-      }
-
-      robotToMove.updateMatrixWorld(true);
+      this.updateRobot(robotToUpdate, position.joints);
     });
 
-    createEffect(() => {
-      const currentSequence = jogSequence();
-
-      if (currentSequence.length === 0 && this.ghostRobot) {
-        this.destroyGhostRobot();
-      }
-    });
+    this.render();
   }
 
-  createGhostRobot() {
-    if (!this.robot) {
-      return;
+  /**
+   *
+   * @param {URDFRobot} robot
+   * @param {JointPosition} jointPosition
+   */
+  updateRobot(robot, jointPosition) {
+    /** @type {Record<string, URDFJoint>} */
+    const robotJoints = /** @type{any} */ (robot.joints);
+    for (let i = 1; i <= 6; i++) {
+      const joint = robotJoints[`joint_${i}`];
+      const jointPositionAngle = jointPosition[`j${i}`];
+      joint.setJointValue(
+        MathUtils.degToRad(jointPositionAngle - jointOffset[i])
+      );
     }
-    this.destroyGhostRobot();
 
-    this.ghostRobot = this.robot.clone();
-    this.ghostRobot.traverse((c) => {
+    robot.updateMatrixWorld(true);
+  }
+
+  purgeArrows() {
+    this.arrows.forEach((arrow) => {
+      this.scene.remove(arrow)
+      arrow.dispose()
+    })
+    this.arrows = []
+  }
+  purgeGhosts() {
+    this.ghosts.forEach((ghost) => {
+      this.scene.remove(ghost);
+    });
+    this.ghosts = [];
+  }
+
+  /**
+   *
+   * @param {MeshPhongMaterial} material
+   * @returns
+   */
+  createGhostRobot(material) {
+    /** @type {URDFRobot} */
+    const ghostRobot = this.robot.clone();
+    ghostRobot.traverse((c) => {
       c.castShadow = false;
-      c.material = this.ghostMaterial;
+      c.material = material;
       c.layers.set(1);
     });
-
-    this.scene.add(this.ghostRobot)
+    this.scene.add(ghostRobot);
+    this.ghosts.push(ghostRobot);
+    return ghostRobot;
   }
 
-  destroyGhostRobot() {
-    if (!this.ghostRobot) {
-      return;
-    }
-    console.log("Destroying")
-    this.scene.remove(this.ghostRobot);
-    delete this.ghostRobot;
+  /**
+   * 
+   * @param {Vector3} from 
+   * @param {Vector3} to 
+   */
+  createArrow(from, to) {
+    const direction = to.copy()
+    direction.sub(from)
+    const length = direction.length()
+    direction.normalize()
+
+    const arrow = new ArrowHelper(direction, from, length, 0xFFFFFF)
+    this.arrows.push(arrow)
+    this.scene.add(arrow)
   }
 
   setupURDFControl(scene, camera, orbit, renderer) {
@@ -227,14 +317,14 @@ class Robot3D extends HTMLElement {
     );
     dragControls.onDragStart = (joint) => {
       orbit.enabled = false;
-      if (!this.ghostRobot) {
-        this.createGhostRobot();
-      }
+      this.dragging = true;
+      this.updateRobots();
       this.render();
     };
     dragControls.onDragEnd = (joint) => {
       orbit.enabled = true;
-      this.appendJogSequence(joint.name, joint.angle);
+      this.dragging = false;
+      this.appendJogSequence(joint.name, joint.angle); // implicit updateRobots
       this.render();
     };
     dragControls.updateJoint = (joint, angle) => {
@@ -253,21 +343,36 @@ class Robot3D extends HTMLElement {
   }
 
   appendJogSequence(name, angle) {
-    const jointId = parseInt(name.split("_")[1])
+    const jointId = parseInt(name.split("_")[1]);
     const jointPositionKey = `j${jointId}`;
 
     const offsetAngleDeg = MathUtils.radToDeg(angle) + jointOffset[jointId];
 
+    const sequence = jogSequence();
+    const state = robotState();
+    const lastPosition =
+      sequence.length > 0
+        ? sequence[sequence.length - 1].joints
+        : state?.position.joints;
+
+    if (!lastPosition) {
+      console.error("Unable to get reference position");
+      return;
+    }
+
     /** @type {Position} */
     const nextPosition = {
-      joint: { [jointPositionKey]: offsetAngleDeg },
+      joints: /** @type {any} */ ({
+        ...lastPosition,
+        [jointPositionKey]: offsetAngleDeg,
+      }),
     };
 
-    setJogSequence([...jogSequence(), nextPosition]);
+    setJogSequence([...sequence, nextPosition]);
   }
 
   setJointValue(name, angle) {
-    this.robot.joints[name].setJointValue(angle);
+    this.robot.joints?.[name].setJointValue(angle);
   }
 
   onResize() {
@@ -301,11 +406,6 @@ class Robot3D extends HTMLElement {
 
   adoptedCallback() {
     console.log("Custom element moved to new page.");
-  }
-
-  attributeChangedCallback(name, oldValue, newValue) {
-    const attrs = this.getAllAttributes();
-    this.setAttrsSignal(attrs);
   }
 }
 

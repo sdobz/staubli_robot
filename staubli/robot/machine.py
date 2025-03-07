@@ -23,6 +23,7 @@ class EffectorLocation:
         return f"{self.x:3f}, {self.y:3f}, {self.z:3f}, {self.yaw:3f}, {self.pitch:3f}, {self.roll:3f}"
 
 
+joint_attrs = ['j1', 'j2', 'j3', 'j4', 'j5', 'j6']
 @dataclass
 class JointLocation:
     j1: float
@@ -32,6 +33,18 @@ class JointLocation:
     j5: float
     j6: float
 
+    def format(self) -> str:
+        return f"{self.j1:3f}, {self.j2:3f}, {self.j3:3f}, {self.j4:3f}, {self.j5:3f}, {self.j6:3f}"
+
+    def __sub__(self, other):
+        return JointLocation(
+            self.j1 - other.j1,
+            self.j2 - other.j2,
+            self.j3 - other.j3,
+            self.j4 - other.j4,
+            self.j5 - other.j5,
+            self.j6 - other.j6,
+        )
 
 class Robot:
     def __init__(self, serial):
@@ -117,6 +130,18 @@ class Robot:
         self._write_command("do move jog0")
         self._readline()
         self._read_dot()
+    
+    def jog_joint(self, joint_location: JointLocation, speed: int):
+        where = self.where()
+        delta = joint_location - where[1]
+        for joint_attr in joint_attrs:
+            joint_number = joint_attr[1]
+            delta_angle = getattr(delta, joint_attr)
+            if delta_angle == 0:
+                continue
+            self._write_command(f"do drive {joint_number},{delta_angle:3f},{speed}")
+            self._readline()
+            self._read_dot()
 
     def above(self):
         self._write_command("do above")

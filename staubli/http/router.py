@@ -28,18 +28,27 @@ class RoutingStaticHTTPRequestHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_PUT(self):
-        # content_length = int(self.headers['Content-Length'])
-        # post_data = self.rfile.read(content_length)
-        # data = json.loads(post_data)
         parsed_path = urlparse(self.path)
-
         attr = parsed_path.path[1:].replace("/", "_")
-        if hasattr(self, attr):
-            response = getattr(self, attr)(**parse_qs(parsed_path.params))
-            self._send_response(200, response)
+        if not hasattr(self, attr):
+            self._send_404()
             return
+        
+        api_func = getattr(self, attr)
+        attrs = parse_qs(parsed_path.params)
 
-        self._send_404()
+        content_length = int(self.headers['Content-Length'])
+
+        if content_length > 0:
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data)
+            response = api_func(data=data, **attrs)
+        else:
+            response = api_func(**attrs)
+
+        self._send_response(200, response)
+        return
+
 
     def _send_404(self):
         self._send_response(404, {})

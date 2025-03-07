@@ -13,7 +13,7 @@ Updates attrs for values
 
 import { createEffect, createSignal } from "./state.js";
 
-/** @type {(strings: string[]) => HTMLTemplateElement} */
+/** @type {(strings: TemplateStringsArray) => HTMLTemplateElement} */
 export function html(strings) {
   const templateElement = document.createElement("template");
   templateElement.innerHTML = strings.join("");
@@ -23,7 +23,7 @@ export function html(strings) {
 /**
  * @typedef {Record<string, {
  *   innerHTML?: string,
- *   attributes?: Record<string, string>,
+ *   attributes?: Record<string, string | undefined>,
  *   eventListeners?: Record<string, (e: Event) => void>,
  *   properties?: Record<string, any>
  * }>} AttrMap
@@ -47,7 +47,7 @@ export function createComponent({
       const boundAttrsFn = attrsFn.bind(this);
       const state = stateFn ? stateFn() : undefined;
 
-      const [attrs, setAttrs] = createSignal();
+      const [attrs, setAttrs] = createSignal({});
       this.attrsSignal = attrs;
       this.setAttrsSignal = setAttrs;
 
@@ -106,7 +106,7 @@ export function createComponent({
 
       this.eventListeners = [];
       for (const [selector, updates] of Object.entries(attrMap)) {
-        const elements = this.shadowRoot.querySelectorAll(selector);
+        const elements = this.shadowRoot?.querySelectorAll(selector) ?? [];
         const { eventListeners, innerHTML, attributes, properties } = updates;
 
         for (const element of elements) {

@@ -1,0 +1,5 @@
+{
+    "js/ts.implicitProjectConfig.checkJs": true,
+    "javascript.inlayHints.parameterTypes.enabled": true,
+    "javascript.inlayHints.functionLikeReturnTypes.enabled": true,
+}

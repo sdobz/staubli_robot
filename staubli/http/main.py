@@ -4,7 +4,7 @@ from functools import partial
 
 from staubli.config import Config, env_exists
 from staubli.robot.main import Main, ControllerDelegate
-from staubli.robot.machine import EffectorLocation
+from staubli.robot.machine import EffectorLocation, JointLocation
 from .router import RoutingStaticHTTPRequestHandler
 
 class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
@@ -61,6 +61,35 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
         return {
             "position": self._position()
         }
+    
+    def api_jog(self, data):
+        print("API_JOG PLS")
+        print(data)
+        if "effector" in data:
+            el = data["effector"]
+            effector_location = EffectorLocation(
+                el["x"],
+                el["y"],
+                el["z"],
+                el["pitch"],
+                el["yaw"],
+                el["roll"]
+            )
+            self.controller.robot.jog_absolute(effector_location)
+            return self.api_position()
+        if "joints" in data:
+            j = data["joints"]
+            joint_location = JointLocation(
+                j["j1"] if "j1" in j else 0,
+                j["j2"] if "j2" in j else 0,
+                j["j3"] if "j3" in j else 0,
+                j["j4"] if "j4" in j else 0,
+                j["j5"] if "j5" in j else 0,
+                j["j6"] if "j6" in j else 0,
+            )
+            self.controller.robot.jog_joint(joint_location, 20)
+            return self.api_position()
+
 
     def api_up(self):
         self.controller.on_up()
