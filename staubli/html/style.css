@@ -20,10 +20,20 @@ pre.current {
 }
 
 #robot-3d {
-  width: 50vw;
-  aspect-ratio: 16 / 9;
+  width: 33vw;
+  max-height: 100vh;
+  aspect-ratio: 1;
 }
 
 button:is([aria-current]:not([aria-current=false])) {
   border-bottom: 0.2rem solid var(--pico-color);
+}
+
+/* Use stacks to control spacing */
+article {
+  margin-bottom: 0;
+}
+
+[role="search"], [role="group"] {
+  margin-bottom: 0;
 }

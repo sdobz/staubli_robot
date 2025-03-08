@@ -21,6 +21,16 @@ class EffectorLocation:
 
     def format(self) -> str:
         return f"{self.x:3f}, {self.y:3f}, {self.z:3f}, {self.yaw:3f}, {self.pitch:3f}, {self.roll:3f}"
+    
+    def __sub__(self, other):
+        return EffectorLocation(
+            self.x - other.x,
+            self.y - other.y,
+            self.z - other.z,
+            self.yaw - other.yaw,
+            self.pitch - other.pitch,
+            self.roll - other.roll
+        )
 
 
 joint_attrs = ['j1', 'j2', 'j3', 'j4', 'j5', 'j6']

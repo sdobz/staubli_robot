@@ -17,7 +17,6 @@ import {
   Box3,
   ArrowHelper,
   Euler,
-  Quaternion,
 } from "./vendor/three/three.js";
 import { OrbitControls } from "./vendor/three/OrbitControls.js";
 import URDFLoader from "./vendor/urdf/URDFLoader.js";
@@ -25,14 +24,15 @@ import { PointerURDFDragControls } from "./vendor/urdf/URDFDragControls.js";
 import { html } from "./lib/component.js";
 import { createEffect } from "./lib/state.js";
 import { robotState } from "./robot.js";
-import { jogSequence, sequenceState, setJogSequence } from "./jog-sequence.js";
+import { jogSequence, setJogSequence } from "./jog-sequence.js";
 import { STLLoader } from "./vendor/three/STLLoader.js";
 import { jogState } from "./3d/jog-control.js";
 import { TransformControls } from "./vendor/three/TransformControls.js";
 
 /** @import { URDFJoint, URDFRobot } from "./vendor/urdf/URDFClasses.js"; */
-/** @import { Position, JointPosition, EffectorPosition } from './robot.js' */
+/** @import { JointPosition, EffectorPosition } from './robot.js' */
 /** @import { Object3D } from './vendor/three/three.js' */
+/** @import {JogItem} from './jog-sequence.js' */
 
 const mmToM = 1 / 1000;
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
@@ -120,7 +120,7 @@ class Robot3D extends HTMLElement {
     this.renderer = renderer;
     this.camera = camera;
     this.scene = scene;
-    this.orbit = orbit
+    this.orbit = orbit;
 
     // Load robot
     const manager = new LoadingManager();
@@ -193,7 +193,6 @@ class Robot3D extends HTMLElement {
 
     shadowRoot.appendChild(templateContents);
 
-
     this.onResize();
     this.bindState();
     window.addEventListener("resize", this.onResize.bind(this));
@@ -210,27 +209,25 @@ class Robot3D extends HTMLElement {
 
       const dragControlsEnabled = currentJogState.mode === "drag-joint";
       if (dragControlsEnabled) {
-        this.setupURDFControl()
-      }
-      else {
-        this.removeURDFControl()
+        this.setupURDFControl();
+      } else {
+        this.removeURDFControl();
       }
 
       const effectorControlEnabled =
         currentJogState.mode === "rotate-effector" ||
         currentJogState.mode === "translate-effector";
-      
+
       if (effectorControlEnabled) {
-        const controls = this.setupEffectorControls()
+        const controls = this.setupEffectorControls();
         if (currentJogState.mode === "rotate-effector") {
           controls.setMode("rotate");
         }
         if (currentJogState.mode === "translate-effector") {
           controls.setMode("translate");
         }
-      }
-      else {
-        this.removeEffectorControls()
+      } else {
+        this.removeEffectorControls();
       }
     });
   }
@@ -240,7 +237,6 @@ class Robot3D extends HTMLElement {
     const currentSequence = jogSequence();
 
     if (!currentRobotState?.position) {
-      console.log(currentRobotState)
       console.error("Unable to get current position");
       return;
     }
@@ -257,13 +253,13 @@ class Robot3D extends HTMLElement {
     this.purgeArrows();
 
     const currentPosition = currentRobotState.position;
-    let sequenceToRender = [currentPosition, ...currentSequence];
+    let sequenceToRender = [{ position: currentPosition }, ...currentSequence];
 
     if (this.dragging) {
       sequenceToRender.push(sequenceToRender[sequenceToRender.length - 1]);
     }
 
-    sequenceToRender.forEach((position, index) => {
+    sequenceToRender.forEach(({ position }, index) => {
       if (!position.joints) {
         console.error("Position without joints");
         return;
@@ -280,7 +276,7 @@ class Robot3D extends HTMLElement {
       this.updateRobot(robotToUpdate, position.joints);
     });
 
-    sequenceToRender.forEach((position, index) => {
+    sequenceToRender.forEach(({ position }, index) => {
       if (!position.effector) {
         console.error("Position without effector");
         return;
@@ -328,7 +324,6 @@ class Robot3D extends HTMLElement {
    * @param {EffectorPosition} effectorPosition
    */
   updateEffector(effector, effectorPosition) {
-    console.log(effector, effectorPosition)
     const { x, y, z, pitch, yaw, roll } = effectorPosition;
     effector.position.x = x * mmToM;
     effector.position.y = y * mmToM;
@@ -412,7 +407,7 @@ class Robot3D extends HTMLElement {
 
   setupURDFControl() {
     if (this.dragControls) {
-      return
+      return;
     }
 
     const isJoint = (j) => {
@@ -481,8 +476,8 @@ class Robot3D extends HTMLElement {
   }
 
   removeURDFControl() {
-    this.dragControls?.dispose()
-    delete this.dragControls
+    this.dragControls?.dispose();
+    delete this.dragControls;
   }
 
   appendJointSequence(name, angle) {
@@ -493,25 +488,29 @@ class Robot3D extends HTMLElement {
 
     const sequence = jogSequence();
     const state = robotState();
-    const lastPosition =
-      sequence.length > 0
-        ? sequence[sequence.length - 1].joints
-        : state?.position.joints;
 
-    if (!lastPosition) {
+    console.log(sequence);
+    const lastJoints =
+      sequence.findLast((item) => !!item.position.joints)?.position.joints ??
+      state?.position.joints;
+
+    if (!lastJoints) {
       console.error("Unable to get reference position");
       return;
     }
 
-    /** @type {Position} */
-    const nextPosition = {
-      joints: /** @type {any} */ ({
-        ...lastPosition,
-        [jointPositionKey]: offsetAngleDeg,
-      }),
+    /** @type {JogItem} */
+    const nextItem = {
+      name: new Date().toISOString(),
+      position: {
+        joints: /** @type {any} */ ({
+          ...lastJoints,
+          [jointPositionKey]: offsetAngleDeg,
+        }),
+      },
     };
 
-    setJogSequence([...sequence, nextPosition]);
+    setJogSequence([...sequence, nextItem]);
   }
 
   setJointValue(name, angle) {
@@ -524,10 +523,13 @@ class Robot3D extends HTMLElement {
 
   setupEffectorControls() {
     if (this.transformControls) {
-      return this.transformControls
+      return this.transformControls;
     }
 
-    this.transformControls = new TransformControls(this.camera, this.renderer.domElement);
+    this.transformControls = new TransformControls(
+      this.camera,
+      this.renderer.domElement
+    );
     this.transformControls.addEventListener("change", () => this.render());
     this.transformControls.addEventListener("dragging-changed", (event) => {
       const isDragging = event.value;
@@ -545,23 +547,23 @@ class Robot3D extends HTMLElement {
     });
 
     if (this.effector) {
-      this.transformControls.attach(this.effector)
+      this.transformControls.attach(this.effector);
     }
 
     const gizmo = this.transformControls.getHelper();
     this.scene.add(gizmo);
-    return this.transformControls
+    return this.transformControls;
   }
 
   removeEffectorControls() {
     if (!this.transformControls) {
-      return
+      return;
     }
 
     const gizmo = this.transformControls.getHelper();
     this.scene.remove(gizmo);
-    this.transformControls.dispose()
-    delete this.transformControls
+    this.transformControls.dispose();
+    delete this.transformControls;
   }
 
   /**
@@ -569,19 +571,21 @@ class Robot3D extends HTMLElement {
    * @param {Object3D} effector
    */
   appendEffectorSequence(effector) {
-
     const currentSequence = jogSequence();
     // pyr = YXZ
     setJogSequence([
       ...currentSequence,
       {
-        effector: {
-          x: effector.position.x / mmToM,
-          y: effector.position.y / mmToM,
-          z: effector.position.z / mmToM,
-          pitch: MathUtils.radToDeg(effector.rotation.y),
-          yaw: MathUtils.radToDeg(effector.rotation.z),
-          roll: MathUtils.radToDeg(effector.rotation.x),
+        name: new Date().toISOString(),
+        position: {
+          effector: {
+            x: effector.position.x / mmToM,
+            y: effector.position.y / mmToM,
+            z: effector.position.z / mmToM,
+            pitch: MathUtils.radToDeg(effector.rotation.y),
+            yaw: MathUtils.radToDeg(effector.rotation.z),
+            roll: MathUtils.radToDeg(effector.rotation.x),
+          },
         },
       },
     ]);

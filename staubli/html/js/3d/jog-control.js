@@ -3,7 +3,7 @@
  */
 
 import { createComponent, html } from "../lib/component.js";
-import { createEffect, createSignal } from "../lib/state.js";
+import { createSignal } from "../lib/state.js";
 
 /**
  * @typedef {Object} JogState
@@ -18,11 +18,14 @@ export { jogState };
 createComponent({
   tag: "jog-control",
   template: html`
-    <div role="group">
-      <button data-mode="translate-effector">Translate</button>
-      <button data-mode="rotate-effector">Rotate</button>
-      <button data-mode="drag-joint">Joint</button>
-    </div>
+    <article>
+      <h3>Viewport Jog Mode</h3>
+      <div role="group">
+        <button data-mode="translate-effector">Translate</button>
+        <button data-mode="rotate-effector">Rotate</button>
+        <button data-mode="drag-joint">Joint</button>
+      </div>
+    </article>
   `,
   attrsFn: (_state, attrs) => {
     const currentJogState = jogState();
