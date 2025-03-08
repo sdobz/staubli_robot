@@ -80,7 +80,6 @@ class Robot3D extends HTMLElement {
       depthTest: false,
     });
 
-
     this.dragging = false;
     /** @type {Object3D[]} */
     this.ghosts = [];
@@ -164,7 +163,6 @@ class Robot3D extends HTMLElement {
       this.updateRobots();
     };
 
-
     const stlLoader = new STLLoader();
     stlLoader.load(
       "effectors/flange.stl",
@@ -222,6 +220,7 @@ class Robot3D extends HTMLElement {
 
       if (effectorControlEnabled) {
         const controls = this.setupEffectorControls();
+        controls.setSpace(currentJogState.space);
         if (currentJogState.mode === "rotate-effector") {
           controls.setMode("rotate");
         }
@@ -343,6 +342,7 @@ class Robot3D extends HTMLElement {
         "ZXY"
       )
     );
+
 
     effector.updateMatrixWorld(true);
   }
