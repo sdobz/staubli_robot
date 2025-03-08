@@ -23,7 +23,7 @@ export { jogState };
 createComponent({
   tag: "jog-control",
   template: html`
-    <article>
+    <article class="vertical-stack">
       <h3>Viewport Jog Mode</h3>
       <div role="group">
         <button data-mode="translate-effector">Translate</button>
