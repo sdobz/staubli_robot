@@ -11,65 +11,61 @@ import { createEffect, createSignal } from "../lib/state.js";
  */
 
 const [jogState, setJogState] = createSignal({
-  mode: "drag-joint",
+  mode: /** @type {JogMode} */ ("drag-joint"),
 });
-
-createEffect(() => {
-    console.log("JOG STATE")
-    console.log(jogState())
-})
+export { jogState };
 
 createComponent({
   tag: "jog-control",
   template: html`
     <div role="group">
-      <button data-mode="translate-effector">Rotate</button>
-      <button data-mode="rotate-effector">Translate</button>
+      <button data-mode="translate-effector">Translate</button>
+      <button data-mode="rotate-effector">Rotate</button>
       <button data-mode="drag-joint">Joint</button>
     </div>
   `,
   attrsFn: (_state, attrs) => {
-    const currentJogState = jogState()
+    const currentJogState = jogState();
     /**
-     * 
-     * @param {JogMode} mode 
+     *
+     * @param {JogMode} mode
      */
     function setMode(mode) {
-        setJogState({
-            ...currentJogState,
-            mode
-        })
+      setJogState({
+        ...currentJogState,
+        mode,
+      });
     }
 
     /**
-     * 
+     *
      * @param {JogMode} checkMode
      */
     function ariaCurrent(checkMode) {
-        return currentJogState.mode === checkMode ? "true" : undefined
+      return currentJogState.mode === checkMode ? "true" : undefined;
     }
 
     /**
-     * 
+     *
      * @param {JogMode} forMode
      */
     function buildAttrs(forMode) {
-        return {
-            [`[data-mode='${forMode}']`]: {
-                eventListeners: {
-                    click: () => setMode(forMode)
-                },
-                attributes: {
-                    "aria-current": ariaCurrent(forMode)
-                }
-            }
-        }
+      return {
+        [`[data-mode='${forMode}']`]: {
+          eventListeners: {
+            click: () => setMode(forMode),
+          },
+          attributes: {
+            "aria-current": ariaCurrent(forMode),
+          },
+        },
+      };
     }
 
     return {
-        ...buildAttrs("translate-effector"),
-        ...buildAttrs("rotate-effector"),
-        ...buildAttrs("drag-joint"),
-    }
-  }
+      ...buildAttrs("translate-effector"),
+      ...buildAttrs("rotate-effector"),
+      ...buildAttrs("drag-joint"),
+    };
+  },
 });
