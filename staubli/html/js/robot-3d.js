@@ -62,6 +62,13 @@ class Robot3D extends HTMLElement {
       opacity: 0.2,
       transparent: true,
     });
+    const highlightColor = "#FFFFFF";
+    this.highlightMaterial = new MeshPhongMaterial({
+      shininess: 10,
+      color: highlightColor,
+      emissive: highlightColor,
+      emissiveIntensity: 0.25,
+    });
 
     this.dragging = false;
     /** @type {Object3D[]} */
@@ -114,8 +121,6 @@ class Robot3D extends HTMLElement {
     this.camera = camera;
     this.scene = scene;
     this.orbit = orbit
-
-    this.dragControls = this.setupURDFControl(scene, camera, orbit, renderer);
 
     // Load robot
     const manager = new LoadingManager();
@@ -203,7 +208,13 @@ class Robot3D extends HTMLElement {
     createEffect(() => {
       const currentJogState = jogState();
 
-      // this.dragControls.enabled = currentJogState.mode === "drag-joint";
+      const dragControlsEnabled = currentJogState.mode === "drag-joint";
+      if (dragControlsEnabled) {
+        this.setupURDFControl()
+      }
+      else {
+        this.removeURDFControl()
+      }
 
       const effectorControlEnabled =
         currentJogState.mode === "rotate-effector" ||
@@ -226,10 +237,7 @@ class Robot3D extends HTMLElement {
 
   updateRobots() {
     const currentRobotState = robotState();
-    const currentSequenceState = sequenceState();
     const currentSequence = jogSequence();
-
-    this.dragControls.enabled = !currentSequenceState.active;
 
     if (!currentRobotState?.position) {
       console.log(currentRobotState)
@@ -320,18 +328,16 @@ class Robot3D extends HTMLElement {
    * @param {EffectorPosition} effectorPosition
    */
   updateEffector(effector, effectorPosition) {
+    console.log(effector, effectorPosition)
     const { x, y, z, pitch, yaw, roll } = effectorPosition;
-    console.log(effectorPosition)
-    // rpy = ZYX
-    // pyr = YXZ
     effector.position.x = x * mmToM;
     effector.position.y = y * mmToM;
     effector.position.z = z * mmToM;
     effector.setRotationFromEuler(
       new Euler(
         MathUtils.degToRad(pitch),
-        MathUtils.degToRad(yaw),
         MathUtils.degToRad(roll),
+        MathUtils.degToRad(yaw),
         "YXZ"
       )
     );
@@ -404,15 +410,10 @@ class Robot3D extends HTMLElement {
     this.scene.add(arrow);
   }
 
-  setupURDFControl(scene, camera, orbit, renderer) {
-    const highlightColor = "#FFFFFF";
-    // The highlight material
-    this.highlightMaterial = new MeshPhongMaterial({
-      shininess: 10,
-      color: highlightColor,
-      emissive: highlightColor,
-      emissiveIntensity: 0.25,
-    });
+  setupURDFControl() {
+    if (this.dragControls) {
+      return
+    }
 
     const isJoint = (j) => {
       return j.isURDFJoint && j.jointType !== "fixed";
@@ -448,18 +449,18 @@ class Robot3D extends HTMLElement {
     };
 
     const dragControls = new PointerURDFDragControls(
-      scene,
-      camera,
-      renderer.domElement
+      this.scene,
+      this.camera,
+      this.renderer.domElement
     );
     dragControls.onDragStart = (joint) => {
-      orbit.enabled = false;
+      this.orbit.enabled = false;
       this.dragging = true;
       this.updateRobots();
       this.render();
     };
     dragControls.onDragEnd = (joint) => {
-      orbit.enabled = true;
+      this.orbit.enabled = true;
       this.dragging = false;
       this.appendJointSequence(joint.name, joint.angle); // implicit updateRobots
       this.render();
@@ -476,7 +477,12 @@ class Robot3D extends HTMLElement {
       this.render();
     };
 
-    return dragControls;
+    this.dragControls = dragControls;
+  }
+
+  removeURDFControl() {
+    this.dragControls?.dispose()
+    delete this.dragControls
   }
 
   appendJointSequence(name, angle) {
@@ -563,12 +569,6 @@ class Robot3D extends HTMLElement {
    * @param {Object3D} effector
    */
   appendEffectorSequence(effector) {
-    let vec = new Vector3();
-    effector.getWorldPosition(vec);
-    let quat = new Quaternion();
-    effector.getWorldQuaternion(quat);
-    let euler = new Euler();
-    euler.setFromQuaternion(quat);
 
     const currentSequence = jogSequence();
     // pyr = YXZ
@@ -576,12 +576,12 @@ class Robot3D extends HTMLElement {
       ...currentSequence,
       {
         effector: {
-          x: vec.x / mmToM,
-          y: vec.y / mmToM,
-          z: vec.z / mmToM,
-          pitch: MathUtils.radToDeg(euler.y),
-          yaw: MathUtils.radToDeg(euler.x),
-          roll: MathUtils.radToDeg(euler.z),
+          x: effector.position.x / mmToM,
+          y: effector.position.y / mmToM,
+          z: effector.position.z / mmToM,
+          pitch: MathUtils.radToDeg(effector.rotation.y),
+          yaw: MathUtils.radToDeg(effector.rotation.z),
+          roll: MathUtils.radToDeg(effector.rotation.x),
         },
       },
     ]);
