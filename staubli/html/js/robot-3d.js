@@ -69,6 +69,17 @@ class Robot3D extends HTMLElement {
       emissive: highlightColor,
       emissiveIntensity: 0.25,
     });
+    const effectorColor = "#00FF00";
+    this.effectorMaterial = new MeshPhongMaterial({
+      shininess: 10,
+      color: effectorColor,
+      emissive: effectorColor,
+      emissiveIntensity: 0.25,
+      opacity: 1,
+      transparent: true,
+      depthTest: false,
+    });
+
 
     this.dragging = false;
     /** @type {Object3D[]} */
@@ -153,16 +164,6 @@ class Robot3D extends HTMLElement {
       this.updateRobots();
     };
 
-    const effectorColor = "#00FF00";
-    this.effectorMaterial = new MeshPhongMaterial({
-      shininess: 10,
-      color: effectorColor,
-      emissive: effectorColor,
-      emissiveIntensity: 0.25,
-      opacity: 0.75,
-      transparent: true,
-      depthTest: false,
-    });
 
     const stlLoader = new STLLoader();
     stlLoader.load(
