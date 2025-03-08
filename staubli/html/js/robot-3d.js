@@ -575,7 +575,6 @@ class Robot3D extends HTMLElement {
    */
   appendEffectorSequence(effector) {
     const currentSequence = jogSequence();
-
     setJogSequence([
       ...currentSequence,
       {
