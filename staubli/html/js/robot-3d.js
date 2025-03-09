@@ -31,7 +31,7 @@ import { robotState } from "./robot.js";
 import { jogSequence, setJogSequence } from "./jog-sequence.js";
 import { jogState } from "./3d/jog-control.js";
 
-/** @import { URDFJoint, URDFRobot } from "urdf-loaders/URDFClasses"; */
+/** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { Object3D } from 'three' */
 
 /** @import { JointPosition, EffectorPosition } from './robot.js' */

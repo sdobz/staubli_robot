@@ -1,9 +1,10 @@
 {
     "compilerOptions": {
-        "baseUrl": "./",
+        "baseUrl": ".",
         "paths": {
-            "three": ["js/vendor/three"],
-            "gl-matrix": ["vendor/js"]
+            "three": ["js/vendor/three/three.js"],
+            "three/*": ["js/vendor/three/*"],
+            "urdf-loader/*": ["vendor/js/urdf-loader/*"]
         }
     }
 }
