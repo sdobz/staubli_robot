@@ -32,7 +32,10 @@ import { jogState } from "../jog-control.js";
 import {
   createZYZQuaternion,
   fitCameraToSelection,
+  getObjectEffectorPosition,
+  getObjectEffectorWorldPosition,
   quaternionToZYZ,
+  setObjectEffectorPosition,
 } from "./util.js";
 
 import {
@@ -42,6 +45,7 @@ import {
   Solver,
   SOLVE_STATUS,
   setUrdfFromIK,
+  setIKFromUrdf,
 } from "closed-chain-ik-js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
@@ -286,6 +290,7 @@ class Robot3D extends HTMLElement {
     }
 
     let lastRobot;
+    
     sequenceToRender.forEach(({ position, hide }, index) => {
       const isFirst = index === 0;
       const isLast = index === sequenceToRender.length - 1;
@@ -303,13 +308,24 @@ class Robot3D extends HTMLElement {
           );
       robotToUpdate.visible = !hide;
 
+      let displayEffectorPosition = position.effector
+
       if (position.joints) {
         this.updateRobot(robotToUpdate, position.joints);
+
+        if (!displayEffectorPosition) {
+          robotToUpdate.traverse(obj => {
+            if (obj.name === 'tool0') {
+              displayEffectorPosition = getObjectEffectorWorldPosition(obj, this.effectorOffset, mmToM)
+            }
+          })
+        }
       }
       else if (position.effector && lastRobot) {
         // console.log("Position without joints, embarking on IK...");
 
-        const ikRoot = urdfRobotToIKRoot(lastRobot);
+        const ikRoot = urdfRobotToIKRoot(this.robot);
+        setIKFromUrdf(ikRoot, lastRobot)
         ikRoot.setDoF();
         const effectorLink = ikRoot.find(
           (potentialLink) => potentialLink.name === "link_6"
@@ -325,7 +341,7 @@ class Robot3D extends HTMLElement {
         this.updateIK(ikRoot, solver, robotToUpdate);
       }
 
-      if (position.effector) {
+      if (displayEffectorPosition) {
         const effectorToUpdate = isLast
           ? this.effector
           : this.createGhostEffector(
@@ -334,7 +350,7 @@ class Robot3D extends HTMLElement {
 
         effectorToUpdate.visible = !hide;
 
-        this.updateEffector(effectorToUpdate, position.effector);
+        setObjectEffectorPosition(effectorToUpdate, displayEffectorPosition, this.effectorOffset, mmToM)
       }
 
       lastRobot = robotToUpdate;
@@ -397,21 +413,6 @@ class Robot3D extends HTMLElement {
     }
 
     robot.updateMatrixWorld(true);
-  }
-
-  /**
-   *
-   * @param {Object3D} effector
-   * @param {EffectorPosition} effectorPosition
-   */
-  updateEffector(effector, effectorPosition) {
-    const { x, y, z, yaw, pitch, roll } = effectorPosition;
-    effector.position.x = x * mmToM + this.effectorOffset.x;
-    effector.position.y = y * mmToM + this.effectorOffset.y;
-    effector.position.z = z * mmToM + this.effectorOffset.z;
-
-    effector.setRotationFromQuaternion(createZYZQuaternion(yaw, pitch, roll));
-    effector.updateMatrixWorld(true);
   }
 
   /**
@@ -671,13 +672,8 @@ class Robot3D extends HTMLElement {
       {
         name: new Date().toISOString(),
         position: {
-          effector: {
-            x: (effector.position.x - this.effectorOffset.x) / mmToM,
-            y: (effector.position.y - this.effectorOffset.y) / mmToM,
-            z: (effector.position.z - this.effectorOffset.z) / mmToM,
-            ...quaternionToZYZ(effector.quaternion),
-          },
-        },
+          effector: getObjectEffectorPosition(effector, this.effectorOffset, mmToM),
+        }
       },
     ]);
   }

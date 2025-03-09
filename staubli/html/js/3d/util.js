@@ -1,11 +1,7 @@
-// https://chatgpt.com/c/67cd432e-cb74-800c-b5f7-4cb90809cbfa
-
 import { Box3, MathUtils, Quaternion, Vector3 } from "three";
 
-
-const size = new Vector3();
-const center = new Vector3();
-const box = new Box3();
+/** @import { EffectorPosition } from '../robot.js' */
+/** @import { Object3D } from 'three' */
 
 // https://codepen.io/discoverthreejs/full/vwVeZB
 export function fitCameraToSelection(camera, controls, selection, fitOffset = 1.2) {
@@ -40,6 +36,13 @@ export function fitCameraToSelection(camera, controls, selection, fitOffset = 1.
 
   controls.update();
 }
+
+
+// https://chatgpt.com/c/67cd432e-cb74-800c-b5f7-4cb90809cbfa
+
+const size = new Vector3();
+const center = new Vector3();
+const box = new Box3();
 
 
 /**
@@ -94,4 +97,56 @@ export function quaternionToZYZ(q) {
     pitch: MathUtils.radToDeg(pitch),
     roll: MathUtils.radToDeg(roll),
   };
+}
+
+/**
+ * @param {Object3D} object 
+ * @param {Vector3} offset 
+ * @param {number} scale 
+ * @returns {EffectorPosition}
+ */
+export function getObjectEffectorPosition(object, offset, scale){
+  return {
+    x: (object.position.x - offset.x) / scale,
+    y: (object.position.y - offset.y) / scale,
+    z: (object.position.z - offset.z) / scale,
+    ...quaternionToZYZ(object.quaternion),
+  }
+}
+
+/**
+ * @param {Object3D} object 
+ * @param {Vector3} offset 
+ * @param {number} scale 
+ * @returns {EffectorPosition}
+ */
+export function getObjectEffectorWorldPosition(object, offset, scale){
+  const worldPosition = new Vector3()
+  const worldQuaternion = new Quaternion()
+
+  object.getWorldPosition(worldPosition)
+  object.getWorldQuaternion(worldQuaternion)
+  return {
+    x: (worldPosition.x - offset.x) / scale,
+    y: (worldPosition.y - offset.y) / scale,
+    z: (worldPosition.z - offset.z) / scale,
+    ...quaternionToZYZ(worldQuaternion),
+  }
+}
+
+  /**
+   *
+   * @param {Object3D} object
+   * @param {EffectorPosition} effectorPosition
+   * @param {Vector3} offset
+   * @param {number} scale
+   */
+export function setObjectEffectorPosition(object, effectorPosition, offset, scale) {
+  const { x, y, z, yaw, pitch, roll } = effectorPosition;
+  object.position.x = x * scale + offset.x
+  object.position.y = y * scale + offset.y;
+  object.position.z = z * scale + offset.z;
+
+  object.setRotationFromQuaternion(createZYZQuaternion(yaw, pitch, roll));
+  object.updateMatrixWorld(true);
 }
