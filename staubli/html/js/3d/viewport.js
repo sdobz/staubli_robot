@@ -16,7 +16,6 @@ import {
   Vector3,
   Box3,
   ArrowHelper,
-  Quaternion,
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
@@ -25,17 +24,31 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import URDFLoader from "urdf-loader/URDFLoader.js";
 import { PointerURDFDragControls } from "urdf-loader/URDFDragControls.js";
 
-import { html } from "./lib/component.js";
-import { createEffect } from "./lib/state.js";
-import { robotState } from "./robot.js";
-import { jogSequence, setJogSequence } from "./jog-sequence.js";
-import { jogState } from "./3d/jog-control.js";
+import { html } from "../lib/component.js";
+import { createEffect } from "../lib/state.js";
+import { robotState } from "../robot.js";
+import { jogSequence, setJogSequence } from "../jog-sequence.js";
+import { jogState } from "../jog-control.js";
+import {
+  createZYZQuaternion,
+  fitCameraToSelection,
+  quaternionToZYZ,
+} from "./util.js";
+
+import {
+  urdfRobotToIKRoot,
+  Goal,
+  IKRootsHelper,
+  Solver,
+  SOLVE_STATUS,
+  setUrdfFromIK,
+} from "closed-chain-ik-js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { Object3D } from 'three' */
 
-/** @import { JointPosition, EffectorPosition } from './robot.js' */
-/** @import {JogItem} from './jog-sequence.js' */
+/** @import { JointPosition, EffectorPosition } from '../robot.js' */
+/** @import {JogItem} from '../jog-sequence.js' */
 
 const mmToM = 1 / 1000;
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
@@ -52,6 +65,15 @@ class Robot3D extends HTMLElement {
       shininess: 10,
       color: ghostColor,
       emissive: ghostColor,
+      emissiveIntensity: 0.25,
+      opacity: 0.2,
+      transparent: true,
+    });
+    const ikColor = "#FF0000";
+    this.ikMaterial = new MeshPhongMaterial({
+      shininess: 10,
+      color: ikColor,
+      emissive: ikColor,
       emissiveIntensity: 0.25,
       opacity: 0.2,
       transparent: true,
@@ -263,21 +285,45 @@ class Robot3D extends HTMLElement {
       sequenceToRender.push(sequenceToRender[sequenceToRender.length - 1]);
     }
 
+    let lastRobot;
     sequenceToRender.forEach(({ position, hide }, index) => {
-      if (!position.joints) {
-        console.error("Position without joints");
-        return;
-      }
       const isFirst = index === 0;
       const isLast = index === sequenceToRender.length - 1;
+
+      const hasJoints = !!position.joints;
 
       const robotToUpdate = isLast
         ? this.robot
         : this.createGhostRobot(
-            isFirst ? this.followMaterial : this.ghostMaterial
+            isFirst
+              ? this.followMaterial
+              : hasJoints
+              ? this.ghostMaterial
+              : this.ikMaterial
           );
-
       robotToUpdate.visible = !hide;
+
+      if (!position.joints && lastRobot) {
+        // console.log("Position without joints, embarking on IK...");
+
+        const ikRoot = urdfRobotToIKRoot(lastRobot);
+        ikRoot.setDoF();
+        const effectorLink = ikRoot.find(potentialLink => potentialLink.name === "link_6")
+        // const helper = new IKRootsHelper([ikRoot]);
+        // this.scene.add(helper);
+        // this.ghosts.push(helper);
+        const goal = new Goal();
+        goal.makeClosure( effectorLink );
+        this.updateGoal(goal, position.effector);
+        const solver = new Solver([ikRoot]);
+        
+        this.updateIK(ikRoot, solver, robotToUpdate);
+        lastRobot = robotToUpdate;
+
+        return;
+      }
+
+      lastRobot = robotToUpdate;
 
       this.updateRobot(robotToUpdate, position.joints);
     });
@@ -302,6 +348,41 @@ class Robot3D extends HTMLElement {
     });
 
     this.render();
+  }
+
+  updateIK(ikRoot, solver, target) {
+    const settleIterations = 5
+    let totalTime = 0;
+    let isConverged = false;
+    for (let i = 0; i < settleIterations; i++) {
+      // update drive goals from the new location
+      ikRoot.updateMatrixWorld(true);
+
+      // update store results
+      const startTime = window.performance.now();
+      const results = solver.solve();
+      const delta = window.performance.now() - startTime;
+      totalTime += delta;
+
+      isConverged =
+        results.filter((r) => r === SOLVE_STATUS.CONVERGED).length ===
+        results.length;
+      const isAllDiverged =
+        results.filter((r) => r === SOLVE_STATUS.DIVERGED).length ===
+        results.length;
+      const isAllStalled =
+        results.filter((r) => r === SOLVE_STATUS.STALLED).length ===
+        results.length;
+
+      if (isConverged || isAllDiverged || isAllStalled) {
+        break;
+      }
+      // console.log("converged", isConverged, "all diverged", isAllDiverged, "all stalled", isAllStalled)
+    }
+    // console.log("settled", totalTime)
+
+
+    setUrdfFromIK(target, ikRoot);
   }
 
   /**
@@ -337,9 +418,24 @@ class Robot3D extends HTMLElement {
     effector.position.y = y * mmToM + this.effectorOffset.y;
     effector.position.z = z * mmToM + this.effectorOffset.z;
 
-    // MathUtils.setQuaternionFromProperEuler(effector.quaternion, yaw, pitch, roll, 'ZXZ')
     effector.setRotationFromQuaternion(createZYZQuaternion(yaw, pitch, roll));
     effector.updateMatrixWorld(true);
+  }
+
+  /**
+   *
+   * @param {Goal} goal
+   * @param {EffectorPosition} effectorPosition
+   */
+  updateGoal(goal, effectorPosition) {
+    const { x, y, z, yaw, pitch, roll } = effectorPosition;
+    goal.setPosition(
+      x * mmToM + this.effectorOffset.x,
+      y * mmToM + this.effectorOffset.y,
+      z * mmToM + this.effectorOffset.z
+    );
+
+    goal.setQuaternion(createZYZQuaternion(yaw, pitch, roll));
   }
 
   purgeArrows() {
@@ -628,97 +724,4 @@ class Robot3D extends HTMLElement {
   }
 }
 
-const size = new Vector3();
-const center = new Vector3();
-const box = new Box3();
-
-// https://codepen.io/discoverthreejs/full/vwVeZB
-function fitCameraToSelection(camera, controls, selection, fitOffset = 1.2) {
-  box.makeEmpty();
-  for (const object of selection) {
-    box.expandByObject(object);
-  }
-
-  box.getSize(size);
-  box.getCenter(center);
-
-  const maxSize = Math.max(size.x, size.y, size.z);
-  const fitHeightDistance =
-    maxSize / (2 * Math.atan((Math.PI * camera.fov) / 360));
-  const fitWidthDistance = fitHeightDistance / camera.aspect;
-  const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
-
-  const direction = controls.target
-    .clone()
-    .sub(camera.position)
-    .normalize()
-    .multiplyScalar(distance);
-
-  controls.maxDistance = distance * 10;
-  controls.target.copy(center);
-
-  camera.near = distance / 100;
-  camera.far = distance * 100;
-  camera.updateProjectionMatrix();
-
-  camera.position.copy(controls.target).sub(direction);
-
-  controls.update();
-}
-
 customElements.define("robot-3d", Robot3D);
-
-// https://chatgpt.com/c/67cd432e-cb74-800c-b5f7-4cb90809cbfa
-/**
- *
- * @param {number} yawDeg
- * @param {number} pitchDeg
- * @param {number} rollDeg
- */
-function createZYZQuaternion(yawDeg, pitchDeg, rollDeg) {
-  const qYaw = new Quaternion().setFromAxisAngle(
-    new Vector3(0, 0, 1),
-    MathUtils.degToRad(yawDeg)
-  );
-  const qPitch = new Quaternion().setFromAxisAngle(
-    new Vector3(0, 1, 0),
-    MathUtils.degToRad(pitchDeg)
-  );
-  const qRoll = new Quaternion().setFromAxisAngle(
-    new Vector3(0, 0, 1),
-    MathUtils.degToRad(rollDeg)
-  );
-
-  // Combine the rotations in the correct order: Yaw → Pitch → Roll
-  const qFinal = new Quaternion();
-  qFinal.multiplyQuaternions(qYaw, qPitch);
-  qFinal.multiply(qRoll);
-
-  return qFinal;
-}
-
-// https://amu.hal.science/hal-03848730/document
-// 3.3 Example of a proper sequence: the sequence ZYZ
-// fig (46)
-
-/**
- *
- * @param {Quaternion} q
- * @returns
- */
-function quaternionToZYZ(q) {
-  const qr = q.w,
-    qz = q.z,
-    qy = q.y,
-    qx = q.x;
-
-  const roll = Math.atan2(qz, qr) - Math.atan2(-qx, qy);
-  const pitch = Math.acos(2 * (qr * qr + qz * qz) - 1);
-  const yaw = Math.atan2(qz, qr) + Math.atan2(-qx, qy);
-
-  return {
-    yaw: MathUtils.radToDeg(yaw),
-    pitch: MathUtils.radToDeg(pitch),
-    roll: MathUtils.radToDeg(roll),
-  };
-}

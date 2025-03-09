@@ -6,8 +6,8 @@
  * @typedef {"local" | "world"} JogSpace
  */
 
-import { createComponent, html } from "../lib/component.js";
-import { createSignal } from "../lib/state.js";
+import { createComponent, html } from "./lib/component.js";
+import { createSignal } from "./lib/state.js";
 
 /**
  * @typedef {Object} JogState
