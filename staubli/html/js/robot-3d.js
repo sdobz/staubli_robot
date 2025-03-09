@@ -76,8 +76,6 @@ class Robot3D extends HTMLElement {
     /** @type {ArrowHelper[]} */
     this.arrows = [];
 
-
-
     /** @type {Mesh | undefined} */
     this.effector = undefined;
     this.effectorOffset = new Vector3(0, 0, 0);
@@ -145,7 +143,9 @@ class Robot3D extends HTMLElement {
         c.castShadow = true;
       });
 
-      this.effectorOffset = this.effectorOffset.copy(this.robot.joints["base_link-base"].position);
+      this.effectorOffset = this.effectorOffset.copy(
+        this.robot.joints["base_link-base"].position
+      );
 
       fitCameraToSelection(camera, orbit, [this.robot]);
 
@@ -273,8 +273,8 @@ class Robot3D extends HTMLElement {
         : this.createGhostRobot(
             isFirst ? this.followMaterial : this.ghostMaterial
           );
-      
-      robotToUpdate.visible = !hide
+
+      robotToUpdate.visible = !hide;
 
       this.updateRobot(robotToUpdate, position.joints);
     });
@@ -293,7 +293,7 @@ class Robot3D extends HTMLElement {
             isFirst ? this.followMaterial : this.ghostMaterial
           );
 
-      effectorToUpdate.visible = !hide
+      effectorToUpdate.visible = !hide;
 
       this.updateEffector(effectorToUpdate, position.effector);
     });
@@ -334,12 +334,15 @@ class Robot3D extends HTMLElement {
     effector.position.y = y * mmToM + this.effectorOffset.y;
     effector.position.z = z * mmToM + this.effectorOffset.z;
 
-    effector.setRotationFromEuler(new Euler(
-      MathUtils.degToRad(roll),
-      MathUtils.degToRad(pitch),
-      MathUtils.degToRad(yaw),
-      "ZXY"));
-    
+    effector.setRotationFromEuler(
+      new Euler(
+        MathUtils.degToRad(roll),
+        MathUtils.degToRad(pitch),
+        MathUtils.degToRad(yaw),
+        "ZXY"
+      )
+    );
+
     effector.updateMatrixWorld(true);
   }
 
@@ -399,7 +402,7 @@ class Robot3D extends HTMLElement {
    * @param {Vector3} to
    */
   createArrow(from, to) {
-    const direction = new Vector3(to.x, to.y, to.z)
+    const direction = new Vector3(to.x, to.y, to.z);
     direction.sub(from);
     const length = direction.length();
     direction.normalize();
@@ -493,7 +496,6 @@ class Robot3D extends HTMLElement {
     const sequence = jogSequence();
     const state = robotState();
 
-    console.log(sequence);
     const lastJoints =
       sequence.findLast((item) => !!item.position.joints)?.position.joints ??
       state?.position.joints;
@@ -541,6 +543,10 @@ class Robot3D extends HTMLElement {
 
       this.dragging = isDragging;
 
+      if (isDragging) {
+        this.updateRobots();
+      }
+
       if (!isDragging) {
         if (!this.effector) {
           console.error("Drag end without effector");
@@ -576,7 +582,14 @@ class Robot3D extends HTMLElement {
    */
   appendEffectorSequence(effector) {
     const currentSequence = jogSequence();
-    // pyr = YXZ
+
+    const reorderedRotation = new Euler(
+      effector.rotation.x,
+      effector.rotation.y,
+      effector.rotation.z,
+      effector.rotation.order
+    ).reorder("ZXY");
+
     setJogSequence([
       ...currentSequence,
       {
@@ -586,9 +599,9 @@ class Robot3D extends HTMLElement {
             x: (effector.position.x - this.effectorOffset.x) / mmToM,
             y: (effector.position.y - this.effectorOffset.y) / mmToM,
             z: (effector.position.z - this.effectorOffset.z) / mmToM,
-            pitch: MathUtils.radToDeg(effector.rotation.y),
-            yaw: MathUtils.radToDeg(effector.rotation.z),
-            roll: MathUtils.radToDeg(effector.rotation.x),
+            pitch: MathUtils.radToDeg(reorderedRotation.y),
+            yaw: MathUtils.radToDeg(reorderedRotation.z),
+            roll: MathUtils.radToDeg(reorderedRotation.x),
           },
         },
       },

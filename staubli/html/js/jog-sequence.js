@@ -2,107 +2,6 @@ import { html, createComponent } from "./lib/component.js";
 import { createEffect, createSignal } from "./lib/state.js";
 import { robot } from "./robot.js";
 
-const notesSequence = [
-  {
-    name: "jogged j2",
-    position: {
-      effector: { x: 258.112, y: 0, z: 950.58, roll: 0, pitch: 15.191, yaw: 0 },
-      joints: { j1: 0, j2: -74.809, j3: 90, j4: 0, j5: 0, j6: 0 },
-    },
-  },
-  {
-    name: "jogged j1",
-    position: {
-      effector: {
-        x: 240.16,
-        y: 94.58,
-        z: 950.58,
-        roll: 0,
-        pitch: 15.191,
-        yaw: 21.496,
-      },
-      joints: { j1: 21.496, j2: -74.809, j3: 90, j4: 0, j5: 0, j6: 0 },
-    },
-  },
-  {
-    name: "jogged j3",
-    position: {
-      effector: {
-        x: 495.824,
-        y: 195.266,
-        z: 771.953,
-        roll: 0,
-        pitch: 50.863,
-        yaw: 21.496,
-      },
-      joints: { j1: 21.496, j2: -74.809, j3: 125.672, j4: 0, j5: 0, j6: 0 },
-    },
-  },
-  {
-    name: "jogged j4",
-    position: {
-      effector: {
-        x: 495.82,
-        y: 195.264,
-        z: 771.958,
-        roll: 43.388,
-        pitch: 50.862,
-        yaw: 21.496,
-      },
-      joints: {
-        j1: 21.496,
-        j2: -74.809,
-        j3: 125.671,
-        j4: 43.388,
-        j5: 0,
-        j6: 0,
-      },
-    },
-  },
-  {
-    name: "jogged j5",
-    position: {
-      effector: {
-        x: 488.137,
-        y: 236.928,
-        z: 721.86,
-        roll: 32.223,
-        pitch: 87.608,
-        yaw: 50.81,
-      },
-      joints: {
-        j1: 21.496,
-        j2: -74.809,
-        j3: 125.67,
-        j4: 43.388,
-        j5: 45.408,
-        j6: -0.004,
-      },
-    },
-  },
-  {
-    name: "jogged j6",
-    position: {
-      effector: {
-        x: 488.137,
-        y: 236.928,
-        z: 721.86,
-        roll: -130.227,
-        pitch: 87.608,
-        yaw: 50.81,
-      },
-      joints: {
-        j1: 21.496,
-        j2: -74.809,
-        j3: 125.67,
-        j4: 43.388,
-        j5: 45.408,
-        j6: 197.547,
-      },
-    },
-  },
-];
-
 /** @import { Position } from './robot.js' */
 
 const [sequenceState, setSequenceState] = createSignal({
@@ -120,7 +19,7 @@ export { sequenceState };
  */
 
 /** @type {JogItem[]} */
-const initialJogSequence = notesSequence;
+const initialJogSequence = [];
 const [jogSequence, _setJogSequence] = createSignal(initialJogSequence);
 
 /** @type {(sequence: JogItem[]) => void} */
