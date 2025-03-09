@@ -334,9 +334,11 @@ class Robot3D extends HTMLElement {
     effector.position.y = y * mmToM + this.effectorOffset.y;
     effector.position.z = z * mmToM + this.effectorOffset.z;
 
-    effector.rotation.x = MathUtils.degToRad(roll)
-    effector.rotation.y = MathUtils.degToRad(pitch)
-    effector.rotation.z = MathUtils.degToRad(yaw)
+    effector.setRotationFromEuler(new Euler(
+      MathUtils.degToRad(roll),
+      MathUtils.degToRad(pitch),
+      MathUtils.degToRad(yaw),
+      "ZXY"));
     
     effector.updateMatrixWorld(true);
   }
