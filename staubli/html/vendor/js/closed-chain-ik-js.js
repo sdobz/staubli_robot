@@ -2139,7 +2139,7 @@ var WorkerSolver = class {
 import { Group as Group2, Vector2, Color } from "three";
 
 // src/three/IKJointHelper.js
-import { BoxBufferGeometry, Vector3, CylinderBufferGeometry, SphereBufferGeometry, Mesh, MeshStandardMaterial } from "three";
+import { BoxGeometry, Vector3, CylinderGeometry, SphereGeometry, Mesh, MeshStandardMaterial } from "three";
 import { Line2 as Line22 } from "three/examples/jsm/lines/Line2.js";
 
 // src/three/IKLinkHelper.js
@@ -2245,7 +2245,7 @@ var RotationLimitHelper = class extends Mesh {
       this.geometry.dispose();
     }
     const dof = this._dof;
-    const geometry = new CylinderBufferGeometry(0.075, 0.075, 1e-7, 100, 1, false, min, delta);
+    const geometry = new CylinderGeometry(0.075, 0.075, 1e-7, 100, 1, false, min, delta);
     if (dof === DOF.EX) {
       geometry.rotateZ(HALF_PI);
     }
@@ -2259,7 +2259,7 @@ var IKJointHelper = class extends IKLinkHelper {
   constructor(joint) {
     super(joint);
     const xRotationMesh = new Mesh(
-      new CylinderBufferGeometry(0.05, 0.05, 0.25, 30, 1).rotateZ(HALF_PI),
+      new CylinderGeometry(0.05, 0.05, 0.25, 30, 1).rotateZ(HALF_PI),
       new MeshStandardMaterial()
     );
     const xRotationLimits = new RotationLimitHelper(
@@ -2267,7 +2267,7 @@ var IKJointHelper = class extends IKLinkHelper {
       DOF.EX
     );
     const yRotationMesh = new Mesh(
-      new CylinderBufferGeometry(0.05, 0.05, 0.25, 30, 1),
+      new CylinderGeometry(0.05, 0.05, 0.25, 30, 1),
       new MeshStandardMaterial()
     );
     const yRotationLimits = new RotationLimitHelper(
@@ -2275,7 +2275,7 @@ var IKJointHelper = class extends IKLinkHelper {
       DOF.EY
     );
     const zRotationMesh = new Mesh(
-      new CylinderBufferGeometry(0.05, 0.05, 0.25, 30, 1).rotateX(HALF_PI),
+      new CylinderGeometry(0.05, 0.05, 0.25, 30, 1).rotateX(HALF_PI),
       new MeshStandardMaterial()
     );
     const zRotationLimits = new RotationLimitHelper(
@@ -2284,11 +2284,11 @@ var IKJointHelper = class extends IKLinkHelper {
     );
     zRotationLimits.rotation.set(HALF_PI, 0, 0);
     const freeRotationMesh = new Mesh(
-      new SphereBufferGeometry(0.05, 30, 30),
+      new SphereGeometry(0.05, 30, 30),
       new MeshStandardMaterial()
     );
     const fixedMesh = new Mesh(
-      new BoxBufferGeometry(0.05, 0.05, 0.05),
+      new BoxGeometry(0.05, 0.05, 0.05),
       new MeshStandardMaterial()
     );
     const translationMesh = new Line22();

@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "baseUrl": "./",
+        "paths": {
+            "three": ["js/vendor/three"],
+            "gl-matrix": ["vendor/js"]
+        }
+    }
+}

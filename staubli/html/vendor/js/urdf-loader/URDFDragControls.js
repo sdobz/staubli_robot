@@ -1,4 +1,4 @@
-import { Raycaster, Vector3, Plane, Vector2 } from '../three/three.js';
+import { Raycaster, Vector3, Plane, Vector2 } from 'three';
 
 // Find the nearest parent that is a joint
 function isJoint(j) {
@@ -242,9 +242,6 @@ export class PointerURDFDragControls extends URDFDragControls {
         }
 
         this._mouseDown = e => {
-            if (!this.enabled) {
-                return
-            }
 
             updateMouse(e);
             raycaster.setFromCamera(mouse, this.camera);
@@ -254,9 +251,6 @@ export class PointerURDFDragControls extends URDFDragControls {
         };
 
         this._mouseMove = e => {
-            if (!this.enabled) {
-                return
-            }
 
             updateMouse(e);
             raycaster.setFromCamera(mouse, this.camera);
@@ -265,9 +259,6 @@ export class PointerURDFDragControls extends URDFDragControls {
         };
 
         this._mouseUp = e => {
-            if (!this.enabled) {
-                return
-            }
 
             updateMouse(e);
             raycaster.setFromCamera(mouse, this.camera);

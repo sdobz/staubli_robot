@@ -55,7 +55,7 @@
         packages.pythonEnv
         packages.devPythonEnv
         pkgs.rsync
-        pkgs.nodejs_20
+        pkgs.curl
       ];
       shellHook = ''
         if [ -e .venv ] && [ ! -L .venv ]; then
@@ -74,7 +74,6 @@
           && ln -s ${packages.devPythonEnv} .venv-dev
 
         echo "Linked nix python env to .venv and .venv-dev"
-        cp ${packages.closed-chain-ik-js}/closed-chain-ik-js.js staubli/html/js/vendor
       '';
     };
   }));

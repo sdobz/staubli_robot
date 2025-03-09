@@ -17,21 +17,24 @@ import {
   Box3,
   ArrowHelper,
   Quaternion,
-} from "./vendor/three/three.js";
-import { OrbitControls } from "./vendor/three/OrbitControls.js";
-import URDFLoader from "./vendor/urdf/URDFLoader.js";
-import { PointerURDFDragControls } from "./vendor/urdf/URDFDragControls.js";
+} from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+
+import URDFLoader from "urdf-loader/URDFLoader.js";
+import { PointerURDFDragControls } from "urdf-loader/URDFDragControls.js";
+
 import { html } from "./lib/component.js";
 import { createEffect } from "./lib/state.js";
 import { robotState } from "./robot.js";
 import { jogSequence, setJogSequence } from "./jog-sequence.js";
-import { STLLoader } from "./vendor/three/STLLoader.js";
 import { jogState } from "./3d/jog-control.js";
-import { TransformControls } from "./vendor/three/TransformControls.js";
 
-/** @import { URDFJoint, URDFRobot } from "./vendor/urdf/URDFClasses.js"; */
+/** @import { URDFJoint, URDFRobot } from "urdf-loaders/URDFClasses"; */
+/** @import { Object3D } from 'three' */
+
 /** @import { JointPosition, EffectorPosition } from './robot.js' */
-/** @import { Object3D } from './vendor/three/three.js' */
 /** @import {JogItem} from './jog-sequence.js' */
 
 const mmToM = 1 / 1000;
