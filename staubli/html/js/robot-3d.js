@@ -76,8 +76,11 @@ class Robot3D extends HTMLElement {
     /** @type {ArrowHelper[]} */
     this.arrows = [];
 
+
+
     /** @type {Mesh | undefined} */
     this.effector = undefined;
+    this.effectorOffset = new Vector3(0, 0, 0);
 
     let scene, camera, renderer, orbit;
     scene = new Scene();
@@ -128,7 +131,7 @@ class Robot3D extends HTMLElement {
     loader.packages = {
       staubli_tx90_support: "/urdf/staubli_tx90_support",
     };
-    loader.load("/urdf/staubli_tx90_support/urdf/tx90.urdf", (result) => {
+    loader.load("/urdf/staubli_tx90_support/urdf/tx90-rx.urdf", (result) => {
       /** @type {URDFRobot | undefined} */
       this.robot = result;
     });
@@ -138,13 +141,11 @@ class Robot3D extends HTMLElement {
         console.error("Manager load without robot");
         return;
       }
-      const state = robotState();
       this.robot.traverse((c) => {
         c.castShadow = true;
       });
-      if (state?.position.joints) {
-        this.updateRobot(this.robot, state.position.joints);
-      }
+
+      this.effectorOffset = this.effectorOffset.copy(this.robot.joints["base_link-base"].position);
 
       fitCameraToSelection(camera, orbit, [this.robot]);
 
@@ -329,9 +330,9 @@ class Robot3D extends HTMLElement {
    */
   updateEffector(effector, effectorPosition) {
     const { x, y, z, pitch, yaw, roll } = effectorPosition;
-    effector.position.x = x * mmToM;
-    effector.position.y = y * mmToM;
-    effector.position.z = z * mmToM;
+    effector.position.x = x * mmToM + this.effectorOffset.x;
+    effector.position.y = y * mmToM + this.effectorOffset.y;
+    effector.position.z = z * mmToM + this.effectorOffset.z;
 
     effector.rotation.x = MathUtils.degToRad(roll)
     effector.rotation.y = MathUtils.degToRad(pitch)
@@ -396,7 +397,7 @@ class Robot3D extends HTMLElement {
    * @param {Vector3} to
    */
   createArrow(from, to) {
-    const direction = to.copy();
+    const direction = new Vector3(to.x, to.y, to.z)
     direction.sub(from);
     const length = direction.length();
     direction.normalize();
@@ -580,9 +581,9 @@ class Robot3D extends HTMLElement {
         name: new Date().toISOString(),
         position: {
           effector: {
-            x: effector.position.x / mmToM,
-            y: effector.position.y / mmToM,
-            z: effector.position.z / mmToM,
+            x: (effector.position.x - this.effectorOffset.x) / mmToM,
+            y: (effector.position.y - this.effectorOffset.y) / mmToM,
+            z: (effector.position.z - this.effectorOffset.z) / mmToM,
             pitch: MathUtils.radToDeg(effector.rotation.y),
             yaw: MathUtils.radToDeg(effector.rotation.z),
             roll: MathUtils.radToDeg(effector.rotation.x),
