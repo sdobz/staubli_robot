@@ -29,9 +29,10 @@ export function html(strings) {
  * }>} AttrMap
  */
 
-/** @type {<S>(setup: {tag: string, observedAttributes?: string[], template: HTMLTemplateElement, stateFn?: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap}) => void} */
+/** @type {<S>(setup: {tag: string, opts?: ElementDefinitionOptions, observedAttributes?: string[], template: HTMLTemplateElement, stateFn?: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap}) => void} */
 export function createComponent({
   tag,
+  opts,
   observedAttributes,
   template,
   stateFn,
@@ -53,12 +54,13 @@ export function createComponent({
 
       const templateContent = template.content;
 
-      const shadowRoot = this.attachShadow({ mode: "open" });
-      document.querySelectorAll("link").forEach(linkElement => {
-        shadowRoot.appendChild(linkElement.cloneNode());
-      })
-      shadowRoot.appendChild(templateContent.cloneNode(true));
+      // const shadowRoot = this.attachShadow({ mode: "open" });
+      // document.querySelectorAll("link").forEach(linkElement => {
+      //   shadowRoot.appendChild(linkElement.cloneNode());
+      // })
+      // shadowRoot.appendChild(templateContent.cloneNode(true));
 
+      this.appendChild(templateContent.cloneNode(true));
 
 
       createEffect(() => {
@@ -106,7 +108,7 @@ export function createComponent({
 
       this.eventListeners = [];
       for (const [selector, updates] of Object.entries(attrMap)) {
-        const elements = this.shadowRoot?.querySelectorAll(selector) ?? [];
+        const elements = this.querySelectorAll(selector) ?? [];
         const { eventListeners, attributes, properties } = updates;
 
         for (const element of elements) {
@@ -139,5 +141,5 @@ export function createComponent({
     }
   }
 
-  customElements.define(tag, Component);
+  customElements.define(tag, Component, opts);
 }

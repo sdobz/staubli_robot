@@ -2,6 +2,107 @@ import { html, createComponent } from "./lib/component.js";
 import { createEffect, createSignal } from "./lib/state.js";
 import { robot } from "./robot.js";
 
+const notesSequence = [
+  {
+    name: "jogged j2",
+    position: {
+      effector: { x: 258.112, y: 0, z: 950.58, roll: 0, pitch: 15.191, yaw: 0 },
+      joints: { j1: 0, j2: -74.809, j3: 90, j4: 0, j5: 0, j6: 0 },
+    },
+  },
+  {
+    name: "jogged j1",
+    position: {
+      effector: {
+        x: 240.16,
+        y: 94.58,
+        z: 950.58,
+        roll: 0,
+        pitch: 15.191,
+        yaw: 21.496,
+      },
+      joints: { j1: 21.496, j2: -74.809, j3: 90, j4: 0, j5: 0, j6: 0 },
+    },
+  },
+  {
+    name: "jogged j3",
+    position: {
+      effector: {
+        x: 495.824,
+        y: 195.266,
+        z: 771.953,
+        roll: 0,
+        pitch: 50.863,
+        yaw: 21.496,
+      },
+      joints: { j1: 21.496, j2: -74.809, j3: 125.672, j4: 0, j5: 0, j6: 0 },
+    },
+  },
+  {
+    name: "jogged j4",
+    position: {
+      effector: {
+        x: 495.82,
+        y: 195.264,
+        z: 771.958,
+        roll: 43.388,
+        pitch: 50.862,
+        yaw: 21.496,
+      },
+      joints: {
+        j1: 21.496,
+        j2: -74.809,
+        j3: 125.671,
+        j4: 43.388,
+        j5: 0,
+        j6: 0,
+      },
+    },
+  },
+  {
+    name: "jogged j5",
+    position: {
+      effector: {
+        x: 488.137,
+        y: 236.928,
+        z: 721.86,
+        roll: 32.223,
+        pitch: 87.608,
+        yaw: 50.81,
+      },
+      joints: {
+        j1: 21.496,
+        j2: -74.809,
+        j3: 125.67,
+        j4: 43.388,
+        j5: 45.408,
+        j6: -0.004,
+      },
+    },
+  },
+  {
+    name: "jogged j6",
+    position: {
+      effector: {
+        x: 488.137,
+        y: 236.928,
+        z: 721.86,
+        roll: -130.227,
+        pitch: 87.608,
+        yaw: 50.81,
+      },
+      joints: {
+        j1: 21.496,
+        j2: -74.809,
+        j3: 125.67,
+        j4: 43.388,
+        j5: 45.408,
+        j6: 197.547,
+      },
+    },
+  },
+];
+
 /** @import { Position } from './robot.js' */
 
 const [sequenceState, setSequenceState] = createSignal({
@@ -15,10 +116,11 @@ export { sequenceState };
  * @typedef {Object} JogItem
  * @property {string} [name]
  * @property {Position} position
+ * @property {boolean} [hide]
  */
 
 /** @type {JogItem[]} */
-const initialJogSequence = [];
+const initialJogSequence = notesSequence;
 const [jogSequence, _setJogSequence] = createSignal(initialJogSequence);
 
 /** @type {(sequence: JogItem[]) => void} */
@@ -78,101 +180,6 @@ createEffect(() => {
 });
 
 createComponent({
-  tag: "jog-sequence-position",
-  observedAttributes: ["index"],
-  template: html`
-    <article class="vertical-stack">
-      <input class="name" value="" />
-      <button class="remove">X</button>
-      <table class="effector">
-        <thead>
-          <tr>
-            <th scope="col">X</th>
-            <th scope="col">Y</th>
-            <th scope="col">Z</th>
-            <th scope="col">Y</th>
-            <th scope="col">P</th>
-            <th scope="col">R</th>
-          </tr>
-        </thead>
-      </table>
-      <table class="joints">
-        <thead>
-          <tr>
-            <th scope="col">J1</th>
-            <th scope="col">J2</th>
-            <th scope="col">J3</th>
-            <th scope="col">J4</th>
-            <th scope="col">J5</th>
-            <th scope="col">J6</th>
-          </tr>
-        </thead>
-      </table>
-    </article>
-  `,
-  attrsFn: (_state, attrs) => {
-    const currentSequence = jogSequence();
-    const currentState = sequenceState();
-    
-    const index = parseInt(attrs.index);
-    const thisItem = currentSequence[index];
-
-    const isDisabled = currentState.pending || currentState.active;
-    const isPending = index === 0 && currentState.pending;
-
-    function removeItem() {
-      const newSequence = [...currentSequence];
-      newSequence.splice(index, 1);
-      setJogSequence(newSequence);
-    }
-
-    /**
-     *
-     * @param {Event} e
-     */
-    function changeName(e) {
-      const newName = /** @type {HTMLInputElement} */ (e.target).value;
-
-      // This is a mutation. Does this matter?
-      currentSequence[index].name = newName;
-      setJogSequence(currentSequence);
-    }
-
-    return {
-      ".loading": {
-        attributes: { style: isPending ? "" : "display: none" },
-      },
-      ".remove": {
-        attributes: {
-          disabled: isDisabled ? "true" : undefined,
-        },
-        eventListeners: {
-          click: removeItem,
-        },
-      },
-      ".name": {
-        attributes: {
-          value: thisItem?.name,
-        },
-        eventListeners: {
-          change: changeName,
-        },
-      },
-      ".effector": {
-        attributes: {
-          style: thisItem?.position.effector ? undefined : "display: none;",
-        },
-      },
-      ".joints": {
-        attributes: {
-          style: thisItem?.position.joints ? undefined : "display: none;",
-        },
-      },
-    };
-  },
-});
-
-createComponent({
   tag: "jog-sequence-control",
   template: html`
     <div class="vertical-stack">
@@ -180,7 +187,18 @@ createComponent({
         <button class="sequence-purge">X</button>
         <button class="sequence-active">&amp;</button>
       </div>
-      <div class="positions"></div>
+      <table class="effector">
+        <thead>
+          <tr>
+            <th scope="col">go</th>
+            <th scope="col">show</th>
+            <th scope="col">name</th>
+            <th scope="col">type</th>
+            <th scope="col">dist</th>
+          </tr>
+        </thead>
+        <tbody class="positions"></tbody>
+      </table>
     </div>
   `,
   attrsFn: (_state, _attrs) => {
@@ -204,10 +222,28 @@ createComponent({
       });
     }
 
+    function toggleHide() {
+      const index = findIndex(this)
+
+      if (index === undefined || isNaN(index)) {
+        return
+      }
+
+      currentSequence[index].hide = !currentSequence[index].hide
+      setJogSequence(currentSequence)
+    }
+
     const children = currentSequence
       .map(
-        (_, index) =>
-          `<jog-sequence-position index="${index}"></jog-sequence-position>`
+        (item, index) => `
+      <tr data-index="${index}">
+        <td ${index===0 && currentState.pending ? 'aria-loading=true' : ''}></td>
+        <td><input class="toggle-hide" type="checkbox" ${item.hide ? "" : "checked"}/></td>
+        <th scope="row">${item.name}</th>
+        <td>${!!item.position.effector ? "tool" : ""} ${!!item.position.joints ? "joint" : ""}</td>
+        <td>123mm</td>
+      </tr>
+    `
       )
       .join("\n");
 
@@ -234,6 +270,25 @@ createComponent({
       ".positions": {
         properties: { innerHTML: children },
       },
+      ".toggle-hide": {
+        eventListeners: {
+          click: toggleHide
+        }
+      }
     };
   },
 });
+
+/**
+ * 
+ * @param {HTMLElement} el 
+ */
+function findIndex(el) {
+  if (el.hasAttribute("data-index")) {
+    return parseInt(el.getAttribute("data-index") || "")
+  }
+  if (el.parentElement) {
+    return findIndex(el.parentElement)
+  }
+  return
+}

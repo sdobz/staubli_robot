@@ -259,7 +259,7 @@ class Robot3D extends HTMLElement {
       sequenceToRender.push(sequenceToRender[sequenceToRender.length - 1]);
     }
 
-    sequenceToRender.forEach(({ position }, index) => {
+    sequenceToRender.forEach(({ position, hide }, index) => {
       if (!position.joints) {
         console.error("Position without joints");
         return;
@@ -272,11 +272,13 @@ class Robot3D extends HTMLElement {
         : this.createGhostRobot(
             isFirst ? this.followMaterial : this.ghostMaterial
           );
+      
+      robotToUpdate.visible = !hide
 
       this.updateRobot(robotToUpdate, position.joints);
     });
 
-    sequenceToRender.forEach(({ position }, index) => {
+    sequenceToRender.forEach(({ position, hide }, index) => {
       if (!position.effector) {
         console.error("Position without effector");
         return;
@@ -289,6 +291,8 @@ class Robot3D extends HTMLElement {
         : this.createGhostEffector(
             isFirst ? this.followMaterial : this.ghostMaterial
           );
+
+      effectorToUpdate.visible = !hide
 
       this.updateEffector(effectorToUpdate, position.effector);
     });
@@ -328,14 +332,11 @@ class Robot3D extends HTMLElement {
     effector.position.x = x * mmToM;
     effector.position.y = y * mmToM;
     effector.position.z = z * mmToM;
-    effector.setRotationFromEuler(
-      new Euler(
-        MathUtils.degToRad(pitch),
-        MathUtils.degToRad(roll),
-        MathUtils.degToRad(yaw),
-        "YXZ"
-      )
-    );
+
+    effector.rotation.x = MathUtils.degToRad(roll)
+    effector.rotation.y = MathUtils.degToRad(pitch)
+    effector.rotation.z = MathUtils.degToRad(yaw)
+    
     effector.updateMatrixWorld(true);
   }
 
