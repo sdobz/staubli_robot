@@ -16,7 +16,7 @@ import {
   Vector3,
   Box3,
   ArrowHelper,
-  Euler,
+  Quaternion,
 } from "./vendor/three/three.js";
 import { OrbitControls } from "./vendor/three/OrbitControls.js";
 import URDFLoader from "./vendor/urdf/URDFLoader.js";
@@ -329,21 +329,13 @@ class Robot3D extends HTMLElement {
    * @param {EffectorPosition} effectorPosition
    */
   updateEffector(effector, effectorPosition) {
-    const { x, y, z, pitch, yaw, roll } = effectorPosition;
+    const { x, y, z, yaw, pitch, roll } = effectorPosition;
     effector.position.x = x * mmToM + this.effectorOffset.x;
     effector.position.y = y * mmToM + this.effectorOffset.y;
     effector.position.z = z * mmToM + this.effectorOffset.z;
 
-    effector.setRotationFromEuler(
-      new Euler(
-        MathUtils.degToRad(roll),
-        MathUtils.degToRad(pitch),
-        MathUtils.degToRad(yaw),
-        "ZXY"
-      )
-    );
-
-
+    // MathUtils.setQuaternionFromProperEuler(effector.quaternion, yaw, pitch, roll, 'ZXZ')
+    effector.setRotationFromQuaternion(createZYZQuaternion(yaw, pitch, roll));
     effector.updateMatrixWorld(true);
   }
 
@@ -584,13 +576,6 @@ class Robot3D extends HTMLElement {
   appendEffectorSequence(effector) {
     const currentSequence = jogSequence();
 
-    const reorderedRotation = new Euler(
-      effector.rotation.x,
-      effector.rotation.y,
-      effector.rotation.z,
-      effector.rotation.order
-    ).reorder("ZXY");
-
     setJogSequence([
       ...currentSequence,
       {
@@ -600,9 +585,7 @@ class Robot3D extends HTMLElement {
             x: (effector.position.x - this.effectorOffset.x) / mmToM,
             y: (effector.position.y - this.effectorOffset.y) / mmToM,
             z: (effector.position.z - this.effectorOffset.z) / mmToM,
-            pitch: MathUtils.radToDeg(reorderedRotation.y),
-            yaw: MathUtils.radToDeg(reorderedRotation.z),
-            roll: MathUtils.radToDeg(reorderedRotation.x),
+            ...quaternionToZYZ(effector.quaternion),
           },
         },
       },
@@ -682,3 +665,58 @@ function fitCameraToSelection(camera, controls, selection, fitOffset = 1.2) {
 }
 
 customElements.define("robot-3d", Robot3D);
+
+// https://chatgpt.com/c/67cd432e-cb74-800c-b5f7-4cb90809cbfa
+/**
+ *
+ * @param {number} yawDeg
+ * @param {number} pitchDeg
+ * @param {number} rollDeg
+ */
+function createZYZQuaternion(yawDeg, pitchDeg, rollDeg) {
+  const qYaw = new Quaternion().setFromAxisAngle(
+    new Vector3(0, 0, 1),
+    MathUtils.degToRad(yawDeg)
+  );
+  const qPitch = new Quaternion().setFromAxisAngle(
+    new Vector3(0, 1, 0),
+    MathUtils.degToRad(pitchDeg)
+  );
+  const qRoll = new Quaternion().setFromAxisAngle(
+    new Vector3(0, 0, 1),
+    MathUtils.degToRad(rollDeg)
+  );
+
+  // Combine the rotations in the correct order: Yaw → Pitch → Roll
+  const qFinal = new Quaternion();
+  qFinal.multiplyQuaternions(qYaw, qPitch);
+  qFinal.multiply(qRoll);
+
+  return qFinal;
+}
+
+// https://amu.hal.science/hal-03848730/document
+// 3.3 Example of a proper sequence: the sequence ZYZ
+// fig (46)
+
+/**
+ *
+ * @param {Quaternion} q
+ * @returns
+ */
+function quaternionToZYZ(q) {
+  const qr = q.w,
+    qz = q.z,
+    qy = q.y,
+    qx = q.x;
+
+  const roll = Math.atan2(qz, qr) - Math.atan2(-qx, qy);
+  const pitch = Math.acos(2 * (qr * qr + qz * qz) - 1);
+  const yaw = Math.atan2(qz, qr) + Math.atan2(-qx, qy);
+
+  return {
+    yaw: MathUtils.radToDeg(yaw),
+    pitch: MathUtils.radToDeg(pitch),
+    roll: MathUtils.radToDeg(roll),
+  };
+}
