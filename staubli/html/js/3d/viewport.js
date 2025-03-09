@@ -303,55 +303,48 @@ class Robot3D extends HTMLElement {
           );
       robotToUpdate.visible = !hide;
 
-      if (!position.joints && lastRobot) {
+      if (position.joints) {
+        this.updateRobot(robotToUpdate, position.joints);
+      }
+      else if (position.effector && lastRobot) {
         // console.log("Position without joints, embarking on IK...");
 
         const ikRoot = urdfRobotToIKRoot(lastRobot);
         ikRoot.setDoF();
-        const effectorLink = ikRoot.find(potentialLink => potentialLink.name === "link_6")
+        const effectorLink = ikRoot.find(
+          (potentialLink) => potentialLink.name === "link_6"
+        );
         // const helper = new IKRootsHelper([ikRoot]);
         // this.scene.add(helper);
         // this.ghosts.push(helper);
         const goal = new Goal();
-        goal.makeClosure( effectorLink );
+        goal.makeClosure(effectorLink);
         this.updateGoal(goal, position.effector);
         const solver = new Solver([ikRoot]);
-        
-        this.updateIK(ikRoot, solver, robotToUpdate);
-        lastRobot = robotToUpdate;
 
-        return;
+        this.updateIK(ikRoot, solver, robotToUpdate);
+      }
+
+      if (position.effector) {
+        const effectorToUpdate = isLast
+          ? this.effector
+          : this.createGhostEffector(
+              isFirst ? this.followMaterial : this.ghostMaterial
+            );
+
+        effectorToUpdate.visible = !hide;
+
+        this.updateEffector(effectorToUpdate, position.effector);
       }
 
       lastRobot = robotToUpdate;
-
-      this.updateRobot(robotToUpdate, position.joints);
-    });
-
-    sequenceToRender.forEach(({ position, hide }, index) => {
-      if (!position.effector) {
-        console.error("Position without effector");
-        return;
-      }
-      const isFirst = index === 0;
-      const isLast = index === sequenceToRender.length - 1;
-
-      const effectorToUpdate = isLast
-        ? this.effector
-        : this.createGhostEffector(
-            isFirst ? this.followMaterial : this.ghostMaterial
-          );
-
-      effectorToUpdate.visible = !hide;
-
-      this.updateEffector(effectorToUpdate, position.effector);
     });
 
     this.render();
   }
 
   updateIK(ikRoot, solver, target) {
-    const settleIterations = 5
+    const settleIterations = 5;
     let totalTime = 0;
     let isConverged = false;
     for (let i = 0; i < settleIterations; i++) {
@@ -380,7 +373,6 @@ class Robot3D extends HTMLElement {
       // console.log("converged", isConverged, "all diverged", isAllDiverged, "all stalled", isAllStalled)
     }
     // console.log("settled", totalTime)
-
 
     setUrdfFromIK(target, ikRoot);
   }
