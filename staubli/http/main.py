@@ -88,77 +88,12 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
             self.controller.robot.jog_joint(joint_location, 20)
             return self.api_position()
 
-
-    def api_up(self):
-        self.controller.on_up()
-
-    def api_down(self):
-        self.controller.on_down()
-
-    def api_left(self):
-        self.controller.on_left()
-
-    def api_right(self):
-        self.controller.on_right()
-
-    def api_forward(self):
-        self.controller.on_forward()
-
-    def api_back(self):
-        self.controller.on_back()
-
-    def api_yaw_left(self):
-        self.controller.on_yaw_left()
-
-    def api_yaw_right(self):
-        self.controller.on_yaw_right()
-
-    def api_pitch_up(self):
-        self.controller.on_pitch_up()
-
-    def api_pitch_down(self):
-        self.controller.on_pitch_down()
-
-    def api_roll_left(self):
-        self.controller.on_roll_left()
-
-    def api_roll_right(self):
-        self.controller.on_roll_right()
-
-    def api_minus(self):
-        self.controller.on_minus()
-        return { "distance": self.controller.distance}
-
-    def api_plus(self):
-        self.controller.on_plus()
-        return { "distance": self.controller.distance}
-
-    def api_angle_minus(self):
-        self.controller.on_angle_minus()
-        return { "angle_step": self.controller.angle_step() }
-
-    def api_angle_plus(self):
-        self.controller.on_angle_plus()
-        return { "angle_step": self.controller.angle_step() }
-
     def api_elbow(self):
         self.controller.on_elbow()
         return { "elbow": self.controller.elbow }
 
     def api_flail(self):
         self.controller.on_flail()
-
-    def api_print_position(self):
-        self.controller.on_print_position()
-        return { "positions": self._format_positions(self.controller.positions) }
-
-    def api_next_position(self):
-        self.controller.on_next_position()
-        return { "positions_index": self.controller.positions_index }
-
-    def api_previous_position(self):
-        self.controller.on_previous_position()
-        return { "positions_index": self.controller.positions_index }
 
     def api_reset(self):
         self.controller.on_reset()
