@@ -13,7 +13,7 @@ Updates attrs for values
 
 import { createEffect, createSignal } from "./state.js";
 
-/** @type {(strings: string[]) => HTMLTemplateElement} */
+/** @type {(strings: TemplateStringsArray) => HTMLTemplateElement} */
 export function html(strings) {
   const templateElement = document.createElement("template");
   templateElement.innerHTML = strings.join("");
@@ -23,15 +23,16 @@ export function html(strings) {
 /**
  * @typedef {Record<string, {
  *   innerHTML?: string,
- *   attributes?: Record<string, string>,
+ *   attributes?: Record<string, string | undefined>,
  *   eventListeners?: Record<string, (e: Event) => void>,
  *   properties?: Record<string, any>
  * }>} AttrMap
  */
 
-/** @type {<S>(setup: {tag: string, observedAttributes?: string[], template: HTMLTemplateElement, stateFn?: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap}) => void} */
+/** @type {<S>(setup: {tag: string, opts?: ElementDefinitionOptions, observedAttributes?: string[], template: HTMLTemplateElement, stateFn?: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap}) => void} */
 export function createComponent({
   tag,
+  opts,
   observedAttributes,
   template,
   stateFn,
@@ -47,18 +48,19 @@ export function createComponent({
       const boundAttrsFn = attrsFn.bind(this);
       const state = stateFn ? stateFn() : undefined;
 
-      const [attrs, setAttrs] = createSignal();
+      const [attrs, setAttrs] = createSignal({});
       this.attrsSignal = attrs;
       this.setAttrsSignal = setAttrs;
 
       const templateContent = template.content;
 
-      const shadowRoot = this.attachShadow({ mode: "open" });
-      document.querySelectorAll("link").forEach(linkElement => {
-        shadowRoot.appendChild(linkElement.cloneNode());
-      })
-      shadowRoot.appendChild(templateContent.cloneNode(true));
+      // const shadowRoot = this.attachShadow({ mode: "open" });
+      // document.querySelectorAll("link").forEach(linkElement => {
+      //   shadowRoot.appendChild(linkElement.cloneNode());
+      // })
+      // shadowRoot.appendChild(templateContent.cloneNode(true));
 
+      this.appendChild(templateContent.cloneNode(true));
 
 
       createEffect(() => {
@@ -106,8 +108,8 @@ export function createComponent({
 
       this.eventListeners = [];
       for (const [selector, updates] of Object.entries(attrMap)) {
-        const elements = this.shadowRoot.querySelectorAll(selector);
-        const { eventListeners, innerHTML, attributes, properties } = updates;
+        const elements = this.querySelectorAll(selector) ?? [];
+        const { eventListeners, attributes, properties } = updates;
 
         for (const element of elements) {
           if (eventListeners) {
@@ -139,5 +141,5 @@ export function createComponent({
     }
   }
 
-  customElements.define(tag, Component);
+  customElements.define(tag, Component, opts);
 }

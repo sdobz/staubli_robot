@@ -3,14 +3,14 @@ import { createSignal } from "./lib/state.js";
 async function get(url) {
   return await (await fetch(url)).json();
 }
-async function put(url) {
-  return await (await fetch(url, { method: "PUT" })).json();
+async function put(url, data) {
+  return await (await fetch(url, { method: "PUT", body: data !== undefined ? JSON.stringify(data) : undefined })).json();
 }
 
 /**
  * @typedef {Object} Position
- * @property {EffectorPosition | undefined} effector - The position and orientation of the end effector.
- * @property {JointPosition | undefined} joints - The joint angles.
+ * @property {EffectorPosition} [effector] - The position and orientation of the end effector.
+ * @property {JointPosition} [joints] - The joint angles.
  */
 
 /**
@@ -49,9 +49,9 @@ async function put(url) {
  * @property {number} positions_index - The index of the current position.
  */
 
-/** @type {RobotState | undefined} */
+/** @type {any} */
 const initialRobotState = undefined;
-
+/** @type readonly [() => RobotState | undefined, (newState: RobotState) => void] */
 const [robotState, setRobotState] = createSignal(initialRobotState);
 
 function loadRobot() {
@@ -60,6 +60,7 @@ function loadRobot() {
 
 // Only way to mutate robot state
 class Robot {
+  /** @type {number | undefined} */
   positionTimeout = undefined;
   getPositionEventually() {
     if (this.positionTimeout) {
@@ -79,6 +80,9 @@ class Robot {
     this.getPositionEventually();
   }
 
+  /**
+   * @param {Promise<RobotState>} p
+   */
   async withRobotState(p) {
     setRobot(null);
     const newState = await p;
@@ -87,6 +91,11 @@ class Robot {
       ...newState,
     });
     setRobot(this);
+  }
+
+  /** @type {(position: Position) => Promise<void>} */
+  async jog(position) {
+    await this.withRobotState(put("/api/jog", position))
   }
 
   async up() {
@@ -178,8 +187,9 @@ class Robot {
   }
 }
 
-/** @type {Robot | undefined} */
+/** @type {any} */
 const robotInstance = new Robot();
-
+/** @type {readonly [() => (Robot | null), (robot: Robot | null) => void]} */
 const [robot, setRobot] = createSignal(robotInstance);
+
 export { robot, robotState, loadRobot };

@@ -19,7 +19,8 @@ class Config:
                     prop = key.strip().lower()
 
                     if not hasattr(config, prop):
-                        raise Exception(f"Unexpected property {key} in {env_file}")
+                        # raise Exception(f"Unexpected property {key} in {env_file}")
+                        continue
                     setattr(
                         config, prop, value.strip().strip('"').strip("'")
                     )  # Remove spaces and quotes
