@@ -34,7 +34,6 @@ import {
   fitCameraToSelection,
   getObjectEffectorPosition,
   getObjectEffectorWorldPosition,
-  quaternionToZYZ,
   setObjectEffectorPosition,
 } from "./util.js";
 
@@ -46,6 +45,7 @@ import {
   SOLVE_STATUS,
   setUrdfFromIK,
   setIKFromUrdf,
+  DOF,
 } from "closed-chain-ik-js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
@@ -170,21 +170,22 @@ class Robot3D extends HTMLElement {
     };
     loader.load("/urdf/staubli_tx90_support/urdf/tx90-rx.urdf", (result) => {
       /** @type {URDFRobot | undefined} */
-      this.robot = result;
+      this.urdfRoot = result;
     });
 
     manager.onLoad = () => {
-      if (!this.robot) {
+      if (!this.urdfRoot) {
         console.error("Manager load without robot");
         return;
       }
+      this.effectorOffset = this.effectorOffset.copy(
+        this.urdfRoot.joints["base_link-base"].position
+      );
+
+      this.robot = this.urdfRoot.clone(true);
       this.robot.traverse((c) => {
         c.castShadow = true;
       });
-
-      this.effectorOffset = this.effectorOffset.copy(
-        this.robot.joints["base_link-base"].position
-      );
 
       fitCameraToSelection(camera, orbit, [this.robot]);
 
@@ -267,12 +268,10 @@ class Robot3D extends HTMLElement {
     const currentSequence = jogSequence();
 
     if (!currentRobotState?.position) {
-      console.error("Unable to get current position");
       return;
     }
 
     if (!this.robot) {
-      console.error("Robot not loaded");
       return;
     }
 
@@ -290,7 +289,7 @@ class Robot3D extends HTMLElement {
     }
 
     let lastRobot;
-    
+
     sequenceToRender.forEach(({ position, hide }, index) => {
       const isFirst = index === 0;
       const isLast = index === sequenceToRender.length - 1;
@@ -308,31 +307,30 @@ class Robot3D extends HTMLElement {
           );
       robotToUpdate.visible = !hide;
 
-      let displayEffectorPosition = position.effector
+      let displayEffectorPosition = position.effector;
 
       if (position.joints) {
         this.updateRobot(robotToUpdate, position.joints);
 
         if (!displayEffectorPosition) {
-          robotToUpdate.traverse(obj => {
-            if (obj.name === 'tool0') {
-              displayEffectorPosition = getObjectEffectorWorldPosition(obj, this.effectorOffset, mmToM)
+          robotToUpdate.traverse((obj) => {
+            if (obj.name === "tool0") {
+              displayEffectorPosition = getObjectEffectorWorldPosition(
+                obj,
+                this.effectorOffset,
+                mmToM
+              );
             }
-          })
+          });
         }
-      }
-      else if (position.effector && lastRobot) {
-        // console.log("Position without joints, embarking on IK...");
-
-        const ikRoot = urdfRobotToIKRoot(this.robot);
-        setIKFromUrdf(ikRoot, lastRobot)
-        ikRoot.setDoF();
+      } else if (position.effector && lastRobot) {
+        const ikRoot = urdfRobotToIKRoot(this.urdfRoot);
+        setIKFromUrdf(ikRoot, lastRobot);
+        ikRoot.setDoF(); // Lock the base
         const effectorLink = ikRoot.find(
-          (potentialLink) => potentialLink.name === "link_6"
+          (potentialLink) => potentialLink.name === "tool0"
         );
-        // const helper = new IKRootsHelper([ikRoot]);
-        // this.scene.add(helper);
-        // this.ghosts.push(helper);
+
         const goal = new Goal();
         goal.makeClosure(effectorLink);
         this.updateGoal(goal, position.effector);
@@ -350,7 +348,12 @@ class Robot3D extends HTMLElement {
 
         effectorToUpdate.visible = !hide;
 
-        setObjectEffectorPosition(effectorToUpdate, displayEffectorPosition, this.effectorOffset, mmToM)
+        setObjectEffectorPosition(
+          effectorToUpdate,
+          displayEffectorPosition,
+          this.effectorOffset,
+          mmToM
+        );
       }
 
       lastRobot = robotToUpdate;
@@ -386,9 +389,7 @@ class Robot3D extends HTMLElement {
       if (isConverged || isAllDiverged || isAllStalled) {
         break;
       }
-      // console.log("converged", isConverged, "all diverged", isAllDiverged, "all stalled", isAllStalled)
     }
-    // console.log("settled", totalTime)
 
     setUrdfFromIK(target, ikRoot);
   }
@@ -427,8 +428,13 @@ class Robot3D extends HTMLElement {
       y * mmToM + this.effectorOffset.y,
       z * mmToM + this.effectorOffset.z
     );
-
-    goal.setQuaternion(createZYZQuaternion(yaw, pitch, roll));
+    const goalQuaternion = createZYZQuaternion(yaw, pitch, roll);
+    goal.setQuaternion(
+      goalQuaternion.x,
+      goalQuaternion.y,
+      goalQuaternion.z,
+      goalQuaternion.w
+    );
   }
 
   purgeArrows() {
@@ -617,11 +623,29 @@ class Robot3D extends HTMLElement {
       return this.transformControls;
     }
 
+    let ikRoot, solver, goal;
+
     this.transformControls = new TransformControls(
       this.camera,
       this.renderer.domElement
     );
-    this.transformControls.addEventListener("change", () => this.render());
+    this.transformControls.addEventListener("change", () => {
+      if (goal) {
+        goal.setPosition(
+          this.effector.position.x,
+          this.effector.position.y,
+          this.effector.position.z
+        );
+        goal.setQuaternion(
+          this.effector.quaternion.x,
+          this.effector.quaternion.y,
+          this.effector.quaternion.z,
+          this.effector.quaternion.w
+        );
+        this.updateIK(ikRoot, solver, this.robot);
+      }
+      this.render();
+    });
     this.transformControls.addEventListener("dragging-changed", (event) => {
       const isDragging = event.value;
       this.orbit.enabled = !isDragging;
@@ -629,6 +653,17 @@ class Robot3D extends HTMLElement {
       this.dragging = isDragging;
 
       if (isDragging) {
+        if (!ikRoot) {
+          ikRoot = urdfRobotToIKRoot(this.urdfRoot);
+          setIKFromUrdf(ikRoot, this.robot);
+          ikRoot.setDoF(); // Lock the base
+          const effectorLink = ikRoot.find(
+            (potentialLink) => potentialLink.name === "tool0"
+          );
+          goal = new Goal();
+          goal.makeClosure(effectorLink);
+          solver = new Solver([ikRoot]);
+        }
         this.updateRobots();
       }
 
@@ -637,6 +672,17 @@ class Robot3D extends HTMLElement {
           console.error("Drag end without effector");
           return;
         }
+
+        if (ikRoot) {
+          ikRoot = undefined;
+        }
+        if (solver) {
+          solver = undefined;
+        }
+        if (goal) {
+          goal = undefined;
+        }
+
         this.appendEffectorSequence(this.effector);
       }
     });
@@ -672,8 +718,12 @@ class Robot3D extends HTMLElement {
       {
         name: new Date().toISOString(),
         position: {
-          effector: getObjectEffectorPosition(effector, this.effectorOffset, mmToM),
-        }
+          effector: getObjectEffectorPosition(
+            effector,
+            this.effectorOffset,
+            mmToM
+          ),
+        },
       },
     ]);
   }
