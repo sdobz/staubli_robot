@@ -39,6 +39,7 @@
     staubli = import ./pi/staubli.nix { inherit pkgs; };
   in rec {
     packages = {
+      closed-chain-ik-js = import ./closed-chain-ik-js.nix { inherit pkgs; };
       pi-image = self.images.staubli;
       staubli = staubli.package;
       pythonEnv = staubli.env;
@@ -54,6 +55,7 @@
         packages.pythonEnv
         packages.devPythonEnv
         pkgs.rsync
+        pkgs.curl
       ];
       shellHook = ''
         if [ -e .venv ] && [ ! -L .venv ]; then

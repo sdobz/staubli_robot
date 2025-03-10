@@ -60,24 +60,10 @@ function loadRobot() {
 
 // Only way to mutate robot state
 class Robot {
-  /** @type {number | undefined} */
-  positionTimeout = undefined;
-  getPositionEventually() {
-    if (this.positionTimeout) {
-      clearTimeout(this.positionTimeout);
-    }
-    this.positionTimeout = setTimeout(loadRobot, 1000);
-  }
-
   async withRobot(p) {
     setRobot(null);
     await p;
     setRobot(this);
-  }
-
-  async withRobotPosition(p) {
-    await this.withRobot(p);
-    this.getPositionEventually();
   }
 
   /**
@@ -98,88 +84,12 @@ class Robot {
     await this.withRobotState(put("/api/jog", position))
   }
 
-  async up() {
-    await this.withRobotPosition(put("/api/up"));
-  }
-
-  async down() {
-    await this.withRobotPosition(put("/api/down"));
-  }
-
-  async left() {
-    await this.withRobotPosition(put("/api/left"));
-  }
-
-  async right() {
-    await this.withRobotPosition(put("/api/right"));
-  }
-
-  async forward() {
-    await this.withRobotPosition(put("/api/forward"));
-  }
-
-  async back() {
-    await this.withRobotPosition(put("/api/back"));
-  }
-
-  async yaw_left() {
-    await this.withRobotPosition(put("/api/yaw_left"));
-  }
-
-  async yaw_right() {
-    await this.withRobotPosition(put("/api/yaw_right"));
-  }
-
-  async pitch_up() {
-    await this.withRobotPosition(put("/api/pitch_up"));
-  }
-
-  async pitch_down() {
-    await this.withRobotPosition(put("/api/pitch_down"));
-  }
-
-  async roll_left() {
-    await this.withRobotPosition(put("/api/roll_left"));
-  }
-
-  async roll_right() {
-    await this.withRobotPosition(put("/api/roll_right"));
-  }
-
-  async minus() {
-    await this.withRobotState(put("/api/minus"));
-  }
-
-  async plus() {
-    await this.withRobotState(put("/api/plus"));
-  }
-
-  async angle_minus() {
-    await this.withRobotState(put("/api/angle_minus"));
-  }
-
-  async angle_plus() {
-    await this.withRobotState(put("/api/angle_plus"));
-  }
-
   async elbow() {
     await this.withRobotState(put("/api/elbow"));
   }
 
   async flail() {
     await this.withRobot(put("/api/flail"));
-  }
-
-  async print_position() {
-    await this.withRobotState(put("/api/print_position"));
-  }
-
-  async next_position() {
-    await this.withRobotState(put("/api/next_position"));
-  }
-
-  async previous_position() {
-    await this.withRobotState(put("/api/previous_position"));
   }
 
   async reset() {
