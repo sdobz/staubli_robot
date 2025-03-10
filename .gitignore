@@ -6,3 +6,5 @@ result
 .venv-dev
 
 .env
+
+*.FCBak

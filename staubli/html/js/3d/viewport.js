@@ -166,9 +166,9 @@ class Robot3D extends HTMLElement {
     const manager = new LoadingManager();
     const loader = new URDFLoader(manager);
     loader.packages = {
-      staubli_tx90_support: "/urdf/staubli_tx90_support",
+      staubli_rx90: "/urdf/staubli_rx90",
     };
-    loader.load("/urdf/staubli_tx90_support/urdf/tx90-rx.urdf", (result) => {
+    loader.load("/urdf/staubli_rx90/StaubliRX90.urdf", (result) => {
       /** @type {URDFRobot | undefined} */
       this.urdfRoot = result;
     });

@@ -1,0 +1,16 @@
+{
+    "robots": [
+        {
+            "name": "RX-90",
+            "type": "robotic arm",
+            "manufacturer": "Staubli",
+            "xacro-generated": true,
+            "urdf": [
+                "StaubliRX90.urdf"
+            ],
+            "variant": null,
+            "source-link": "http://todo",
+            "id": 1
+        }
+    ]
+}
