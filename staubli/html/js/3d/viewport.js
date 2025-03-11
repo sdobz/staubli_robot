@@ -27,7 +27,10 @@ import { PointerURDFDragControls } from "urdf-loader/URDFDragControls.js";
 import { html } from "../lib/component.js";
 import { createEffect } from "../lib/state.js";
 import { robotState } from "../robot.js";
-import { jogSequence, setJogSequence } from "../jog-sequence.js";
+import {
+  jogSequence,
+  updatePosition,
+} from "../jog-sequence.js";
 import { jogState } from "../jog-control.js";
 import {
   createZYZQuaternion,
@@ -52,7 +55,6 @@ import {
 /** @import { Object3D } from 'three' */
 
 /** @import { JointPosition, EffectorPosition } from '../robot.js' */
-/** @import {JogItem} from '../jog-sequence.js' */
 
 const mmToM = 1 / 1000;
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
@@ -175,8 +177,7 @@ class Robot3D extends HTMLElement {
 
     manager.onLoad = () => {
       if (!this.urdfRoot) {
-        console.error("Manager load without robot");
-        return;
+        throw new Error("Manager load without robot");
       }
       this.effectorOffset = this.effectorOffset.copy(
         this.urdfRoot.joints["base_link-base"].position
@@ -282,7 +283,10 @@ class Robot3D extends HTMLElement {
     this.purgeArrows();
 
     const currentPosition = currentRobotState.position;
-    let sequenceToRender = [{ position: currentPosition }, ...currentSequence.items];
+    let sequenceToRender = [
+      { position: currentPosition },
+      ...currentSequence.items,
+    ];
 
     if (this.dragging) {
       sequenceToRender.push(sequenceToRender[sequenceToRender.length - 1]);
@@ -401,7 +405,7 @@ class Robot3D extends HTMLElement {
    */
   updateRobot(robot, jointPosition) {
     if (!robot.joints) {
-      console.error("Robot no joints");
+      throw new Error("Robot no joints");
     }
     /** @type {Record<string, URDFJoint>} */
     const robotJoints = /** @type{any} */ (robot.joints);
@@ -584,33 +588,9 @@ class Robot3D extends HTMLElement {
 
     const offsetAngleDeg = MathUtils.radToDeg(angle) + jointOffset[jointId];
 
-    const currentJogSequence = jogSequence();
-    const state = robotState();
-
-    const lastJoints =
-      currentJogSequence.items.findLast((item) => !!item.position.joints)?.position
-        .joints ?? state?.position.joints;
-
-    if (!lastJoints) {
-      console.error("Unable to get reference position");
-      return;
-    }
-
-    /** @type {JogItem} */
-    const nextItem = {
-      name: new Date().toISOString(),
-      position: {
-        joints: /** @type {any} */ ({
-          ...lastJoints,
-          [jointPositionKey]: offsetAngleDeg,
-        }),
-      },
-    };
-
-    setJogSequence({
-      ...currentJogSequence,
-      items: [...currentJogSequence.items, nextItem],
-    });
+    updatePosition({
+      joints: {[jointPositionKey]: offsetAngleDeg}
+    })
   }
 
   setJointValue(name, angle) {
@@ -715,22 +695,8 @@ class Robot3D extends HTMLElement {
    * @param {Object3D} effector
    */
   appendEffectorSequence(effector) {
-    const currentSequence = jogSequence();
-    setJogSequence({
-      ...currentSequence,
-      items: [
-        ...currentSequence.items,
-        {
-          name: new Date().toISOString(),
-          position: {
-            effector: getObjectEffectorPosition(
-              effector,
-              this.effectorOffset,
-              mmToM
-            ),
-          },
-        },
-      ],
+    updatePosition({
+      effector: getObjectEffectorPosition(effector, this.effectorOffset, mmToM),
     });
   }
 

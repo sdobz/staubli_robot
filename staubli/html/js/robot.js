@@ -14,6 +14,26 @@ async function put(url, data) {
  */
 
 /**
+ * @typedef {"joints" | "effector"} PositionType
+ */
+
+/**
+ * 
+ * @param {Position} position 
+ * @returns {PositionType}
+ */
+export function positionType(position) {
+  if (position.effector) {
+    return "effector"
+  }
+  if (position.joints) {
+    return "joints"
+  }
+
+  throw new Error("Invalid position")
+}
+
+/**
  * @typedef {Object} StoredPosition
  * @property {string} name - The name of the position
  * @property {EffectorPosition} position - The position and orientation of the end effector.

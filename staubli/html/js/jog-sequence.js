@@ -1,16 +1,17 @@
 import { html, createComponent } from "./lib/component.js";
 import { createEffect, createSignal } from "./lib/state.js";
-import { robot } from "./robot.js";
+import { robot, robotState, positionType } from "./robot.js";
 import { getItem, listItems, removeItem, setItem } from "./lib/storage.js";
 
-/** @import { Position } from './robot.js' */
+/** @import { Position, JointPosition, EffectorPosition } from './robot.js' */
 
 /** @typedef {"stopped" | "play" | "preview" | "jog" } PlaybackEnum */
 /** @typedef {"none" | "sequence" | "item" } EditingEnum */
 
 /**
  * @typedef {Object} SequenceState
- * @property {number} [selectedIndex]
+ * @property {number} selectedIndex
+ * @property {boolean} updateSelected
  * @property {PlaybackEnum} playback
  * @property {EditingEnum} editing
  * @property {boolean} loop
@@ -19,7 +20,8 @@ import { getItem, listItems, removeItem, setItem } from "./lib/storage.js";
 
 /** @type {SequenceState} */
 const initialSequenceState = {
-  selectedIndex: undefined,
+  selectedIndex: 0,
+  updateSelected: false,
   editing: "none",
   playback: "stopped",
   loop: false,
@@ -108,7 +110,75 @@ function setJogSequence(newJogSequence) {
   _setJogSequence(newJogSequence);
 }
 
+/**
+ * @param {{joints?: Partial<JointPosition>, effector?: EffectorPosition}} partialPosition
+ */
+export function updatePosition(partialPosition) {
+  const currentJogSequence = jogSequence();
+  const currentSequenceState = sequenceState();
+  const currentRobotState = robotState();
+  const currentIndex = currentSequenceState.selectedIndex;
+  const currentItem = currentJogSequence.items[currentIndex];
+
+  /** @type {Position} */
+  let position;
+
+  if (partialPosition.joints) {
+    // Joints always "append" - preserve order
+    let lastJoints = currentRobotState.position.joints;
+
+    for (let i = currentIndex - 1; i >= 0; i -= 1) {
+      const testJoints = currentJogSequence.items[i]?.position.joints;
+      if (!testJoints) {
+        continue;
+      }
+
+      lastJoints = testJoints;
+      break;
+    }
+
+    if (!lastJoints) {
+      throw new Error(
+        "Unable to discover previous joints while inserting joint based position"
+      );
+    }
+
+    position = {
+      joints: {
+        ...lastJoints,
+        ...partialPosition.joints,
+      },
+    };
+  } else if (partialPosition.effector) {
+    position = { effector: partialPosition.effector };
+  } else {
+    throw new Error("Invalid position supplied to updatePosition");
+  }
+
+  const shouldUpdate =
+    currentSequenceState.updateSelected &&
+    currentItem &&
+    positionType(position) === positionType(currentItem.position);
+
+  const oldItems = currentJogSequence.items;
+
+  /** @type {JogItem[]} */
+  const newItems = shouldUpdate
+    ? [
+        ...oldItems.slice(0, currentIndex),
+        { ...currentItem, position },
+        ...oldItems.slice(currentIndex),
+      ]
+    : [...oldItems, { name: new Date().toISOString(), position }];
+
+  setJogSequence({
+    ...currentJogSequence,
+    items: newItems,
+  });
+}
+
 export function loadJogSequence(id) {
+  /** @type {JogSequence | null} */
   const item = getItem("sequence", id);
   if (!item) {
     return;
@@ -140,9 +210,8 @@ createEffect(() => {
     return;
   }
 
-  const nextIndex =
-    initialState.selectedIndex === undefined ? 0 : initialState.selectedIndex;
-  const nextItem = initialSequence[nextIndex];
+  const nextIndex = initialState.selectedIndex;
+  const nextItem = initialSequence.items[nextIndex];
 
   if (!nextItem) {
     setSequenceState({
@@ -207,6 +276,14 @@ createComponent({
         <button class="sequence-play">play</button>
         <button class="sequence-stop">stop</button>
       </div>
+      <h4>Current Point</h4>
+      <fieldset>
+        <label>
+          <input class="sequence-update" type="checkbox" role="switch" />
+          Update Selected
+        </label>
+        <button class="item-edit">Edit Selected</button>
+      </fieldset>
       <table class="effector">
         <thead>
           <tr>
@@ -255,8 +332,15 @@ createComponent({
 
       setSequenceState({
         ...currentState,
-        editing: "sequence"
-      })
+        editing: "sequence",
+      });
+    }
+
+    function doToggleUpdateSelected() {
+      setSequenceState({
+        ...currentState,
+        updateSelected: !currentState.updateSelected,
+      });
     }
 
     /**
@@ -268,15 +352,15 @@ createComponent({
 
         setSequenceState({
           ...currentState,
-          playback
-        })
-      }
+          playback,
+        });
+      };
     }
 
-    const doPlay = makePlaybackHandler("play")
-    const doPreview = makePlaybackHandler("preview")
-    const doStop = makePlaybackHandler("stopped")
-    const doJog = makePlaybackHandler("jog")
+    const doPlay = makePlaybackHandler("play");
+    const doPreview = makePlaybackHandler("preview");
+    const doStop = makePlaybackHandler("stopped");
+    const doJog = makePlaybackHandler("jog");
 
     /**
      * @param {Event} e
@@ -302,29 +386,36 @@ createComponent({
       }
 
       const newItems = currentSequence.items.filter((_, i) => i !== index);
-      let nextSelectedIndex = currentState.selectedIndex
+      let nextSelectedIndex = currentState.selectedIndex;
 
-      if (nextSelectedIndex !== undefined) {
-        if (index < nextSelectedIndex) {
-          nextSelectedIndex -= 1
-        }
-
-        if (nextSelectedIndex >= newItems.length) {
-          nextSelectedIndex = undefined
-        }
-
-        if (nextSelectedIndex !== currentState.selectedIndex) {
-          setSequenceState({
-            ...currentState,
-            selectedIndex: nextSelectedIndex
-          })
-        }
+      if (index < nextSelectedIndex) {
+        nextSelectedIndex -= 1;
       }
-      
+
+      if (nextSelectedIndex >= newItems.length) {
+        nextSelectedIndex = newItems.length - 1;
+      }
+
+      if (nextSelectedIndex !== currentState.selectedIndex) {
+        setSequenceState({
+          ...currentState,
+          selectedIndex: nextSelectedIndex,
+        });
+      }
+
       setJogSequence({
         ...currentSequence,
-        items: newItems
-      })
+        items: newItems,
+      });
+    }
+
+    function doEditItem() {
+      if (isBusy) return;
+
+      setSequenceState({
+        ...currentState,
+        editing: "item",
+      });
     }
 
     const selectItems =
@@ -341,9 +432,10 @@ createComponent({
     `
       );
 
-    const children = currentSequence.items
-      .map(
-        (item, index) => `
+    const children =
+      currentSequence.items
+        .map(
+          (item, index) => `
       <tr data-index="${index}">
         <td>
           <input type="radio" class="item-select" ${
@@ -352,31 +444,36 @@ createComponent({
         </td>
         <th scope="row">${item.name}</th>
         <td>${!!item.position.effector ? "tool" : ""} ${
-          !!item.position.joints ? "joint" : ""
-        }</td>
+            !!item.position.joints ? "joint" : ""
+          }</td>
         <td>${item.speed !== undefined ? item.speed : "inherit"}</td>
         <td><button class="item-delete">X</button></td>
       </tr>
     `
-      )
-      .join("\n") + `
+        )
+        .join("\n") +
+      (currentSequence.items.length == 0
+        ? `
       <tr>
         <td>
-          <input type="radio" class="item-select" ${currentState.selectedIndex === undefined ? "checked" : ""}
-          />
+          <input type="radio" class="item-select" "checked" />
+          Jog robot to add point
         </td>
-        <th scope="row" colspan="4">Add new point</th>
+        <th scope="row" colspan="4"></th>
       </tr>
       `
+        : "");
 
-    const busyDisabled =  isBusy ? "true" : undefined
-    const emptyDisabled =  isEmpty ? "true" : undefined
-    const jogDisabled = currentState.selectedIndex === undefined || !currentSequence[currentState.selectedIndex] ? "true" : undefined
+    const busyDisabled = isBusy ? "true" : undefined;
+    const emptyDisabled = isEmpty ? "true" : undefined;
+    const selectedDisabled = !currentSequence.items[currentState.selectedIndex]
+      ? "true"
+      : undefined;
 
     return {
       ".sequence-delete": {
         attributes: {
-          disabled: busyDisabled
+          disabled: busyDisabled,
         },
         eventListeners: {
           click: doDeleteSequence,
@@ -384,15 +481,24 @@ createComponent({
       },
       ".sequence-edit": {
         attributes: {
-          disable: busyDisabled
+          disabled: busyDisabled,
         },
         eventListeners: {
           click: doEditSequence,
-        }
+        },
+      },
+      ".sequence-update": {
+        attributes: {
+          disabled: selectedDisabled,
+          checked: currentState.updateSelected ? "true" : undefined,
+        },
+        eventListeners: {
+          click: doToggleUpdateSelected,
+        },
       },
       ".sequence-play": {
         attributes: {
-          disabled: emptyDisabled || busyDisabled
+          disabled: emptyDisabled || busyDisabled,
         },
         eventListeners: {
           click: doPlay,
@@ -400,7 +506,7 @@ createComponent({
       },
       ".sequence-jog": {
         attributes: {
-          disabled: emptyDisabled || busyDisabled || jogDisabled
+          disabled: emptyDisabled || busyDisabled || selectedDisabled,
         },
         eventListeners: {
           click: doJog,
@@ -408,7 +514,7 @@ createComponent({
       },
       ".sequence-stop": {
         attributes: {
-          disabled: emptyDisabled || busyDisabled
+          disabled: emptyDisabled || busyDisabled,
         },
         eventListeners: {
           click: doStop,
@@ -416,7 +522,7 @@ createComponent({
       },
       ".sequence-preview": {
         attributes: {
-          disabled: emptyDisabled || busyDisabled
+          disabled: emptyDisabled || busyDisabled,
         },
         eventListeners: {
           click: doPreview,
@@ -424,7 +530,7 @@ createComponent({
       },
       ".select-jog-sequence": {
         attributes: {
-          disabled: busyDisabled
+          disabled: busyDisabled,
         },
         properties: { innerHTML: selectItems },
         eventListeners: {
@@ -436,15 +542,23 @@ createComponent({
       },
       ".item-select": {
         attributes: {
-          disabled: busyDisabled
+          disabled: busyDisabled,
         },
         eventListeners: {
           click: onSelectItem,
         },
       },
+      ".item-edit": {
+        attributes: {
+          disabled: busyDisabled || selectedDisabled,
+        },
+        eventListeners: {
+          click: doEditItem,
+        },
+      },
       ".item-delete": {
         attributes: {
-          disabled: busyDisabled
+          disabled: busyDisabled,
         },
         eventListeners: {
           click: onDeleteItem,
@@ -460,10 +574,10 @@ createComponent({
  */
 function findIndex(el) {
   if (el.hasAttribute("data-index")) {
-    return parseInt(el.getAttribute("data-index") || "");
+    return parseInt(el.getAttribute("data-index") || "-1");
   }
   if (el.parentElement) {
     return findIndex(el.parentElement);
   }
-  return;
+  return -1;
 }
