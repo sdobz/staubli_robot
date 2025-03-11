@@ -50,6 +50,7 @@ import {
   setIKFromUrdf,
   DOF,
 } from "closed-chain-ik-js";
+import { loadRobot } from "./urdf.js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { Object3D } from 'three' */
@@ -164,21 +165,8 @@ class Robot3D extends HTMLElement {
     this.scene = scene;
     this.orbit = orbit;
 
-    // Load robot
-    const manager = new LoadingManager();
-    const loader = new URDFLoader(manager);
-    loader.packages = {
-      staubli_rx90: "/urdf/staubli_rx90",
-    };
-    loader.load("/urdf/staubli_rx90/StaubliRX90.urdf", (result) => {
-      /** @type {URDFRobot | undefined} */
-      this.urdfRoot = result;
-    });
-
-    manager.onLoad = () => {
-      if (!this.urdfRoot) {
-        throw new Error("Manager load without robot");
-      }
+    loadRobot().then((result) => {
+      this.urdfRoot = result
       this.effectorOffset = this.effectorOffset.copy(
         this.urdfRoot.joints["base_link-base"].position
       );
@@ -192,7 +180,7 @@ class Robot3D extends HTMLElement {
 
       scene.add(this.robot);
       this.updateRobots();
-    };
+    })
 
     const stlLoader = new STLLoader();
     stlLoader.load(
