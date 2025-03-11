@@ -79,8 +79,8 @@ function setJogSequence(newJogSequence) {
       }
     }
     
-    setSequences(listItems('sequence'))
     setItem('sequence', /** @type {Required<JogSequence>} */(newJogSequence), reduceJogSequence, sortJogSequence)
+    setSequences(listItems('sequence'))
   }
 
   _setJogSequence(newJogSequence);
@@ -195,6 +195,7 @@ createComponent({
 
       if (currentSequence.id) {
         removeItem('sequence', /** @type{{id: string}} */(currentSequence))
+        setSequences(listItems('sequence'))
       }
       setJogSequence(initialJogSequence);
     }
