@@ -25,6 +25,7 @@ pre.current {
   aspect-ratio: 1;
 }
 
+/* Pico overrides */
 button:is([aria-current]:not([aria-current=false])) {
   border-bottom: 0.2rem solid var(--pico-color);
 }
@@ -36,4 +37,29 @@ article {
 
 [role="search"], [role="group"] {
   margin-bottom: 0;
+}
+@media (min-width: 576px) {
+  :root {
+    --pico-font-size: 75%;
+  }
+}
+@media (min-width: 768px) {
+  :root {
+    --pico-font-size: 78.75%;
+  }
+}
+@media (min-width: 1024px) {
+  :root {
+    --pico-font-size: 82.75%;
+  }
+}
+@media (min-width: 1280px) {
+  :root {
+    --pico-font-size: 87%;
+  }
+}
+@media (min-width: 1536px) {
+  :root {
+    --pico-font-size: 91%;
+  }
 }

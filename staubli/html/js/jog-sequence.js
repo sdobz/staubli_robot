@@ -1,34 +1,51 @@
 import { html, createComponent } from "./lib/component.js";
 import { createEffect, createSignal } from "./lib/state.js";
 import { robot } from "./robot.js";
-import {getItem, listItems, removeItem, setItem} from "./lib/storage.js"
+import { getItem, listItems, removeItem, setItem } from "./lib/storage.js";
 
 /** @import { Position } from './robot.js' */
 
-const [sequenceState, setSequenceState] = createSignal({
-  index: 0,
-  active: false,
-  pending: false,
-});
+/** @typedef {"stopped" | "play" | "preview" | "jog" } PlaybackEnum */
+/** @typedef {"none" | "sequence" | "item" } EditingEnum */
+
+/**
+ * @typedef {Object} SequenceState
+ * @property {number | undefined} selectedIndex
+ * @property {PlaybackEnum} playback
+ * @property {EditingEnum} editing
+ * @property {boolean} loop
+ * @property {boolean} busy
+ */
+
+/** @type {SequenceState} */
+const initialSequenceState = {
+  selectedIndex: undefined,
+  editing: "none",
+  playback: "stopped",
+  loop: false,
+  busy: false,
+};
+const [sequenceState, setSequenceState] = createSignal(initialSequenceState);
 export { sequenceState };
 
 /**
  * @typedef {Object} JogItem
- * @property {string} [name]
+ * @property {string} name
  * @property {Position} position
- * @property {boolean} [visible]
+ * @property {number} [speed]
  */
 
 /**
  * @typedef {Object} JogSequence
  * @property {string} [name]
  * @property {string} [id]
+ * @property {number} [speed]
  * @property {JogItem[]} items
  */
 
 /** @type {JogSequence} */
 const initialJogSequence = {
-  items: []
+  items: [],
 };
 const [jogSequence, _setJogSequence] = createSignal(initialJogSequence);
 
@@ -39,34 +56,34 @@ const [jogSequence, _setJogSequence] = createSignal(initialJogSequence);
  */
 
 /** @type {JogSequenceIndex[]} */
-const initialJogSequenceIndex = listItems("sequence")
-const [sequences, setSequences] = createSignal(initialJogSequenceIndex)
+const initialJogSequenceIndex = listItems("sequence");
+const [sequences, setSequences] = createSignal(initialJogSequenceIndex);
 
 /**
- * @param {JogSequence} jogSequence 
+ * @param {JogSequence} jogSequence
  */
 function isPopulated(jogSequence) {
-  return !!jogSequence.name || jogSequence.items.length > 0
+  return !!jogSequence.name || jogSequence.items.length > 0;
 }
 
-function reduceJogSequence({id, name}) {
-  return {id, name}
+function reduceJogSequence({ id, name }) {
+  return { id, name };
 }
 
-function sortJogSequence({name: nameA}, {name: nameB}) {
-  return nameA < nameB ? -1 : 1
+function sortJogSequence({ name: nameA }, { name: nameB }) {
+  return nameA < nameB ? -1 : 1;
 }
 
 /**
- * 
- * @param {JogSequence} newJogSequence 
+ *
+ * @param {JogSequence} newJogSequence
  */
 function setJogSequence(newJogSequence) {
   const currentState = sequenceState();
-  if (currentState.active) {
+  if (currentState.busy) {
     setSequenceState({
       ...currentState,
-      active: false,
+      playback: "stopped",
     });
   }
 
@@ -74,71 +91,96 @@ function setJogSequence(newJogSequence) {
     if (!newJogSequence.id) {
       newJogSequence = {
         ...newJogSequence,
-        name: newJogSequence.name || (new Date()).toISOString(),
-        id: Math.random().toString(36).slice(2)
-      }
+        name: newJogSequence.name || new Date().toISOString(),
+        id: Math.random().toString(36).slice(2),
+      };
     }
-    
-    setItem('sequence', /** @type {Required<JogSequence>} */(newJogSequence), reduceJogSequence, sortJogSequence)
-    setSequences(listItems('sequence'))
+
+    setItem(
+      "sequence",
+      /** @type {Required<JogSequence>} */ (newJogSequence),
+      reduceJogSequence,
+      sortJogSequence
+    );
+    setSequences(listItems("sequence"));
   }
 
   _setJogSequence(newJogSequence);
 }
 
 export function loadJogSequence(id) {
-  const item = getItem('sequence', id)
+  const item = getItem("sequence", id);
   if (!item) {
-    return
+    return;
   }
 
-  setJogSequence(item)
+  setJogSequence(item);
+  setSequenceState(initialSequenceState);
 }
 export { jogSequence, setJogSequence };
 
 createEffect(() => {
-  const currentSequence = jogSequence();
-  const currentState = sequenceState();
+  const initialSequence = jogSequence();
+  const initialState = sequenceState();
   const currentRobot = robot();
+
+  if (initialState.playback !== "play" && initialState.playback !== "jog") {
+    return;
+  }
+
+  if (initialState.busy) {
+    return;
+  }
 
   if (!currentRobot) {
     return;
   }
 
-  if (currentState.pending) {
+  if (initialSequence.items.length === 0) {
     return;
   }
 
-  if (!currentState.active) {
+  const nextIndex =
+    initialState.selectedIndex === undefined ? 0 : initialState.selectedIndex;
+  const nextItem = initialSequence[nextIndex];
+
+  if (!nextItem) {
+    setSequenceState({
+      ...initialState,
+      playback: "stopped",
+    });
     return;
   }
 
-  if (currentSequence.items.length === 0) {
-    return;
-  }
+  /** @type {SequenceState} */
+  const busyState = {
+    ...initialState,
+    busy: true,
+  };
+  setSequenceState(busyState);
 
-  setSequenceState({
-    ...currentState,
-    pending: true,
-  });
-
-  const nextPosition = currentSequence[0];
-  currentRobot.jog(nextPosition.position).then(() => {
-    const currentJogSequence = jogSequence()
-    const newItems = currentJogSequence.items.slice(1);
+  currentRobot.jog(nextItem.position).then(() => {
+    const newSequence = jogSequence();
     const newState = sequenceState();
 
-    const newActive = newState.active && newItems.length > 0;
+    const stateChangedWhileWaiting =
+      newSequence !== initialSequence || newState !== busyState;
+    const isJog = newState.playback === "jog";
+    const loopOver = nextIndex >= newSequence.items.length - 1;
 
-    _setJogSequence({
-      ...currentJogSequence,
-      items: newItems
-    });
-    setSequenceState({
-      ...newState,
-      active: newActive,
-      pending: false,
-    });
+    if (stateChangedWhileWaiting || isJog || loopOver) {
+      setSequenceState({
+        ...newState,
+        playback: "stopped",
+        busy: false,
+      });
+    } else {
+      const loopedIndex = (nextIndex + 1) % newSequence.items.length;
+      setSequenceState({
+        ...newState,
+        selectedIndex: loopedIndex,
+      });
+    }
   });
 });
 
@@ -146,24 +188,33 @@ createComponent({
   tag: "jog-sequence-control",
   template: html`
     <article class="vertical-stack">
-        <h4>Jog Sequence</h4>
-        <select class="select-jog-sequence" aria-label="Load Jog Sequence" required>
-          <option selected value="">
-            New
-          </option>
-        </select>
+      <h4>Jog Sequence</h4>
+      <select
+        class="select-jog-sequence"
+        aria-label="Load Jog Sequence"
+        required
+      >
+        <option selected value="">New</option>
+      </select>
       <div role="group">
-        <button class="sequence-purge">X</button>
-        <button class="sequence-active">&amp;</button>
+        <button class="sequence-edit">Edit</button>
+        <button class="sequence-delete">Delete</button>
+      </div>
+      <h4>Playback (CAUSES MOVEMENT)</h4>
+      <div role="group">
+        <button class="sequence-preview">preview</button>
+        <button class="sequence-jog">jog</button>
+        <button class="sequence-play">play</button>
+        <button class="sequence-stop">stop</button>
       </div>
       <table class="effector">
         <thead>
           <tr>
-            <th scope="col">go</th>
-            <th scope="col">show</th>
+            <th scope="col">select</th>
             <th scope="col">name</th>
             <th scope="col">type</th>
-            <th scope="col">dist</th>
+            <th scope="col">speed</th>
+            <th scope="col">delete</th>
           </tr>
         </thead>
         <tbody class="positions"></tbody>
@@ -174,112 +225,206 @@ createComponent({
     const currentState = sequenceState();
     const currentSequence = jogSequence();
 
-    const isActive = currentState.active;
     const isEmpty = currentSequence.items.length === 0;
+    const isBusy = currentState.busy;
 
     function onSelectJogSequence(e) {
-      const selectedJogSequenceId = e.target.value
+      if (isBusy) return;
+      const selectedJogSequenceId = e.target.value;
 
       if (!selectedJogSequenceId) {
-        setJogSequence(initialJogSequence)
-        return
+        setJogSequence(initialJogSequence);
+        return;
       }
 
-      loadJogSequence(selectedJogSequenceId)
+      loadJogSequence(selectedJogSequenceId);
     }
 
-    function deleteSequence() {
-      if (isActive) {
-        toggleActive();
-      }
+    function doDeleteSequence() {
+      if (isBusy) return;
 
       if (currentSequence.id) {
-        removeItem('sequence', /** @type{{id: string}} */(currentSequence))
-        setSequences(listItems('sequence'))
+        removeItem("sequence", /** @type{{id: string}} */ (currentSequence));
+        setSequences(listItems("sequence"));
       }
       setJogSequence(initialJogSequence);
     }
 
-    function toggleActive() {
+    function doEditSequence() {
+      if (isBusy) return;
+
       setSequenceState({
         ...currentState,
-        active: !isActive,
-      });
+        editing: "sequence"
+      })
     }
 
-    function toggleHide() {
-      const index = findIndex(this);
+    /**
+     * @param {PlaybackEnum} playback
+     */
+    function makePlaybackHandler(playback) {
+      return () => {
+        if (isBusy) return;
 
+        setSequenceState({
+          ...currentState,
+          playback
+        })
+      }
+    }
+
+    const doPlay = makePlaybackHandler("play")
+    const doPreview = makePlaybackHandler("preview")
+    const doStop = makePlaybackHandler("stopped")
+    const doJog = makePlaybackHandler("jog")
+
+    /**
+     * @param {Event} e
+     */
+    function onSelectItem(e) {
+      e.preventDefault();
+      if (isBusy) return;
+
+      const index = findIndex(this);
       if (index === undefined || isNaN(index)) {
         return;
       }
 
-      currentSequence[index].hide = !currentSequence[index].hide;
-      setJogSequence(currentSequence);
+      setSequenceState({
+        ...currentState,
+        selectedIndex: index,
+      });
     }
 
-    const selectItems = `
+    function onDeleteItem() {
+      if (isBusy) return;
+
+      const index = findIndex(this);
+      if (index === undefined || isNaN(index)) {
+        return;
+      }
+
+      const newItems = currentSequence.items.filter((_, i) => i !== index);
+      
+      setJogSequence({
+        ...currentSequence,
+        items: newItems
+      })
+    }
+
+    const selectItems =
+      `
         <option ${!currentSequence.id ? "selected" : ""} value="">
            New
         </option>
-    ` + sequences().map(({name, id}) => `
+    ` +
+      sequences().map(
+        ({ name, id }) => `
       <option ${currentSequence.id === id ? "selected" : ""} value="${id}">
           ${name}
       </option>
-    `)
+    `
+      );
 
     const children = currentSequence.items
       .map(
         (item, index) => `
       <tr data-index="${index}">
-        <td ${
-          index === 0 && currentState.pending ? "aria-loading=true" : ""
-        }></td>
-        <td><input class="toggle-hide" type="checkbox" ${
-          item.visible === false ? "" : "checked"
-        }/></td>
+        <td>
+          <input type="radio" name="language" class="item-select" ${
+            currentState.selectedIndex === index ? "checked" : ""
+          } />
+        </td>
         <th scope="row">${item.name}</th>
         <td>${!!item.position.effector ? "tool" : ""} ${
           !!item.position.joints ? "joint" : ""
         }</td>
-        <td>123mm</td>
+        <td>${item.speed !== undefined ? item.speed : "inherit"}</td>
+        <td><button class="item-delete">X</button></td>
       </tr>
     `
       )
       .join("\n");
 
+    const busyDisabled =  isBusy ? "true" : undefined
+    const emptyDisabled =  isEmpty ? "true" : undefined
+    const jogDisabled = currentState.selectedIndex === undefined || !currentSequence[currentState.selectedIndex] ? "true" : undefined
+
     return {
-      ".sequence-purge": {
+      ".sequence-delete": {
         attributes: {
-          disabled: isEmpty ? "true" : undefined,
+          disabled: busyDisabled
         },
         eventListeners: {
-          click: deleteSequence,
+          click: doDeleteSequence,
         },
       },
-      ".sequence-active": {
-        properties: {
-          innerHTML: isActive ? "||" : ">",
-        },
+      ".sequence-edit": {
         attributes: {
-          disabled: isEmpty ? "true" : undefined,
+          disable: busyDisabled
         },
         eventListeners: {
-          click: toggleActive,
+          click: doEditSequence,
+        }
+      },
+      ".sequence-play": {
+        attributes: {
+          disabled: emptyDisabled || busyDisabled
+        },
+        eventListeners: {
+          click: doPlay,
+        },
+      },
+      ".sequence-jog": {
+        attributes: {
+          disabled: emptyDisabled || busyDisabled || jogDisabled
+        },
+        eventListeners: {
+          click: doJog,
+        },
+      },
+      ".sequence-stop": {
+        attributes: {
+          disabled: emptyDisabled || busyDisabled
+        },
+        eventListeners: {
+          click: doStop,
+        },
+      },
+      ".sequence-preview": {
+        attributes: {
+          disabled: emptyDisabled || busyDisabled
+        },
+        eventListeners: {
+          click: doPreview,
         },
       },
       ".select-jog-sequence": {
+        attributes: {
+          disabled: busyDisabled
+        },
         properties: { innerHTML: selectItems },
         eventListeners: {
-          change: onSelectJogSequence
-        }
+          change: onSelectJogSequence,
+        },
       },
       ".positions": {
         properties: { innerHTML: children },
       },
-      ".toggle-hide": {
+      ".item-select": {
+        attributes: {
+          disabled: busyDisabled
+        },
         eventListeners: {
-          click: toggleHide,
+          click: onSelectItem,
+        },
+      },
+      ".item-delete": {
+        attributes: {
+          disabled: busyDisabled
+        },
+        eventListeners: {
+          click: onDeleteItem,
         },
       },
     };
