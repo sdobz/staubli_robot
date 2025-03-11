@@ -10,7 +10,7 @@ import { getItem, listItems, removeItem, setItem } from "./lib/storage.js";
 
 /**
  * @typedef {Object} SequenceState
- * @property {number | undefined} selectedIndex
+ * @property {number} [selectedIndex]
  * @property {PlaybackEnum} playback
  * @property {EditingEnum} editing
  * @property {boolean} loop
@@ -285,10 +285,7 @@ createComponent({
       e.preventDefault();
       if (isBusy) return;
 
-      const index = findIndex(this);
-      if (index === undefined || isNaN(index)) {
-        return;
-      }
+      let index = findIndex(this);
 
       setSequenceState({
         ...currentState,
@@ -305,6 +302,24 @@ createComponent({
       }
 
       const newItems = currentSequence.items.filter((_, i) => i !== index);
+      let nextSelectedIndex = currentState.selectedIndex
+
+      if (nextSelectedIndex !== undefined) {
+        if (index < nextSelectedIndex) {
+          nextSelectedIndex -= 1
+        }
+
+        if (nextSelectedIndex >= newItems.length) {
+          nextSelectedIndex = undefined
+        }
+
+        if (nextSelectedIndex !== currentState.selectedIndex) {
+          setSequenceState({
+            ...currentState,
+            selectedIndex: nextSelectedIndex
+          })
+        }
+      }
       
       setJogSequence({
         ...currentSequence,
@@ -331,7 +346,7 @@ createComponent({
         (item, index) => `
       <tr data-index="${index}">
         <td>
-          <input type="radio" name="language" class="item-select" ${
+          <input type="radio" class="item-select" ${
             currentState.selectedIndex === index ? "checked" : ""
           } />
         </td>
@@ -344,7 +359,15 @@ createComponent({
       </tr>
     `
       )
-      .join("\n");
+      .join("\n") + `
+      <tr>
+        <td>
+          <input type="radio" class="item-select" ${currentState.selectedIndex === undefined ? "checked" : ""}
+          />
+        </td>
+        <th scope="row" colspan="4">Add new point</th>
+      </tr>
+      `
 
     const busyDisabled =  isBusy ? "true" : undefined
     const emptyDisabled =  isEmpty ? "true" : undefined
