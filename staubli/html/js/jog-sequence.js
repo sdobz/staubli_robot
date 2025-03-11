@@ -1,6 +1,7 @@
 import { html, createComponent } from "./lib/component.js";
 import { createEffect, createSignal } from "./lib/state.js";
 import { robot } from "./robot.js";
+import {getItem, listItems, removeItem, setItem} from "./lib/storage.js"
 
 /** @import { Position } from './robot.js' */
 
@@ -15,14 +16,51 @@ export { sequenceState };
  * @typedef {Object} JogItem
  * @property {string} [name]
  * @property {Position} position
- * @property {boolean} [hide]
+ * @property {boolean} [visible]
  */
 
-/** @type {JogItem[]} */
-const initialJogSequence = [];
+/**
+ * @typedef {Object} JogSequence
+ * @property {string} [name]
+ * @property {string} [id]
+ * @property {JogItem[]} items
+ */
+
+/** @type {JogSequence} */
+const initialJogSequence = {
+  items: []
+};
 const [jogSequence, _setJogSequence] = createSignal(initialJogSequence);
 
-/** @type {(sequence: JogItem[]) => void} */
+/**
+ * @typedef {Object} JogSequenceIndex
+ * @property {string} name
+ * @property {string} id
+ */
+
+/** @type {JogSequenceIndex[]} */
+const initialJogSequenceIndex = listItems("sequence")
+const [sequences, setSequences] = createSignal(initialJogSequenceIndex)
+
+/**
+ * @param {JogSequence} jogSequence 
+ */
+function isPopulated(jogSequence) {
+  return !!jogSequence.name || jogSequence.items.length > 0
+}
+
+function reduceJogSequence({id, name}) {
+  return {id, name}
+}
+
+function sortJogSequence({name: nameA}, {name: nameB}) {
+  return nameA < nameB ? -1 : 1
+}
+
+/**
+ * 
+ * @param {JogSequence} newJogSequence 
+ */
 function setJogSequence(newJogSequence) {
   const currentState = sequenceState();
   if (currentState.active) {
@@ -32,7 +70,29 @@ function setJogSequence(newJogSequence) {
     });
   }
 
+  if (isPopulated(newJogSequence)) {
+    if (!newJogSequence.id) {
+      newJogSequence = {
+        ...newJogSequence,
+        name: newJogSequence.name || (new Date()).toISOString(),
+        id: Math.random().toString(36).slice(2)
+      }
+    }
+    
+    setSequences(listItems('sequence'))
+    setItem('sequence', /** @type {Required<JogSequence>} */(newJogSequence), reduceJogSequence, sortJogSequence)
+  }
+
   _setJogSequence(newJogSequence);
+}
+
+export function loadJogSequence(id) {
+  const item = getItem('sequence', id)
+  if (!item) {
+    return
+  }
+
+  setJogSequence(item)
 }
 export { jogSequence, setJogSequence };
 
@@ -53,7 +113,7 @@ createEffect(() => {
     return;
   }
 
-  if (currentSequence.length === 0) {
+  if (currentSequence.items.length === 0) {
     return;
   }
 
@@ -64,12 +124,16 @@ createEffect(() => {
 
   const nextPosition = currentSequence[0];
   currentRobot.jog(nextPosition.position).then(() => {
-    const newSequence = jogSequence().slice(1);
+    const currentJogSequence = jogSequence()
+    const newItems = currentJogSequence.items.slice(1);
     const newState = sequenceState();
 
-    const newActive = newState.active && newSequence.length > 0;
+    const newActive = newState.active && newItems.length > 0;
 
-    _setJogSequence(newSequence);
+    _setJogSequence({
+      ...currentJogSequence,
+      items: newItems
+    });
     setSequenceState({
       ...newState,
       active: newActive,
@@ -81,7 +145,13 @@ createEffect(() => {
 createComponent({
   tag: "jog-sequence-control",
   template: html`
-    <div class="vertical-stack">
+    <article class="vertical-stack">
+        <h4>Jog Sequence</h4>
+        <select class="select-jog-sequence" aria-label="Load Jog Sequence" required>
+          <option selected value="">
+            New
+          </option>
+        </select>
       <div role="group">
         <button class="sequence-purge">X</button>
         <button class="sequence-active">&amp;</button>
@@ -98,20 +168,35 @@ createComponent({
         </thead>
         <tbody class="positions"></tbody>
       </table>
-    </div>
+    </article>
   `,
   attrsFn: (_state, _attrs) => {
     const currentState = sequenceState();
     const currentSequence = jogSequence();
 
     const isActive = currentState.active;
-    const isEmpty = currentSequence.length === 0;
+    const isEmpty = currentSequence.items.length === 0;
 
-    function purgeSequence() {
+    function onSelectJogSequence(e) {
+      const selectedJogSequenceId = e.target.value
+
+      if (!selectedJogSequenceId) {
+        setJogSequence(initialJogSequence)
+        return
+      }
+
+      loadJogSequence(selectedJogSequenceId)
+    }
+
+    function deleteSequence() {
       if (isActive) {
         toggleActive();
       }
-      setJogSequence([]);
+
+      if (currentSequence.id) {
+        removeItem('sequence', /** @type{{id: string}} */(currentSequence))
+      }
+      setJogSequence(initialJogSequence);
     }
 
     function toggleActive() {
@@ -132,7 +217,17 @@ createComponent({
       setJogSequence(currentSequence);
     }
 
-    const children = currentSequence
+    const selectItems = `
+        <option ${!currentSequence.id ? "selected" : ""} value="">
+           New
+        </option>
+    ` + sequences().map(({name, id}) => `
+      <option ${currentSequence.id === id ? "selected" : ""} value="${id}">
+          ${name}
+      </option>
+    `)
+
+    const children = currentSequence.items
       .map(
         (item, index) => `
       <tr data-index="${index}">
@@ -140,7 +235,7 @@ createComponent({
           index === 0 && currentState.pending ? "aria-loading=true" : ""
         }></td>
         <td><input class="toggle-hide" type="checkbox" ${
-          item.hide ? "" : "checked"
+          item.visible === false ? "" : "checked"
         }/></td>
         <th scope="row">${item.name}</th>
         <td>${!!item.position.effector ? "tool" : ""} ${
@@ -158,7 +253,7 @@ createComponent({
           disabled: isEmpty ? "true" : undefined,
         },
         eventListeners: {
-          click: purgeSequence,
+          click: deleteSequence,
         },
       },
       ".sequence-active": {
@@ -171,6 +266,12 @@ createComponent({
         eventListeners: {
           click: toggleActive,
         },
+      },
+      ".select-jog-sequence": {
+        properties: { innerHTML: selectItems },
+        eventListeners: {
+          change: onSelectJogSequence
+        }
       },
       ".positions": {
         properties: { innerHTML: children },

@@ -282,7 +282,7 @@ class Robot3D extends HTMLElement {
     this.purgeArrows();
 
     const currentPosition = currentRobotState.position;
-    let sequenceToRender = [{ position: currentPosition }, ...currentSequence];
+    let sequenceToRender = [{ position: currentPosition }, ...currentSequence.items];
 
     if (this.dragging) {
       sequenceToRender.push(sequenceToRender[sequenceToRender.length - 1]);
@@ -584,12 +584,12 @@ class Robot3D extends HTMLElement {
 
     const offsetAngleDeg = MathUtils.radToDeg(angle) + jointOffset[jointId];
 
-    const sequence = jogSequence();
+    const currentJogSequence = jogSequence();
     const state = robotState();
 
     const lastJoints =
-      sequence.findLast((item) => !!item.position.joints)?.position.joints ??
-      state?.position.joints;
+      currentJogSequence.items.findLast((item) => !!item.position.joints)?.position
+        .joints ?? state?.position.joints;
 
     if (!lastJoints) {
       console.error("Unable to get reference position");
@@ -607,7 +607,10 @@ class Robot3D extends HTMLElement {
       },
     };
 
-    setJogSequence([...sequence, nextItem]);
+    setJogSequence({
+      ...currentJogSequence,
+      items: [...currentJogSequence.items, nextItem],
+    });
   }
 
   setJointValue(name, angle) {
@@ -713,19 +716,22 @@ class Robot3D extends HTMLElement {
    */
   appendEffectorSequence(effector) {
     const currentSequence = jogSequence();
-    setJogSequence([
+    setJogSequence({
       ...currentSequence,
-      {
-        name: new Date().toISOString(),
-        position: {
-          effector: getObjectEffectorPosition(
-            effector,
-            this.effectorOffset,
-            mmToM
-          ),
+      items: [
+        ...currentSequence.items,
+        {
+          name: new Date().toISOString(),
+          position: {
+            effector: getObjectEffectorPosition(
+              effector,
+              this.effectorOffset,
+              mmToM
+            ),
+          },
         },
-      },
-    ]);
+      ],
+    });
   }
 
   onResize() {
