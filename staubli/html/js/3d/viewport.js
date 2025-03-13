@@ -4,8 +4,7 @@ import { html } from "../lib/component.js";
 import { createEffect } from "../lib/state.js";
 import { robotState } from "../robot.js";
 import { loadRobot, loadTool, RobotControl } from "./robot.js";
-import { jogSequence, sequenceState } from "../jog-sequence.js";
-import { jogState } from "../jog-control.js";
+import { program, programmerState, jogState } from "../program/state.js";
 import { World } from "./world.js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
@@ -63,8 +62,8 @@ class Robot3D extends HTMLElement {
 
   updateRobots() {
     const currentRobotState = robotState();
-    const currentSequence = jogSequence();
-    const currentSequenceState = sequenceState();
+    const currentSequence = program();
+    const currentProgrammerState = programmerState();
     const currentJogState = jogState();
 
     if (!currentRobotState?.position) {
@@ -101,7 +100,7 @@ class Robot3D extends HTMLElement {
       robot.update(
         position,
         ikPredecessor,
-        index === currentSequenceState.selectedIndex
+        index === currentProgrammerState.selectedIndex
           ? currentJogState
           : undefined
       );

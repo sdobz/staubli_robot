@@ -3,8 +3,10 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import URDFLoader from "urdf-loader/URDFLoader.js";
 import { effectorMaterial, highlightMaterial } from "./world.js";
 import { PointerURDFDragControls } from "urdf-loader/URDFDragControls.js";
-import { updatePosition } from "../jog-sequence.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
+
+import { updatePosition } from "../program/state.js";
+
 import {
   Goal,
   setIKFromUrdf,
@@ -17,7 +19,7 @@ import {
 /** @import { Object3D } from "three" */
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { EffectorPosition, JointPosition, Position } from "../robot" */
-/** @import { JogState } from "../jog-control" */
+/** @import { JogState } from "../program/state.js" */
 /** @import { World } from "./world" */
 
 const mmToM = 1 / 1000;

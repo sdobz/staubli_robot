@@ -1,28 +1,10 @@
-/**
- * @typedef {"translate-effector" | "rotate-effector" | "drag-joint"} JogMode
- */
+import { createComponent, html } from "../lib/component.js";
+import { jogState, setJogState } from "./state.js";
 
-/**
- * @typedef {"local" | "world"} JogSpace
- */
-
-import { createComponent, html } from "./lib/component.js";
-import { createSignal } from "./lib/state.js";
-
-/**
- * @typedef {Object} JogState
- * @property {JogMode} mode - Currently selected translation mode
- * @property {JogSpace} space
- */
-
-const [jogState, setJogState] = createSignal({
-  mode: /** @type {JogMode} */ ("drag-joint"),
-  space: /** @type {JogSpace} */ ("world"),
-});
-export { jogState };
+/** @import { JogMode, JogSpace } from './state.js' */
 
 createComponent({
-  tag: "jog-control",
+  tag: "command-editor",
   template: html`
     <article class="vertical-stack">
       <h3>Viewport Jog Mode</h3>

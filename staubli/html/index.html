@@ -26,7 +26,12 @@
 <body>
   <div class="grid">
     <div class="vertical-stack">
-      <jog-control></jog-control>
+      <article class="vertical-stack">
+        <h1>Program</h1>
+        <program-list></program-list>
+        <playback-control></playback-control>
+        <command-list></command-list>
+      </article>
       <article>
         <h2>Control</h2>
         <div role="group">
@@ -38,7 +43,7 @@
     </div>
     <robot-3d></robot-3d>
     <div class="vertical-stack">
-      <jog-sequence-control></jog-sequence-control>
+      <command-editor></command-editor>
     </div>
   </div>
 </body>
