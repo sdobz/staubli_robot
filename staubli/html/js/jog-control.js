@@ -12,6 +12,7 @@ import { createSignal } from "./lib/state.js";
 /**
  * @typedef {Object} JogState
  * @property {JogMode} mode - Currently selected translation mode
+ * @property {JogSpace} space
  */
 
 const [jogState, setJogState] = createSignal({

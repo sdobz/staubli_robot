@@ -34,7 +34,7 @@
         ];
       };
     };
-  } // (utils.lib.eachSystem [ "x86_64-linux" ] (system: let
+  } // (utils.lib.eachSystem [ "x86_64-linux" "aarch64-darwin" ] (system: let
     pkgs = nixpkgs.legacyPackages.${system};
     staubli = import ./pi/staubli.nix { inherit pkgs; };
   in rec {
