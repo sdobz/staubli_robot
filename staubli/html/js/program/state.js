@@ -11,6 +11,10 @@ import { positionType, robotState } from "../robot.js";
  */
 
 /**
+ * @typedef {"joints" | "tool-position"} CommandType
+ */
+
+/**
  * @typedef {Object} JogState
  * @property {JogMode} mode - Currently selected translation mode
  * @property {JogSpace} space
@@ -33,6 +37,7 @@ export { jogState, setJogState };
  * @property {boolean} updateSelected
  * @property {PlaybackEnum} playback
  * @property {EditingEnum} editing
+ * @property {CommandType} commandToAdd
  * @property {boolean} loop
  * @property {boolean} busy
  */
@@ -41,8 +46,9 @@ export { jogState, setJogState };
 const initialProgrammerState = {
   selectedIndex: 0,
   updateSelected: false,
-  editing: "none",
   playback: "stopped",
+  editing: "none",
+  commandToAdd: "joints",
   loop: false,
   busy: false,
 };
@@ -121,6 +127,12 @@ function setProgram(newProgram) {
       };
     }
 
+    // Instantiate urdf
+    // For item
+    //  Set kinematics to position
+    //  Derive position
+    //  Update derived position
+
     setItem(
       "sequence",
       /** @type {Required<Program>} */ (newProgram),
@@ -131,6 +143,26 @@ function setProgram(newProgram) {
   }
 
   _setProgram(newProgram);
+}
+
+export function addCommand() {
+  const currentProgrammerState = programmerState();
+  const currentProgram = program();
+
+  const currentIndex = currentProgrammerState.selectedIndex;
+
+  const oldItems = currentProgram.items;
+  /** @type {JogItem[]} */
+  const newItems = [
+    ...oldItems.slice(0, currentIndex),
+    newItem,
+    ...oldItems.slice(currentIndex),
+  ];
+
+  setProgram({
+    ...currentProgram,
+    items: newItems,
+  });
 }
 
 /**

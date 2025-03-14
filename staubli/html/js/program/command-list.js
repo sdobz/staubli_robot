@@ -23,6 +23,13 @@ createComponent({
       </thead>
       <tbody class="positions"></tbody>
     </table>
+    <div role="group">
+      <select class="command-to-add" aria-label="Command To Add" required>
+        <option selected value="joints">Set Joints</option>
+        <option value="tool-position">Move</option>
+      </select>
+      <button class="add-command">Add</button>
+    </div>
   `,
   attrsFn: (_state, _attrs) => {
     const currentState = programmerState();
@@ -85,10 +92,29 @@ createComponent({
       });
     }
 
-    const children =
-      currentSequence.items
-        .map(
-          (item, index) => `
+    function onSelectCommandToAdd(e) {
+      if (isBusy) return;
+      const commandToAdd = e.target.value;
+
+      if (!commandToAdd) {
+        return;
+      }
+
+      setProgrammerState({
+        ...currentState,
+        commandToAdd,
+      });
+    }
+
+    function doAddCommand() {
+      if (isBusy) return;
+
+      addCommand();
+    }
+
+    const children = currentSequence.items
+      .map(
+        (item, index) => `
       <tr data-index="${index}">
         <td>
           <input type="radio" class="item-select" ${
@@ -97,25 +123,14 @@ createComponent({
         </td>
         <th scope="row">${item.name}</th>
         <td>${!!item.position.effector ? "tool" : ""} ${
-            !!item.position.joints ? "joint" : ""
-          }</td>
+          !!item.position.joints ? "joint" : ""
+        }</td>
         <td>${item.speed !== undefined ? item.speed : "inherit"}</td>
         <td><button class="item-delete">X</button></td>
       </tr>
     `
-        )
-        .join("\n") +
-      (currentSequence.items.length == 0
-        ? `
-      <tr>
-        <td>
-          <input type="radio" class="item-select" "checked" />
-          Jog robot to add point
-        </td>
-        <th scope="row" colspan="4"></th>
-      </tr>
-      `
-        : "");
+      )
+      .join("\n");
 
     const busyDisabled = isBusy ? "true" : undefined;
     const selectedDisabled = !currentSequence.items[currentState.selectedIndex]
@@ -148,6 +163,19 @@ createComponent({
         },
         eventListeners: {
           click: onDeleteItem,
+        },
+      },
+      ".command-to-add": {
+        eventListeners: {
+          change: onSelectCommandToAdd,
+        },
+      },
+      ".add-command": {
+        attributes: {
+          disabled: busyDisabled,
+        },
+        eventListeners: {
+          click: doAddCommand,
         },
       },
     };
