@@ -1,5 +1,6 @@
 import { html, createComponent } from "../lib/component.js";
 import {
+  addCommand,
   program,
   programmerState,
   setProgram,

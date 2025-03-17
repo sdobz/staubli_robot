@@ -6,6 +6,7 @@ import { robotState } from "../robot.js";
 import { loadRobot, loadTool, RobotControl } from "./robot.js";
 import { program, programmerState, jogState } from "../program/state.js";
 import { World } from "./world.js";
+import { Kinematics } from "./kinematics.js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { Object3D } from 'three' */
@@ -77,35 +78,58 @@ class Robot3D extends HTMLElement {
     const previousRobots = this.robots;
     this.robots = [];
     const popRobot = () => {
-      const nextRobot =
-        previousRobots.pop() ||
-        new RobotControl(this.urdfRoot, this.toolRoot, this.world);
+      const nextRobot = previousRobots.pop() || this.#createRobot();
 
       this.robots.push(nextRobot);
       return nextRobot;
     };
 
+    const kinematics = new Kinematics(this.urdfRoot);
+
     const currentPosition = currentRobotState.position;
+    if (!currentPosition.effector || !currentPosition.joints) {
+      console.error("Missing current poistion");
+    }
+
     const currentRobot = popRobot();
-    currentRobot.update(
-      currentPosition,
-      undefined,
+    currentRobot.updateControls(
+      kinematics,
       currentSequence.items.length === 0 ? currentJogState : undefined
     );
+    kinematics.applyJointPosition(currentPosition.joints, currentRobot);
+    kinematics.applyEffectorPosition(currentPosition.effector, currentRobot);
 
-    let ikPredecessor;
-
-    currentSequence.items.forEach(({ position }, index) => {
+    currentSequence.items.forEach((currentItem, index) => {
+      const position = currentItem.position;
       const robot = popRobot();
-      robot.update(
-        position,
-        ikPredecessor,
+      robot.updateControls(
+        kinematics,
         index === currentProgrammerState.selectedIndex
           ? currentJogState
           : undefined
       );
 
-      ikPredecessor = robot;
+      // This order is important: kinematics derives one from the other
+      if (position.joints) {
+        kinematics.applyJointPosition(position.joints, robot);
+      } else {
+        kinematics.applyJointsFromEffectorPosition(position.effector, robot);
+      }
+      if (position.effector) {
+        kinematics.applyEffectorPosition(position.effector, robot);
+      } else {
+        kinematics.applyEffectorFromJointPosition(robot);
+      }
+
+      // This does not trigger a re-signal, and I hate it.
+      // The way to fix this is to move the entire "updateRobots" sequence into the "updateProgram" loop
+      currentItem._derivedState = {
+        ...currentRobotState,
+        position: {
+          effector: kinematics.determineEffectorPosition(robot),
+          joints: kinematics.determineJointPosition(robot),
+        },
+      };
     });
 
     while (previousRobots.length > 0) {
@@ -113,6 +137,12 @@ class Robot3D extends HTMLElement {
     }
 
     this.world.render();
+  }
+
+  #createRobot() {
+    const newRobot = new RobotControl(this.urdfRoot, this.toolRoot, this.world);
+    newRobot.addToScene();
+    return newRobot;
   }
 
   purgeArrows() {

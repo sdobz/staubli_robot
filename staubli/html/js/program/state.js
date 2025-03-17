@@ -26,7 +26,7 @@ const [jogState, setJogState] = createSignal({
 });
 export { jogState, setJogState };
 
-/** @import { Position, JointPosition, EffectorPosition } from '../robot.js' */
+/** @import { Position, JointPosition, EffectorPosition, RobotState } from '../robot.js' */
 
 /** @typedef {"stopped" | "play" | "preview" | "jog" } PlaybackEnum */
 /** @typedef {"none" | "sequence" | "item" } EditingEnum */
@@ -62,6 +62,7 @@ export { programmerState, setProgrammerState };
  * @property {string} name
  * @property {Position} position
  * @property {number} [speed]
+ * @property {RobotState} [_derivedState]
  */
 
 /**
@@ -150,12 +151,68 @@ export function addCommand() {
   const currentProgram = program();
 
   const currentIndex = currentProgrammerState.selectedIndex;
+  const currentCommand = currentProgram.items[currentIndex]
+  const deriveFromPosition = currentCommand?.position || robotState().position
+
+  if (!deriveFromPosition) {
+    console.error("Add command without position")
+    return
+  }
+
+  /** @type {Position} */
+  const position = currentProgrammerState.commandToAdd === "joints" ? { joints: deriveFromPosition.joints } : { effector: deriveFromPosition.effector }
+
+  /** @type {JogItem} */
+  const newItem = {
+    name: (new Date()).toISOString(),
+    position: position
+  }
 
   const oldItems = currentProgram.items;
   /** @type {JogItem[]} */
   const newItems = [
     ...oldItems.slice(0, currentIndex),
     newItem,
+    ...oldItems.slice(currentIndex),
+  ];
+
+  setProgram({
+    ...currentProgram,
+    items: newItems,
+  });
+}
+
+/**
+ *
+ * @param {Partial<JogItem>} patch
+ */
+export function patchCommand(patch) {
+  const currentProgrammerState = programmerState();
+  const currentProgram = program();
+
+  const currentIndex = currentProgrammerState.selectedIndex;
+
+  const currentCommand = currentProgram.items[currentIndex];
+  if (!currentCommand) {
+    console.error("No selected command while patching");
+    return;
+  }
+
+  if (
+    !patch.position ||
+    positionType(currentCommand.position) !== positionType(patch.position)
+  ) {
+    console.error("Attempt to update command with invalid position");
+    return;
+  }
+
+  const newCommand = mergeDeep(currentCommand, patch);
+
+  const oldItems = currentProgram.items;
+  /** @type {JogItem[]} */
+  const newItems = [
+    ...oldItems.slice(0, currentIndex),
+    newCommand,
     ...oldItems.slice(currentIndex),
   ];
 
@@ -254,4 +311,32 @@ export function deleteProgram() {
     setPrograms(listItems("sequence"));
   }
   setProgram(initialProgram);
+}
+
+/**
+ * Performs a deep merge of objects and returns new object. Does not modify
+ * objects (immutable) and merges arrays via concatenation.
+ *
+ * @param {...object} objects - Objects to merge
+ * @returns {object} New object with merged key/values
+ */
+function mergeDeep(...objects) {
+  const isObject = (obj) => obj && typeof obj === "object";
+
+  return objects.reduce((prev, obj) => {
+    Object.keys(obj).forEach((key) => {
+      const pVal = prev[key];
+      const oVal = obj[key];
+
+      if (Array.isArray(pVal) && Array.isArray(oVal)) {
+        prev[key] = pVal.concat(...oVal);
+      } else if (isObject(pVal) && isObject(oVal)) {
+        prev[key] = mergeDeep(pVal, oVal);
+      } else {
+        prev[key] = oVal;
+      }
+    });
+
+    return prev;
+  }, {});
 }

@@ -1,6 +1,10 @@
 /**
  * This file owns all staubli <-> three coordinate transforms
  * As well as inverse kinematics
+ *
+ * === Tech debt ===
+ * - Opportunity to eliminate allocation of Vector3 and Quaternion by reorganizing "apply" code to copy into destinations
+ * - This class... entirely overlaps RobotControl. Except in the accumulation sense...
  */
 
 import {
@@ -11,11 +15,19 @@ import {
   Solver,
   urdfRobotToIKRoot,
 } from "closed-chain-ik-js";
+import {
+  jogState,
+  patchCommand,
+  program,
+  programmerState,
+} from "../program/state.js";
 import { MathUtils, Quaternion, Vector3 } from "three";
+import { positionType } from "../robot.js";
 
-/** @import { URDFRobot } from "urdf-loader/URDFClasses"; */
+/** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import {Object3D} from 'three' */
 /** @import {Position, EffectorPosition, JointPosition} from '../robot.js' */
+/** @import {RobotControl} from './robot.js' */
 
 const mmToM = 1 / 1000;
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
@@ -24,41 +36,26 @@ export class Kinematics {
   /**
    *
    * @param {URDFRobot} urdfRoot
-   * @param {URDFRobot} target
-   * @param {Object3D} tool
    */
-  constructor(urdfRoot, target, tool) {
+  constructor(urdfRoot) {
     this.urdfRoot = urdfRoot;
     this.baseOffset = urdfRoot.joints["base_link-base"].position;
-    this.target = target || urdfRoot.clone(true);
-    this.tool = tool;
-  }
-
-  /**
-   * 
-   * @param {Position} position 
-   */
-  setPosition(position) {
-    if ()
-  }
-
-  #ikRoot() {
-    if (!this._ikRoot) {
-      this._ikRoot = urdfRobotToIKRoot(this.urdfRoot);
-      this._ikRoot.setDoF(); // Lock the base
-    }
-    return this._ikRoot;
   }
 
   /**
    *
-   * @param {URDFRobot} urdf
+   * @param {URDFRobot} urdfSource
    */
-  setPredecessor(urdf) {
-    setIKFromUrdf(this.#ikRoot(), urdf);
+  setPredecessor(urdfSource) {
+    setIKFromUrdf(this.#ikRoot(), urdfSource);
   }
 
-  solveEffectorPosition(effectorPosition) {
+  /**
+   *
+   * @param {EffectorPosition} effectorPosition
+   * @param {RobotControl} renderTarget
+   */
+  applyJointsFromEffectorPosition(effectorPosition, renderTarget) {
     const { x, y, z, yaw, pitch, roll } = effectorPosition;
 
     const position = new Vector3(
@@ -68,13 +65,151 @@ export class Kinematics {
     );
     const quaternion = createZYZQuaternion(yaw, pitch, roll);
 
-    this.#solve(position, quaternion);
-  }
-  solveObject(object) {
-    this.#solve(object.position, object.quaternion);
+    const solvedIKRoot = this.#solveIK(position, quaternion);
+
+    setUrdfFromIK(renderTarget.robot, solvedIKRoot);
   }
 
-  #solve(position, quaternion) {
+  /**
+   *
+   * @param {RobotControl} renderTarget
+   */
+  applyJointsFromTool(renderTarget) {
+    const solvedIKRoot = this.#solveIK(
+      renderTarget.tool.position,
+      renderTarget.tool.quaternion
+    );
+
+    setUrdfFromIK(renderTarget.robot, solvedIKRoot);
+  }
+
+  /**
+   *
+   * @param {JointPosition} jointPosition
+   * @param {RobotControl} renderTarget
+   */
+  applyJointPosition(jointPosition, renderTarget) {
+    /** @type {Record<string, URDFJoint>} */
+    const robotJoints = /** @type{any} */ (renderTarget.robot.joints);
+    for (let i = 1; i <= 6; i++) {
+      const joint = robotJoints[`joint_${i}`];
+      const jointPositionAngle = jointPosition[`j${i}`];
+      joint.setJointValue(
+        MathUtils.degToRad(jointPositionAngle - jointOffset[i])
+      );
+    }
+
+    renderTarget.robot.updateMatrixWorld(true);
+  }
+
+  /**
+   *
+   * @param {EffectorPosition} effectorPosition
+   * @param {RobotControl} renderTarget
+   */
+  applyEffectorPosition(effectorPosition, renderTarget) {
+    setObjectEffectorPosition(
+      renderTarget.tool,
+      effectorPosition,
+      this.baseOffset,
+      mmToM
+    );
+  }
+
+  /**
+   * 
+   * @param {RobotControl} renderTarget 
+   */
+  applyEffectorFromJointPosition(renderTarget) {
+    renderTarget.robot.traverse((obj) => {
+      if (obj.name === "tool0") {
+        
+        renderTarget.tool.position.setFromMatrixPosition(obj.matrixWorld);
+        renderTarget.tool.quaternion.setFromRotationMatrix(obj.matrixWorld);
+      }
+    });
+  }
+
+  /**
+   *
+   * @param {RobotControl} renderSource
+   * @returns {EffectorPosition}
+   */
+  determineEffectorPosition(renderSource) {
+    let effectorPosition;
+
+    renderSource.robot.traverse((obj) => {
+      if (obj.name === "tool0") {
+        effectorPosition = getObjectEffectorWorldPosition(
+          obj,
+          this.baseOffset,
+          mmToM
+        );
+      }
+    });
+
+    return effectorPosition;
+  }
+
+  /**
+   *
+   * @param {RobotControl} renderSource
+   */
+  updateEffectorPositionCommand(renderSource) {
+    const effector = this.determineEffectorPosition(renderSource);
+
+    patchCommand({ position: { effector } });
+  }
+
+  /**
+   * @param {RobotControl} renderSource
+   * @returns {JointPosition}
+   */
+  determineJointPosition(renderSource) {
+    const jointPosition = /** @type JointPosition */ ({});
+
+    for (let i = 1; i <= 6; i++) {
+      const robotJointName = `joint_${i}`;
+      const positionJointName = `j${i}`;
+
+      const angle = renderSource.robot.joints[robotJointName].angle;
+      jointPosition[positionJointName] =
+        MathUtils.radToDeg(angle) + jointOffset[i];
+    }
+
+    return jointPosition;
+  }
+
+  updateJointPositionCommand(renderSource) {
+    const joints = this.determineJointPosition(renderSource);
+
+    patchCommand({ position: { joints } });
+  }
+
+  // updateJointCommand(robotJointName, angle) {
+  //   const jointId = parseInt(robotJointName.split("_")[1]);
+  //   const jointPositionKey = `j${jointId}`;
+
+  //   const offsetAngleDeg = MathUtils.radToDeg(angle) + jointOffset[jointId];
+
+  //   patchCommand({
+  //     position: {
+  //       joints: /** @type JointPosition */ ({
+  //         [jointPositionKey]: offsetAngleDeg,
+  //       }),
+  //     },
+  //   });
+  // }
+
+  #ikRoot() {
+    if (!this._ikRoot) {
+      this._ikRoot = urdfRobotToIKRoot(this.urdfRoot);
+      this._ikRoot.setDoF(); // Lock the base
+    }
+    return this._ikRoot;
+  }
+
+  #solveIK(position, quaternion) {
     const ikRoot = this.#ikRoot();
 
     if (!this._goal) {
@@ -94,7 +229,6 @@ export class Kinematics {
     const solver = this._solver;
 
     const settleIterations = 5;
-    let totalTime = 0;
     let isConverged = false;
     for (let i = 0; i < settleIterations; i++) {
       // update drive goals from the new location
@@ -121,26 +255,8 @@ export class Kinematics {
       }
     }
 
-    setUrdfFromIK(this.target, ikRoot);
+    return ikRoot;
   }
-
-  deriveEffectorPosition() {
-    /** @type {EffectorPosition} */
-    let effectorPosition;
-    this.target.traverse((obj) => {
-      if (obj.name === "tool0") {
-        effectorPosition = getObjectEffectorWorldPosition(
-          obj,
-          this.baseOffset,
-          mmToM
-        );
-      }
-    });
-
-    return effectorPosition;
-  }
-
-  deriveJoints() {}
 }
 
 // https://chatgpt.com/c/67cd432e-cb74-800c-b5f7-4cb90809cbfa

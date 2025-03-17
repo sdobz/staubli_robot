@@ -1,3 +1,8 @@
+/**
+ * Intent: this file does not know about commands, state, or staubli coordinates
+ * It just knows about three coordinates
+ */
+
 import { LoadingManager, MathUtils, Mesh, Quaternion, Vector3 } from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import URDFLoader from "urdf-loader/URDFLoader.js";
@@ -44,6 +49,7 @@ export function loadTool() {
     stlLoader.load(
       "effectors/flange.stl",
       (geometry) => {
+        const mmToM = 1 / 1000;
         const mesh = new Mesh(geometry, effectorMaterial);
         mesh.scale.x = mmToM;
         mesh.scale.y = mmToM;
@@ -64,39 +70,31 @@ export function loadTool() {
 export class RobotControl {
   /**
    *
-   * @param {URDFRobot} urdfRoot
    * @param {Object3D} toolRoot
    * @param {World} world
    */
   constructor(urdfRoot, toolRoot, world) {
     this.urdfRoot = urdfRoot;
+    /**@type {URDFRobot} */
     this.robot = urdfRoot.clone(true);
+    /**@type {Object3D} */
     this.tool = toolRoot.clone(true);
-    this.kinematics = new Kinematics(urdfRoot, this.robot, this.tool);
     this.world = world;
+  }
 
-    this.world.scene.add(this.robot);
-    this.world.scene.add(this.tool);
+  addToScene() {
+    this.world.scene.add(this.tool)
+    this.world.scene.add(this.robot)
   }
 
   /**
-   *
-   * @param {RobotState} state
+   * @param {Kinematics} kinematics
    * @param {JogState} [jogState]
    */
-  update(state, jogState) {
-    this.kinematics.setPosition(state.position);
-
-    this.tool.setPosition(this.kinematics.effectorPosition);
-
-    this.#updateControls(jogState);
-  }
-
-  /**
-   * @param {JogState} [jogState]
-   */
-  #updateControls(jogState) {
+  updateControls(kinematics, jogState) {
+    this.kinematics = kinematics
     const dragControlsEnabled = jogState?.mode === "drag-joint";
+
     if (dragControlsEnabled) {
       this.#setupURDFControl();
     } else {
@@ -169,7 +167,7 @@ export class RobotControl {
     };
     dragControls.onDragEnd = (joint) => {
       this.world.orbit.enabled = true;
-      this.#updateJointCommand(joint.name, joint.angle); // implicit updateRobots
+      this.kinematics.updateJointPositionCommand(this)
       this.world.render();
     };
     dragControls.updateJoint = (joint, angle) => {
@@ -192,43 +190,18 @@ export class RobotControl {
     delete this.dragControls;
   }
 
-  #updateJointCommand(name, angle) {
-    const jointId = parseInt(name.split("_")[1]);
-    const jointPositionKey = `j${jointId}`;
-
-    const offsetAngleDeg = MathUtils.radToDeg(angle) + jointOffset[jointId];
-
-    updatePosition({
-      joints: { [jointPositionKey]: offsetAngleDeg },
-    });
-  }
-
   #setupToolControl() {
     if (this.transformControls) {
       return this.transformControls;
     }
-
-    let ikRoot, solver, goal;
 
     this.transformControls = new TransformControls(
       this.world.camera,
       this.world.renderer.domElement
     );
     this.transformControls.addEventListener("change", () => {
-      if (goal) {
-        goal.setPosition(
-          this.tool.position.x,
-          this.tool.position.y,
-          this.tool.position.z
-        );
-        goal.setQuaternion(
-          this.tool.quaternion.x,
-          this.tool.quaternion.y,
-          this.tool.quaternion.z,
-          this.tool.quaternion.w
-        );
-        this.#updateIK(ikRoot, solver);
-      }
+      console.log("Goal move, update kinematics...")
+      this.kinematics.applyJointsFromTool(this)
       this.world.render();
     });
     this.transformControls.addEventListener("dragging-changed", (event) => {
@@ -238,36 +211,11 @@ export class RobotControl {
       this.dragging = isDragging;
 
       if (isDragging) {
-        if (!ikRoot) {
-          ikRoot = urdfRobotToIKRoot(this.urdfRoot);
-          setIKFromUrdf(ikRoot, this.robot);
-          ikRoot.setDoF(); // Lock the base
-          const effectorLink = ikRoot.find(
-            (potentialLink) => potentialLink.name === "tool0"
-          );
-          goal = new Goal();
-          goal.makeClosure(effectorLink);
-          solver = new Solver([ikRoot]);
-        }
+        this.kinematics.setPredecessor(this.urdfRoot)
       }
 
       if (!isDragging) {
-        if (!this.tool) {
-          console.error("Drag end without effector");
-          return;
-        }
-
-        if (ikRoot) {
-          ikRoot = undefined;
-        }
-        if (solver) {
-          solver = undefined;
-        }
-        if (goal) {
-          goal = undefined;
-        }
-
-        this.#updateToolCommand();
+        this.kinematics.updateEffectorPositionCommand(this)
       }
     });
 
@@ -287,12 +235,6 @@ export class RobotControl {
     this.world.scene.remove(gizmo);
     this.transformControls.dispose();
     delete this.transformControls;
-  }
-
-  #updateToolCommand() {
-    updatePosition({
-      effector: getObjectEffectorPosition(this.tool, this.toolOffset, mmToM),
-    });
   }
 
   dispose() {
