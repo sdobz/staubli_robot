@@ -150,8 +150,11 @@ export function addCommand() {
   const currentProgrammerState = programmerState();
   const currentProgram = program();
 
-  const currentIndex = currentProgrammerState.selectedIndex;
+  let currentIndex = currentProgrammerState.selectedIndex;
   const currentCommand = currentProgram.items[currentIndex]
+  if (!currentCommand) {
+    currentIndex = 0
+  }
   const deriveFromPosition = currentCommand?.position || robotState().position
 
   if (!deriveFromPosition) {
@@ -180,6 +183,12 @@ export function addCommand() {
     ...currentProgram,
     items: newItems,
   });
+  if (currentIndex !== currentProgrammerState.selectedIndex) {
+    setProgrammerState({
+      ...currentProgrammerState,
+      selectedIndex: currentIndex
+    })
+  }
 }
 
 /**
@@ -213,75 +222,8 @@ export function patchCommand(patch) {
   const newItems = [
     ...oldItems.slice(0, currentIndex),
     newCommand,
-    ...oldItems.slice(currentIndex),
+    ...oldItems.slice(currentIndex + 1),
   ];
-
-  setProgram({
-    ...currentProgram,
-    items: newItems,
-  });
-}
-
-/**
- * @param {{joints?: Partial<JointPosition>, effector?: EffectorPosition}} partialPosition
- */
-export function updatePosition(partialPosition) {
-  const currentProgram = program();
-  const currentProgrammerState = programmerState();
-  const currentRobotState = robotState();
-  const currentIndex = currentProgrammerState.selectedIndex;
-  const currentItem = currentProgram.items[currentIndex];
-
-  /** @type {Position} */
-  let position;
-
-  if (partialPosition.joints) {
-    // Joints always "append" - preserve order
-    let lastJoints = currentRobotState.position.joints;
-
-    for (let i = currentIndex - 1; i >= 0; i -= 1) {
-      const testJoints = currentProgram.items[i]?.position.joints;
-      if (!testJoints) {
-        continue;
-      }
-
-      lastJoints = testJoints;
-      break;
-    }
-
-    if (!lastJoints) {
-      throw new Error(
-        "Unable to discover previous joints while inserting joint based position"
-      );
-    }
-
-    position = {
-      joints: {
-        ...lastJoints,
-        ...partialPosition.joints,
-      },
-    };
-  } else if (partialPosition.effector) {
-    position = { effector: partialPosition.effector };
-  } else {
-    throw new Error("Invalid position supplied to updatePosition");
-  }
-
-  const shouldUpdate =
-    currentProgrammerState.updateSelected &&
-    currentItem &&
-    positionType(position) === positionType(currentItem.position);
-
-  const oldItems = currentProgram.items;
-
-  /** @type {JogItem[]} */
-  const newItems = shouldUpdate
-    ? [
-        ...oldItems.slice(0, currentIndex),
-        { ...currentItem, position },
-        ...oldItems.slice(currentIndex),
-      ]
-    : [...oldItems, { name: new Date().toISOString(), position }];
 
   setProgram({
     ...currentProgram,

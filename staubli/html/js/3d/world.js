@@ -113,7 +113,15 @@ export class World {
   }
 }
 
-// The highlight material
+const currentInactiveColor = "#FFFF00";
+export const currentInactiveMaterial = new MeshPhongMaterial({
+  shininess: 10,
+  color: currentInactiveColor,
+  emissive: currentInactiveColor,
+  emissiveIntensity: 0.25,
+  opacity: 0.2,
+  transparent: true,
+});
 const ghostColor = "#FFFFFF";
 export const ghostMaterial = new MeshPhongMaterial({
   shininess: 10,
@@ -123,24 +131,34 @@ export const ghostMaterial = new MeshPhongMaterial({
   opacity: 0.2,
   transparent: true,
 });
-const ikColor = "#FF0000";
-export const ikMaterial = new MeshPhongMaterial({
+const selectedColor = "#AAAAAA"
+export const selectedMaterial = new MeshPhongMaterial({
   shininess: 10,
-  color: ikColor,
-  emissive: ikColor,
+  color: selectedColor,
+  emissive: selectedColor,
+  emissiveIntensity: 0.25,
+  opacity: 1,
+  transparent: false,
+});
+
+const errorColor = "#FF0000";
+export const errorMaterial = new MeshPhongMaterial({
+  shininess: 10,
+  color: errorColor,
+  emissive: errorColor,
   emissiveIntensity: 0.25,
   opacity: 0.2,
   transparent: true,
 });
-const followColor = "#FFFF00";
-export const followMaterial = new MeshPhongMaterial({
-  shininess: 10,
-  color: followColor,
-  emissive: followColor,
-  emissiveIntensity: 0.25,
-  opacity: 0.2,
-  transparent: true,
-});
+// const followColor = "#FFFF00";
+// export const followMaterial = new MeshPhongMaterial({
+//   shininess: 10,
+//   color: followColor,
+//   emissive: followColor,
+//   emissiveIntensity: 0.25,
+//   opacity: 0.2,
+//   transparent: true,
+// });
 const highlightColor = "#FFFFFF";
 export const highlightMaterial = new MeshPhongMaterial({
   shininess: 10,

@@ -6,11 +6,17 @@
 import { LoadingManager, MathUtils, Mesh, Quaternion, Vector3 } from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import URDFLoader from "urdf-loader/URDFLoader.js";
-import { effectorMaterial, highlightMaterial } from "./world.js";
+import {
+  currentInactiveMaterial,
+  effectorMaterial,
+  errorMaterial,
+  ghostMaterial,
+  highlightMaterial,
+  selectedMaterial,
+} from "./world.js";
 import { PointerURDFDragControls } from "urdf-loader/URDFDragControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 
-import { updatePosition } from "../program/state.js";
 import { Kinematics } from "./kinematics.js";
 
 /** @import { Object3D } from "three" */
@@ -18,6 +24,26 @@ import { Kinematics } from "./kinematics.js";
 /** @import { EffectorPosition, JointPosition, Position, RobotState } from "../robot" */
 /** @import { JogState } from "../program/state.js" */
 /** @import { World } from "./world" */
+
+/** @typedef {"current" | "current-ghost" | "ghost"} RobotModeEnum */
+
+// let globalRobotIndex = 0
+
+// /**
+//  * 
+//  * @param {URDFRobot} r 
+//  */
+// function nameRobot(r) {
+//   console.log("Naming robot", globalRobotIndex)
+//   r.name = `robot-${globalRobotIndex}`
+//   let localRobotIndex = 0
+
+//   r.traverse(c => {
+//     c.name = `robot-${globalRobotIndex}-${localRobotIndex}`
+//   })
+  
+//   globalRobotIndex += 1
+// }
 
 export function loadRobot() {
   return new Promise((resolve, reject) => {
@@ -83,17 +109,54 @@ export class RobotControl {
   }
 
   addToScene() {
-    this.world.scene.add(this.tool)
-    this.world.scene.add(this.robot)
+    this.world.scene.add(this.tool);
+    this.world.scene.add(this.robot);
   }
 
   /**
    * @param {Kinematics} kinematics
+   * @param {RobotModeEnum} mode
    * @param {JogState} [jogState]
    */
-  updateControls(kinematics, jogState) {
-    this.kinematics = kinematics
+  update(kinematics, mode, jogState) {
+    this.kinematics = kinematics;
     const dragControlsEnabled = jogState?.mode === "drag-joint";
+
+    let material;
+    if (mode === "ghost") {
+      if (!!jogState) {
+        material = selectedMaterial;
+      } else {
+        material = ghostMaterial;
+      }
+    } else if (mode === "current") {
+      material = undefined; // urdf defined material
+    } else if (mode === "current-ghost") {
+      material = currentInactiveMaterial;
+    } else {
+      material = errorMaterial;
+    }
+
+    const layer =
+      material && mode !== "current-ghost" && material.opacity === 1 ? 0 : 1;
+    this.tool.traverse((c) => {
+      c.layers.set(layer);
+      if (c.type !== "Mesh") {
+        return;
+      }
+      c.material = material || effectorMaterial;
+    });
+
+    this.robot.traverse((c) => {
+      c.layers.set(layer);
+      if (c.type !== "Mesh") {
+        return;
+      }
+      if (!c.__unsetMaterial) {
+        c.__unsetMaterial = c.material;
+      }
+      c.material = material || c.__unsetMaterial;
+    });
 
     if (dragControlsEnabled) {
       this.#setupURDFControl();
@@ -167,11 +230,15 @@ export class RobotControl {
     };
     dragControls.onDragEnd = (joint) => {
       this.world.orbit.enabled = true;
-      this.kinematics.updateJointPositionCommand(this)
       this.world.render();
+      setTimeout(() => {
+        // updateRobots may re-order robots. This ensures that the "unhover" will not fire on the previous robot
+        this.kinematics.updateJointPositionCommand(this);
+      });
     };
     dragControls.updateJoint = (joint, angle) => {
       this.robot.joints?.[joint.name].setJointValue(angle);
+      this.world.render();
     };
     dragControls.onHover = (joint) => {
       highlightLinkGeometry(joint, false);
@@ -186,6 +253,9 @@ export class RobotControl {
   }
 
   #removeURDFControl() {
+    if (!this.dragControls) {
+      return
+    }
     this.dragControls?.dispose();
     delete this.dragControls;
   }
@@ -200,8 +270,7 @@ export class RobotControl {
       this.world.renderer.domElement
     );
     this.transformControls.addEventListener("change", () => {
-      console.log("Goal move, update kinematics...")
-      this.kinematics.applyJointsFromTool(this)
+      this.kinematics.applyJointsFromTool(this);
       this.world.render();
     });
     this.transformControls.addEventListener("dragging-changed", (event) => {
@@ -211,11 +280,11 @@ export class RobotControl {
       this.dragging = isDragging;
 
       if (isDragging) {
-        this.kinematics.setPredecessor(this.urdfRoot)
+        this.kinematics.setPredecessor(this.urdfRoot);
       }
 
       if (!isDragging) {
-        this.kinematics.updateEffectorPositionCommand(this)
+        this.kinematics.updateEffectorPositionCommand(this);
       }
     });
 

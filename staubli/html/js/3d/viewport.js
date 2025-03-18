@@ -92,9 +92,10 @@ class Robot3D extends HTMLElement {
     }
 
     const currentRobot = popRobot();
-    currentRobot.updateControls(
+    currentRobot.update(
       kinematics,
-      currentSequence.items.length === 0 ? currentJogState : undefined
+      currentSequence.items.length === 0 ? 'current' : 'current-ghost',
+      undefined
     );
     kinematics.applyJointPosition(currentPosition.joints, currentRobot);
     kinematics.applyEffectorPosition(currentPosition.effector, currentRobot);
@@ -102,8 +103,9 @@ class Robot3D extends HTMLElement {
     currentSequence.items.forEach((currentItem, index) => {
       const position = currentItem.position;
       const robot = popRobot();
-      robot.updateControls(
+      robot.update(
         kinematics,
+        'ghost',
         index === currentProgrammerState.selectedIndex
           ? currentJogState
           : undefined

@@ -186,21 +186,6 @@ export class Kinematics {
     patchCommand({ position: { joints } });
   }
 
-  // updateJointCommand(robotJointName, angle) {
-  //   const jointId = parseInt(robotJointName.split("_")[1]);
-  //   const jointPositionKey = `j${jointId}`;
-
-  //   const offsetAngleDeg = MathUtils.radToDeg(angle) + jointOffset[jointId];
-
-  //   patchCommand({
-  //     position: {
-  //       joints: /** @type JointPosition */ ({
-  //         [jointPositionKey]: offsetAngleDeg,
-  //       }),
-  //     },
-  //   });
-  // }
-
   #ikRoot() {
     if (!this._ikRoot) {
       this._ikRoot = urdfRobotToIKRoot(this.urdfRoot);
