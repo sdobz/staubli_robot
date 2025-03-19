@@ -98,6 +98,10 @@ function isPopulated(program) {
   return !!program.name || program.items.length > 0;
 }
 
+export function defaultProgramName() {
+  return (new Date()).toISOString()
+}
+
 function reduceProgram({ id, name }) {
   return { id, name };
 }
@@ -123,7 +127,7 @@ function setProgram(newProgram) {
     if (!newProgram.id) {
       newProgram = {
         ...newProgram,
-        name: newProgram.name || new Date().toISOString(),
+        name: newProgram.name || defaultProgramName(),
         id: Math.random().toString(36).slice(2),
       };
     }

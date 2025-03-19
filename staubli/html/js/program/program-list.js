@@ -1,11 +1,13 @@
 import { createComponent, html } from "../lib/component.js";
 import {
+  defaultProgramName,
   deleteProgram,
   loadProgram,
   newProgram,
   program,
   programmerState,
   programs,
+  setProgram,
   setProgrammerState,
 } from "./state.js";
 
@@ -47,6 +49,13 @@ createComponent({
     function doEditSequence() {
       if (isBusy) return;
 
+      if (!currentSequence.name) {
+        setProgram({
+          ...currentSequence,
+          name: defaultProgramName()
+        })
+      }
+
       setProgrammerState({
         ...currentState,
         editing: "sequence",
@@ -86,7 +95,6 @@ createComponent({
           click: doEditSequence,
         },
       },
-
       ".select-jog-sequence": {
         attributes: {
           disabled: busyDisabled,

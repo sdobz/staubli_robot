@@ -5,6 +5,7 @@ import "./program/command-editor.js";
 import "./program/command-list.js";
 import "./program/playback.js";
 import "./program/program-list.js";
+import "./program/edit.js";
 import { loadRobot } from "./robot.js";
 
 loadRobot();
