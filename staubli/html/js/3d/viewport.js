@@ -78,7 +78,7 @@ class Robot3D extends HTMLElement {
     const previousRobots = this.robots;
     this.robots = [];
     const popRobot = () => {
-      const nextRobot = previousRobots.pop() || this.#createRobot();
+      const nextRobot = previousRobots.shift() || this.#createRobot();
 
       this.robots.push(nextRobot);
       return nextRobot;
@@ -100,6 +100,7 @@ class Robot3D extends HTMLElement {
     kinematics.applyJointPosition(currentPosition.joints, currentRobot);
     kinematics.applyEffectorPosition(currentPosition.effector, currentRobot);
 
+    let previousRobot = currentRobot
     currentSequence.items.forEach((currentItem, index) => {
       const position = currentItem.position;
       const robot = popRobot();
@@ -115,13 +116,14 @@ class Robot3D extends HTMLElement {
       if (position.joints) {
         kinematics.applyJointPosition(position.joints, robot);
       } else {
-        kinematics.applyJointsFromEffectorPosition(position.effector, robot);
+        kinematics.applyJointsFromEffectorPosition(previousRobot, position.effector, robot);
       }
       if (position.effector) {
         kinematics.applyEffectorPosition(position.effector, robot);
       } else {
         kinematics.applyEffectorFromJointPosition(robot);
       }
+      previousRobot = robot
 
       // This does not trigger a re-signal, and I hate it.
       // The way to fix this is to move the entire "updateRobots" sequence into the "updateProgram" loop

@@ -155,7 +155,7 @@ export function addCommand() {
   if (!currentCommand) {
     currentIndex = 0
   }
-  const deriveFromPosition = currentCommand?.position || robotState().position
+  const deriveFromPosition = currentCommand?._derivedState?.position || robotState().position
 
   if (!deriveFromPosition) {
     console.error("Add command without position")
@@ -174,21 +174,19 @@ export function addCommand() {
   const oldItems = currentProgram.items;
   /** @type {JogItem[]} */
   const newItems = [
-    ...oldItems.slice(0, currentIndex),
+    ...oldItems.slice(0, currentIndex+1),
     newItem,
-    ...oldItems.slice(currentIndex),
+    ...oldItems.slice(currentIndex+1),
   ];
 
   setProgram({
     ...currentProgram,
     items: newItems,
   });
-  if (currentIndex !== currentProgrammerState.selectedIndex) {
-    setProgrammerState({
-      ...currentProgrammerState,
-      selectedIndex: currentIndex
-    })
-  }
+  setProgrammerState({
+    ...currentProgrammerState,
+    selectedIndex: currentIndex + 1
+  })
 }
 
 /**

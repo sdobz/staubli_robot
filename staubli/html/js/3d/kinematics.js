@@ -9,6 +9,7 @@
 
 import {
   Goal,
+  IKRootsHelper,
   setIKFromUrdf,
   setUrdfFromIK,
   SOLVE_STATUS,
@@ -43,19 +44,11 @@ export class Kinematics {
   }
 
   /**
-   *
-   * @param {URDFRobot} urdfSource
-   */
-  setPredecessor(urdfSource) {
-    setIKFromUrdf(this.#ikRoot(), urdfSource);
-  }
-
-  /**
-   *
+   * @param {RobotControl} predecessor
    * @param {EffectorPosition} effectorPosition
    * @param {RobotControl} renderTarget
    */
-  applyJointsFromEffectorPosition(effectorPosition, renderTarget) {
+  applyJointsFromEffectorPosition(predecessor, effectorPosition, renderTarget) {
     const { x, y, z, yaw, pitch, roll } = effectorPosition;
 
     const position = new Vector3(
@@ -65,17 +58,18 @@ export class Kinematics {
     );
     const quaternion = createZYZQuaternion(yaw, pitch, roll);
 
-    const solvedIKRoot = this.#solveIK(position, quaternion);
+    const solvedIKRoot = this.#solveIK(predecessor, position, quaternion);
 
     setUrdfFromIK(renderTarget.robot, solvedIKRoot);
   }
 
   /**
-   *
+   * @param {RobotControl} predecessor
    * @param {RobotControl} renderTarget
    */
-  applyJointsFromTool(renderTarget) {
+  applyJointsFromTool(predecessor, renderTarget) {
     const solvedIKRoot = this.#solveIK(
+      predecessor,
       renderTarget.tool.position,
       renderTarget.tool.quaternion
     );
@@ -117,13 +111,12 @@ export class Kinematics {
   }
 
   /**
-   * 
-   * @param {RobotControl} renderTarget 
+   *
+   * @param {RobotControl} renderTarget
    */
   applyEffectorFromJointPosition(renderTarget) {
     renderTarget.robot.traverse((obj) => {
       if (obj.name === "tool0") {
-        
         renderTarget.tool.position.setFromMatrixPosition(obj.matrixWorld);
         renderTarget.tool.quaternion.setFromRotationMatrix(obj.matrixWorld);
       }
@@ -186,6 +179,16 @@ export class Kinematics {
     patchCommand({ position: { joints } });
   }
 
+  drawHelper(scene) {
+    if (this.helper) {
+      scene.remove(this.helper);
+      delete this.helper;
+    }
+
+    this.helper = new IKRootsHelper([this.#ikRoot()]);
+    scene.add(this.helper);
+  }
+
   #ikRoot() {
     if (!this._ikRoot) {
       this._ikRoot = urdfRobotToIKRoot(this.urdfRoot);
@@ -194,8 +197,9 @@ export class Kinematics {
     return this._ikRoot;
   }
 
-  #solveIK(position, quaternion) {
+  #solveIK(predecessor, position, quaternion) {
     const ikRoot = this.#ikRoot();
+    setIKFromUrdf(ikRoot, predecessor.robot);
 
     if (!this._goal) {
       this._goal = new Goal();
@@ -205,8 +209,8 @@ export class Kinematics {
       this._goal.makeClosure(effectorLink);
     }
     const goal = this._goal;
-    goal.setPosition(position);
-    goal.setQuaternion(quaternion);
+    goal.setPosition(position.x, position.y, position.z);
+    goal.setQuaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 
     if (!this._solver) {
       this._solver = new Solver([ikRoot]);

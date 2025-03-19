@@ -30,8 +30,8 @@ import { Kinematics } from "./kinematics.js";
 // let globalRobotIndex = 0
 
 // /**
-//  * 
-//  * @param {URDFRobot} r 
+//  *
+//  * @param {URDFRobot} r
 //  */
 // function nameRobot(r) {
 //   console.log("Naming robot", globalRobotIndex)
@@ -41,7 +41,7 @@ import { Kinematics } from "./kinematics.js";
 //   r.traverse(c => {
 //     c.name = `robot-${globalRobotIndex}-${localRobotIndex}`
 //   })
-  
+
 //   globalRobotIndex += 1
 // }
 
@@ -225,6 +225,9 @@ export class RobotControl {
       this.world.camera,
       this.world.renderer.domElement
     );
+    // Solves an issue rendering LineSegment2: raycaster needs to understand how to intersect with 2d objects
+    dragControls.raycaster.camera = this.world.camera;
+
     dragControls.onDragStart = (joint) => {
       this.world.orbit.enabled = false;
     };
@@ -254,7 +257,7 @@ export class RobotControl {
 
   #removeURDFControl() {
     if (!this.dragControls) {
-      return
+      return;
     }
     this.dragControls?.dispose();
     delete this.dragControls;
@@ -270,7 +273,7 @@ export class RobotControl {
       this.world.renderer.domElement
     );
     this.transformControls.addEventListener("change", () => {
-      this.kinematics.applyJointsFromTool(this);
+      this.kinematics.applyJointsFromTool(this, this);
       this.world.render();
     });
     this.transformControls.addEventListener("dragging-changed", (event) => {
@@ -279,9 +282,9 @@ export class RobotControl {
 
       this.dragging = isDragging;
 
-      if (isDragging) {
-        this.kinematics.setPredecessor(this.urdfRoot);
-      }
+      // if (isDragging) {
+      //   this.kinematics.setPredecessor(this.urdfRoot);
+      // }
 
       if (!isDragging) {
         this.kinematics.updateEffectorPositionCommand(this);
