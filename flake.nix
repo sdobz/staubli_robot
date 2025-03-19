@@ -34,7 +34,7 @@
         ];
       };
     };
-  } // (utils.lib.eachSystem [ "x86_64-linux" ] (system: let
+  } // (utils.lib.eachSystem [ "x86_64-linux" "aarch64-darwin" ] (system: let
     pkgs = nixpkgs.legacyPackages.${system};
     staubli = import ./pi/staubli.nix { inherit pkgs; };
   in rec {
@@ -46,6 +46,21 @@
       devPythonEnv = pkgs.python3.withPackages(ps: with ps; [
         black
       ]);
+      simplify = pkgs.buildGoPackage {
+        pname = "simplify";
+        version = "dev";
+
+        src = pkgs.fetchFromGitHub {
+          owner = "fogleman";
+          repo = "simplify";
+          rev = "d32f302d50469376eae60b2cd5a328c26888fade";
+          sha256 = "sha256-dVs8i3Qa3CKZ+xBjoLEYASItF9rHHcln7K9z2WI+hXg=";
+        };
+
+        goPackagePath = "github.com/fogleman/simplify";
+
+        subPackages = [ "cmd/simplify" ];
+      };
     };
 
     defaultPackage = packages.pythonEnv; # If you want to juist build the environment
@@ -54,6 +69,7 @@
       buildInputs = [
         packages.pythonEnv
         packages.devPythonEnv
+        # packages.simplify
         pkgs.rsync
         pkgs.curl
       ];
