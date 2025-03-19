@@ -27,7 +27,10 @@ import { PointerURDFDragControls } from "urdf-loader/URDFDragControls.js";
 import { html } from "../lib/component.js";
 import { createEffect } from "../lib/state.js";
 import { robotState } from "../robot.js";
-import { jogSequence, setJogSequence } from "../jog-sequence.js";
+import {
+  jogSequence,
+  updatePosition,
+} from "../jog-sequence.js";
 import { jogState } from "../jog-control.js";
 import {
   createZYZQuaternion,
@@ -47,12 +50,12 @@ import {
   setIKFromUrdf,
   DOF,
 } from "closed-chain-ik-js";
+import { loadRobot } from "./urdf.js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { Object3D } from 'three' */
 
 /** @import { JointPosition, EffectorPosition } from '../robot.js' */
-/** @import {JogItem} from '../jog-sequence.js' */
 
 const mmToM = 1 / 1000;
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
@@ -162,22 +165,8 @@ class Robot3D extends HTMLElement {
     this.scene = scene;
     this.orbit = orbit;
 
-    // Load robot
-    const manager = new LoadingManager();
-    const loader = new URDFLoader(manager);
-    loader.packages = {
-      staubli_rx90: "/urdf/staubli_rx90",
-    };
-    loader.load("/urdf/staubli_rx90/StaubliRX90.urdf", (result) => {
-      /** @type {URDFRobot | undefined} */
-      this.urdfRoot = result;
-    });
-
-    manager.onLoad = () => {
-      if (!this.urdfRoot) {
-        console.error("Manager load without robot");
-        return;
-      }
+    loadRobot().then((result) => {
+      this.urdfRoot = result
       this.effectorOffset = this.effectorOffset.copy(
         this.urdfRoot.joints["base_link-base"].position
       );
@@ -191,7 +180,7 @@ class Robot3D extends HTMLElement {
 
       scene.add(this.robot);
       this.updateRobots();
-    };
+    })
 
     const stlLoader = new STLLoader();
     stlLoader.load(
@@ -282,7 +271,10 @@ class Robot3D extends HTMLElement {
     this.purgeArrows();
 
     const currentPosition = currentRobotState.position;
-    let sequenceToRender = [{ position: currentPosition }, ...currentSequence];
+    let sequenceToRender = [
+      { position: currentPosition },
+      ...currentSequence.items,
+    ];
 
     if (this.dragging) {
       sequenceToRender.push(sequenceToRender[sequenceToRender.length - 1]);
@@ -401,7 +393,7 @@ class Robot3D extends HTMLElement {
    */
   updateRobot(robot, jointPosition) {
     if (!robot.joints) {
-      console.error("Robot no joints");
+      throw new Error("Robot no joints");
     }
     /** @type {Record<string, URDFJoint>} */
     const robotJoints = /** @type{any} */ (robot.joints);
@@ -584,30 +576,9 @@ class Robot3D extends HTMLElement {
 
     const offsetAngleDeg = MathUtils.radToDeg(angle) + jointOffset[jointId];
 
-    const sequence = jogSequence();
-    const state = robotState();
-
-    const lastJoints =
-      sequence.findLast((item) => !!item.position.joints)?.position.joints ??
-      state?.position.joints;
-
-    if (!lastJoints) {
-      console.error("Unable to get reference position");
-      return;
-    }
-
-    /** @type {JogItem} */
-    const nextItem = {
-      name: new Date().toISOString(),
-      position: {
-        joints: /** @type {any} */ ({
-          ...lastJoints,
-          [jointPositionKey]: offsetAngleDeg,
-        }),
-      },
-    };
-
-    setJogSequence([...sequence, nextItem]);
+    updatePosition({
+      joints: {[jointPositionKey]: offsetAngleDeg}
+    })
   }
 
   setJointValue(name, angle) {
@@ -712,20 +683,9 @@ class Robot3D extends HTMLElement {
    * @param {Object3D} effector
    */
   appendEffectorSequence(effector) {
-    const currentSequence = jogSequence();
-    setJogSequence([
-      ...currentSequence,
-      {
-        name: new Date().toISOString(),
-        position: {
-          effector: getObjectEffectorPosition(
-            effector,
-            this.effectorOffset,
-            mmToM
-          ),
-        },
-      },
-    ]);
+    updatePosition({
+      effector: getObjectEffectorPosition(effector, this.effectorOffset, mmToM),
+    });
   }
 
   onResize() {
