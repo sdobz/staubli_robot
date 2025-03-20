@@ -119,7 +119,7 @@ createComponent({
   attrsFn: (_state, _attrs) => {
     const currentState = programmerState();
     const currentProgran = program();
-    const currentCommand = currentProgran.items[currentState.selectedIndex]
+    const currentCommand = currentProgran.commands[currentState.selectedIndex]
 
     function doCloseEditing() {
       setProgrammerState({

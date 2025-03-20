@@ -29,6 +29,7 @@ import { positionType } from "../robot.js";
 /** @import {Object3D} from 'three' */
 /** @import {Position, EffectorPosition, JointPosition} from '../robot.js' */
 /** @import {RobotControl} from './robot.js' */
+/** @import {Joint} from 'closed-chain-ik-js' */
 
 const mmToM = 1 / 1000;
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
@@ -151,7 +152,7 @@ export class Kinematics {
   updateEffectorPositionCommand(renderSource) {
     const effector = this.determineEffectorPosition(renderSource);
 
-    patchCommand({ position: { effector } });
+    patchCommand({ type: "effector", data: effector });
   }
 
   /**
@@ -176,7 +177,7 @@ export class Kinematics {
   updateJointPositionCommand(renderSource) {
     const joints = this.determineJointPosition(renderSource);
 
-    patchCommand({ position: { joints } });
+    patchCommand({ type: 'joints', data: joints });
   }
 
   drawHelper(scene) {
@@ -192,7 +193,7 @@ export class Kinematics {
   #ikRoot() {
     if (!this._ikRoot) {
       this._ikRoot = urdfRobotToIKRoot(this.urdfRoot);
-      this._ikRoot.setDoF(); // Lock the base
+      /** @type {Joint} */(this._ikRoot).setDoF(); // Lock the base
     }
     return this._ikRoot;
   }

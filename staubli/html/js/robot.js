@@ -99,9 +99,14 @@ class Robot {
     setRobot(this);
   }
 
-  /** @type {(position: Position) => Promise<void>} */
-  async jog(position) {
-    await this.withRobotState(put("/api/jog", position))
+  /** @type {(effectorPosition: EffectorPosition) => Promise<void>} */
+  async effector(effectorPosition) {
+    await this.withRobotState(put("/api/effector", effectorPosition))
+  }
+
+  /** @type {(jointPosition: JointPosition) => Promise<void>} */
+  async joints(jointPosition) {
+    await this.withRobotState(put("/api/joints", jointPosition))
   }
 
   async elbow() {

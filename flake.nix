@@ -72,6 +72,7 @@
         # packages.simplify
         pkgs.rsync
         pkgs.curl
+        pkgs.typescript
       ];
       shellHook = ''
         if [ -e .venv ] && [ ! -L .venv ]; then

@@ -6,7 +6,7 @@ import { createComponent, html } from "../lib/component.js";
 /** @import { PlaybackEnum, ProgrammerState } from "./state.js" */
 
 createEffect(() => {
-  const initialSequence = program();
+  const initialProgram = program();
   const initialState = programmerState();
   const currentRobot = robot();
 
@@ -22,17 +22,18 @@ createEffect(() => {
     return;
   }
 
-  if (initialSequence.items.length === 0) {
+  if (initialProgram.commands.length === 0) {
     return;
   }
 
   const nextIndex = initialState.selectedIndex;
-  const nextItem = initialSequence.items[nextIndex];
+  const nextCommand = initialProgram.commands[nextIndex];
 
-  if (!nextItem) {
+  if (!nextCommand) {
     setProgrammerState({
       ...initialState,
       playback: "stopped",
+      busy: false,
     });
     return;
   }
@@ -44,14 +45,14 @@ createEffect(() => {
   };
   setProgrammerState(busyState);
 
-  currentRobot.jog(nextItem.position).then(() => {
+  currentRobot[nextCommand.type](nextCommand.data).then(() => {
     const newSequence = program();
     const newState = programmerState();
 
     const stateChangedWhileWaiting =
-      newSequence !== initialSequence || newState !== busyState;
+      newSequence !== initialProgram || newState !== busyState;
     const isJog = newState.playback === "jog";
-    const loopOver = nextIndex >= newSequence.items.length - 1;
+    const loopOver = nextIndex >= newSequence.commands.length - 1;
 
     if (stateChangedWhileWaiting || isJog || loopOver) {
       setProgrammerState({
@@ -60,10 +61,11 @@ createEffect(() => {
         busy: false,
       });
     } else {
-      const loopedIndex = (nextIndex + 1) % newSequence.items.length;
+      const loopedIndex = (nextIndex + 1) % newSequence.commands.length;
       setProgrammerState({
         ...newState,
         selectedIndex: loopedIndex,
+        busy: false,
       });
     }
   });
@@ -102,11 +104,13 @@ createComponent({
     const doStop = makePlaybackHandler("stopped");
     const doJog = makePlaybackHandler("jog");
 
-    const isEmpty = currentSequence.items.length === 0;
+    const isEmpty = currentSequence.commands.length === 0;
     const isBusy = currentState.busy;
     const busyDisabled = isBusy ? "true" : undefined;
     const emptyDisabled = isEmpty ? "true" : undefined;
-    const selectedDisabled = !currentSequence.items[currentState.selectedIndex]
+    const selectedDisabled = !currentSequence.commands[
+      currentState.selectedIndex
+    ]
       ? "true"
       : undefined;
     return {

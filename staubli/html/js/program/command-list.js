@@ -25,11 +25,11 @@ createComponent({
       <tbody class="positions"></tbody>
     </table>
     <div class="horizontal-stack">
-      <button class="item-edit">Edit</button>
+      <button class="command-edit">Edit</button>
       <div role="group">
         <select class="command-to-add" aria-label="Command To Add" required>
           <option selected value="joints">Set Joints</option>
-          <option value="tool-position">Move</option>
+          <option value="effector">Move</option>
         </select>
         <button class="add-command">Add</button>
       </div>
@@ -37,7 +37,7 @@ createComponent({
   `,
   attrsFn: (_state, _attrs) => {
     const currentState = programmerState();
-    const currentSequence = program();
+    const currentProgram = program();
 
     const isBusy = currentState.busy;
     /**
@@ -63,15 +63,15 @@ createComponent({
         return;
       }
 
-      const newItems = currentSequence.items.filter((_, i) => i !== index);
+      const newCommands = currentProgram.commands.filter((_, i) => i !== index);
       let nextSelectedIndex = currentState.selectedIndex;
 
       if (index < nextSelectedIndex) {
         nextSelectedIndex -= 1;
       }
 
-      if (nextSelectedIndex >= newItems.length) {
-        nextSelectedIndex = newItems.length - 1;
+      if (nextSelectedIndex >= newCommands.length) {
+        nextSelectedIndex = newCommands.length - 1;
       }
 
       if (nextSelectedIndex !== currentState.selectedIndex) {
@@ -82,8 +82,8 @@ createComponent({
       }
 
       setProgram({
-        ...currentSequence,
-        items: newItems,
+        ...currentProgram,
+        commands: newCommands,
       });
     }
 
@@ -116,28 +116,26 @@ createComponent({
       addCommand();
     }
 
-    const children = currentSequence.items
+    const children = currentProgram.commands
       .map(
-        (item, index) => `
+        (command, index) => `
       <tr data-index="${index}">
         <td>
-          <input type="radio" class="item-select" ${
+          <input type="radio" class="command-select" ${
             currentState.selectedIndex === index ? "checked" : ""
           } />
         </td>
-        <th scope="row">${item.name}</th>
-        <td>${!!item.position.effector ? "tool" : ""} ${
-          !!item.position.joints ? "joint" : ""
-        }</td>
-        <td>${item.speed !== undefined ? item.speed : "inherit"}</td>
-        <td><button class="item-delete">X</button></td>
+        <th scope="row">${command.name}</th>
+        <td>${command.type}</td>
+        <td>...</td>
+        <td><button class="command-delete">X</button></td>
       </tr>
     `
       )
       .join("\n");
 
     const busyDisabled = isBusy ? "true" : undefined;
-    const selectedDisabled = !currentSequence.items[currentState.selectedIndex]
+    const selectedDisabled = !currentProgram.commands[currentState.selectedIndex]
       ? "true"
       : undefined;
 
@@ -145,7 +143,7 @@ createComponent({
       ".positions": {
         properties: { innerHTML: children },
       },
-      ".item-select": {
+      ".command-select": {
         attributes: {
           disabled: busyDisabled,
         },
@@ -153,7 +151,7 @@ createComponent({
           click: onSelectItem,
         },
       },
-      ".item-edit": {
+      ".command-edit": {
         attributes: {
           disabled: busyDisabled || selectedDisabled,
         },
@@ -161,7 +159,7 @@ createComponent({
           click: doEditItem,
         },
       },
-      ".item-delete": {
+      ".command-delete": {
         attributes: {
           disabled: busyDisabled,
         },
