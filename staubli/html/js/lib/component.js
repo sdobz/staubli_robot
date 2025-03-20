@@ -108,7 +108,7 @@ export function createComponent({
 
       this.eventListeners = [];
       for (const [selector, updates] of Object.entries(attrMap)) {
-        const elements = this.querySelectorAll(selector) ?? [];
+        const elements = this.querySelectorAll(selector);
         const { eventListeners, attributes, properties } = updates;
 
         for (const element of elements) {

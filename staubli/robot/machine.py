@@ -141,7 +141,8 @@ class Robot:
         self._readline()
         self._read_dot()
     
-    def jog_joint(self, joint_location: JointLocation, speed: int):
+    def jog_joint(self, joint_location: JointLocation):
+        speed = 20
         where = self.where()
         delta = joint_location - where[1]
         for joint_attr in joint_attrs:

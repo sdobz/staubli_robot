@@ -55,8 +55,15 @@ export function createEffect(fn) {
     effect.execute();
 }
 
+/**
+ * Creates a memoized signal that updates whenever the value of `fn` changes.
+ *
+ * @template T - The return type of the `fn` function.
+ * @param {() => T} fn - A function that returns a value of type `T`.
+ * @returns {() => T} - A signal function that returns the latest value of `fn`.
+ */
 export function createMemo(fn) {
-    const [signal, setSignal] = createSignal();
+    const [signal, setSignal] = createSignal(null);
     createEffect(() => setSignal(fn()));
     return signal;
 }

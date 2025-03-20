@@ -44,7 +44,7 @@ class Robot3D extends HTMLElement {
       shadowRoot.appendChild(linkElement.cloneNode());
     });
     const templateContents = robot3DTemplate.content.cloneNode(true);
-    this.container = templateContents.querySelector("#robot-3d");
+    this.container = /** @type {HTMLElement} */(templateContents).querySelector("#robot-3d");
     this.container.appendChild(this.world.renderer.domElement);
 
     shadowRoot.appendChild(templateContents);
@@ -94,15 +94,18 @@ class Robot3D extends HTMLElement {
     const currentRobot = popRobot();
     currentRobot.update(
       kinematics,
-      currentSequence.items.length === 0 ? 'current' : 'current-ghost',
+      currentSequence.commands.length === 0 ? 'current' : 'current-ghost',
       undefined
     );
     kinematics.applyJointPosition(currentPosition.joints, currentRobot);
     kinematics.applyEffectorPosition(currentPosition.effector, currentRobot);
 
     let previousRobot = currentRobot
-    currentSequence.items.forEach((currentItem, index) => {
-      const position = currentItem.position;
+    currentSequence.commands.forEach((currentCommand, index) => {
+      if (currentCommand.type !== "effector" && currentCommand.type !== "joints") {
+        return;
+      }
+
       const robot = popRobot();
       robot.update(
         kinematics,
@@ -113,13 +116,13 @@ class Robot3D extends HTMLElement {
       );
 
       // This order is important: kinematics derives one from the other
-      if (position.joints) {
-        kinematics.applyJointPosition(position.joints, robot);
+      if (currentCommand.type === "joints") {
+        kinematics.applyJointPosition(currentCommand.data, robot);
       } else {
-        kinematics.applyJointsFromEffectorPosition(previousRobot, position.effector, robot);
+        kinematics.applyJointsFromEffectorPosition(previousRobot, currentCommand.data, robot);
       }
-      if (position.effector) {
-        kinematics.applyEffectorPosition(position.effector, robot);
+      if (currentCommand.type === "effector") {
+        kinematics.applyEffectorPosition(currentCommand.data, robot);
       } else {
         kinematics.applyEffectorFromJointPosition(robot);
       }
@@ -127,7 +130,7 @@ class Robot3D extends HTMLElement {
 
       // This does not trigger a re-signal, and I hate it.
       // The way to fix this is to move the entire "updateRobots" sequence into the "updateProgram" loop
-      currentItem._derivedState = {
+      currentCommand._derivedState = {
         ...currentRobotState,
         position: {
           effector: kinematics.determineEffectorPosition(robot),

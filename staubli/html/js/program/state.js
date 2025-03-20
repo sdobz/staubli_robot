@@ -9,11 +9,6 @@ import { positionType, robotState } from "../robot.js";
 /**
  * @typedef {"local" | "world"} JogSpace
  */
-
-/**
- * @typedef {"joints" | "tool-position"} CommandType
- */
-
 /**
  * @typedef {Object} JogState
  * @property {JogMode} mode - Currently selected translation mode
@@ -58,11 +53,30 @@ const [programmerState, setProgrammerState] = createSignal(
 export { programmerState, setProgrammerState };
 
 /**
- * @typedef {Object} JogItem
+ * @typedef {Object} AnyCommand
  * @property {string} name
- * @property {Position} position
- * @property {number} [speed]
  * @property {RobotState} [_derivedState]
+ */
+
+/**
+ * @typedef {Object} JointsCommandType
+ * @property {"joints"} type
+ * @property {JointPosition} data
+ *
+ * @typedef {JointsCommandType & AnyCommand} JointsCommand
+ */
+
+/**
+ * @typedef {Object} EffectorCommandType
+ * @property {"effector"} type
+ * @property {EffectorPosition} data
+ *
+ * @typedef {EffectorCommandType & AnyCommand} EffectorCommand
+ */
+
+/**
+ * @typedef {JointsCommand | EffectorCommand} Command
+ * @typedef {Command["type"]} CommandType
  */
 
 /**
@@ -70,12 +84,12 @@ export { programmerState, setProgrammerState };
  * @property {string} [name]
  * @property {string} [id]
  * @property {number} [speed]
- * @property {JogItem[]} items
+ * @property {Command[]} commands
  */
 
 /** @type {Program} */
 const initialProgram = {
-  items: [],
+  commands: [],
 };
 const [program, _setProgram] = createSignal(initialProgram);
 export { program, setProgram };
@@ -95,7 +109,11 @@ export { programs };
  * @param {Program} program
  */
 function isPopulated(program) {
-  return !!program.name || program.items.length > 0;
+  return !!program.name || program.commands.length > 0;
+}
+
+export function defaultProgramName() {
+  return new Date().toISOString();
 }
 
 function reduceProgram({ id, name }) {
@@ -123,7 +141,7 @@ function setProgram(newProgram) {
     if (!newProgram.id) {
       newProgram = {
         ...newProgram,
-        name: newProgram.name || new Date().toISOString(),
+        name: newProgram.name || defaultProgramName(),
         id: Math.random().toString(36).slice(2),
       };
     }
@@ -151,47 +169,62 @@ export function addCommand() {
   const currentProgram = program();
 
   let currentIndex = currentProgrammerState.selectedIndex;
-  const currentCommand = currentProgram.items[currentIndex]
+  const currentCommand = currentProgram.commands[currentIndex];
   if (!currentCommand) {
-    currentIndex = 0
+    currentIndex = -1;
   }
-  const deriveFromPosition = currentCommand?._derivedState?.position || robotState().position
+  const deriveFromPosition =
+    currentCommand?._derivedState?.position || robotState().position;
 
   if (!deriveFromPosition) {
-    console.error("Add command without position")
-    return
+    console.error("Add command without position");
+    return;
   }
 
-  /** @type {Position} */
-  const position = currentProgrammerState.commandToAdd === "joints" ? { joints: deriveFromPosition.joints } : { effector: deriveFromPosition.effector }
+  /** @type {Command} */
+  let newCommand;
 
-  /** @type {JogItem} */
-  const newItem = {
-    name: (new Date()).toISOString(),
-    position: position
+  switch (currentProgrammerState.commandToAdd) {
+    case "joints":
+      newCommand = {
+        name: defaultProgramName(),
+        type: "joints",
+        data: deriveFromPosition.joints,
+      };
+      break;
+    case "effector":
+      newCommand = {
+        name: defaultProgramName(),
+        type: "effector",
+        data: deriveFromPosition.effector,
+      };
+      break;
+    default:
+      throw new Error(`Unknown command type: ${currentProgrammerState.commandToAdd}`)
   }
 
-  const oldItems = currentProgram.items;
-  /** @type {JogItem[]} */
-  const newItems = [
-    ...oldItems.slice(0, currentIndex+1),
-    newItem,
-    ...oldItems.slice(currentIndex+1),
+  const oldCommands = currentProgram.commands;
+  /** @type {Command[]} */
+  const newCommands = [
+    ...oldCommands.slice(0, currentIndex + 1),
+    newCommand,
+    ...oldCommands.slice(currentIndex + 1),
   ];
+
+  const selectedIndex = currentIndex + 1
 
   setProgram({
     ...currentProgram,
-    items: newItems,
+    commands: newCommands,
   });
   setProgrammerState({
     ...currentProgrammerState,
-    selectedIndex: currentIndex + 1
-  })
+    selectedIndex,
+  });
 }
 
 /**
- *
- * @param {Partial<JogItem>} patch
+ * @param {Partial<Command>} patch
  */
 export function patchCommand(patch) {
   const currentProgrammerState = programmerState();
@@ -199,33 +232,30 @@ export function patchCommand(patch) {
 
   const currentIndex = currentProgrammerState.selectedIndex;
 
-  const currentCommand = currentProgram.items[currentIndex];
+  const currentCommand = currentProgram.commands[currentIndex];
   if (!currentCommand) {
     console.error("No selected command while patching");
     return;
   }
 
-  if (
-    !patch.position ||
-    positionType(currentCommand.position) !== positionType(patch.position)
-  ) {
-    console.error("Attempt to update command with invalid position");
+  if (!patch.type || patch.type !== currentCommand.type) {
+    console.error("Attempt to update command with missing or mismatched type");
     return;
   }
 
   const newCommand = mergeDeep(currentCommand, patch);
 
-  const oldItems = currentProgram.items;
-  /** @type {JogItem[]} */
-  const newItems = [
-    ...oldItems.slice(0, currentIndex),
+  const oldCommands = currentProgram.commands;
+  /** @type {Command[]} */
+  const newCommands = [
+    ...oldCommands.slice(0, currentIndex),
     newCommand,
-    ...oldItems.slice(currentIndex + 1),
+    ...oldCommands.slice(currentIndex + 1),
   ];
 
   setProgram({
     ...currentProgram,
-    items: newItems,
+    commands: newCommands,
   });
 }
 

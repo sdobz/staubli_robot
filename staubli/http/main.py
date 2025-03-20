@@ -20,10 +20,6 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
     def api_hello(self):
         return {"hello": "world"}
 
-    def _format_positions(self, positions: list[tuple[str, EffectorLocation]]):
-        print(positions)
-        return [{"name": loc[0], "position": self._format_effector_location(loc[1])} for loc in positions]
-
     def _format_effector_location(self, effector_location: EffectorLocation):
         return {
             "x": effector_location.x,
@@ -51,42 +47,36 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
     def api_robot(self):
         return {
             "position": self._position(),
-            "distance": self.controller.distance,
-            "angle_step": self.controller.angle_step(),
             "elbow": self.controller.elbow,
-            "positions": self._format_positions(self.controller.positions),
-            "positions_index": self.controller.positions_index
         }
     def api_position(self):
         return {
             "position": self._position()
         }
     
-    def api_jog(self, data):
-        if "effector" in data:
-            el = data["effector"]
-            effector_location = EffectorLocation(
-                el["x"],
-                el["y"],
-                el["z"],
-                el["pitch"],
-                el["yaw"],
-                el["roll"]
-            )
-            self.controller.robot.jog_absolute(effector_location)
-            return self.api_position()
-        if "joints" in data:
-            j = data["joints"]
-            joint_location = JointLocation(
-                j["j1"] if "j1" in j else 0,
-                j["j2"] if "j2" in j else 0,
-                j["j3"] if "j3" in j else 0,
-                j["j4"] if "j4" in j else 0,
-                j["j5"] if "j5" in j else 0,
-                j["j6"] if "j6" in j else 0,
-            )
-            self.controller.robot.jog_joint(joint_location, 20)
-            return self.api_position()
+    def api_effector(self, data):
+        effector_location = EffectorLocation(
+            data["x"],
+            data["y"],
+            data["z"],
+            data["yaw"],
+            data["pitch"],
+            data["roll"]
+        )
+        self.controller.robot.jog_absolute(effector_location)
+        return self.api_position()
+    
+    def api_joints(self, data):
+        joint_location = JointLocation(
+            data["j1"],
+            data["j2"],
+            data["j3"],
+            data["j4"],
+            data["j5"],
+            data["j6"]
+        )
+        self.controller.robot.jog_joint(joint_location)
+        return self.api_position()
 
     def api_elbow(self):
         self.controller.on_elbow()
