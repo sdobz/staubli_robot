@@ -6,6 +6,6 @@ import "./program/command-list.js";
 import "./program/playback.js";
 import "./program/program-list.js";
 import "./program/edit.js";
-import { loadRobot } from "./robot.js";
+import { robotApi } from "./robot.js";
 
-loadRobot();
+robotApi.load();

@@ -48,6 +48,7 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
         return {
             "position": self._position(),
             "elbow": self.controller.elbow,
+            "speed": 20
         }
     def api_position(self):
         return {

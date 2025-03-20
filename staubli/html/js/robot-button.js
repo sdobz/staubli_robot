@@ -1,6 +1,6 @@
 import { createComponent, html } from "./lib/component.js";
 
-import { robot, robotState } from "./robot.js";
+import { robot } from "./robot.js";
 
 createComponent({
   tag: "robot-button",
@@ -31,7 +31,9 @@ createComponent({
   tag: "elbow-button",
   template: html` <robot-button method="elbow" label="..."></robot-button> `,
   attrsFn: (_state, _attrs) => {
-    const label = robotState()?.["elbow"] || "Elbow...";
+    const instance = robot()
+    const state = instance?.state()
+    const label = state ? state["elbow"] : "Elbow...";
 
     return {
       "robot-button": {

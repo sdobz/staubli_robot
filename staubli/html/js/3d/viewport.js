@@ -1,19 +1,23 @@
 import { Vector3, ArrowHelper } from "three";
 
 import { html } from "../lib/component.js";
-import { createEffect } from "../lib/state.js";
-import { robotState } from "../robot.js";
+import { createEffect, createSignal } from "../lib/state.js";
 import { loadRobot, loadTool, RobotControl } from "./robot.js";
 import { program, programmerState, jogState } from "../program/state.js";
 import { World } from "./world.js";
 import { Kinematics } from "./kinematics.js";
+import { robot } from "../robot.js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { Object3D } from 'three' */
 
-/** @import { JointPosition, EffectorPosition } from '../robot.js' */
+/** @import { JointPosition, EffectorPosition } from '../robot-types.d.ts' */
 
 const robot3DTemplate = html` <div id="robot-3d"></div> `;
+
+/** @type readonly [() => RobotControl | null, (set: RobotControl) => void] */
+const [previewRobotControl, setPreviewRobotControl] = createSignal(null);
+export { previewRobotControl };
 
 class Robot3D extends HTMLElement {
   constructor() {
@@ -44,7 +48,9 @@ class Robot3D extends HTMLElement {
       shadowRoot.appendChild(linkElement.cloneNode());
     });
     const templateContents = robot3DTemplate.content.cloneNode(true);
-    this.container = /** @type {HTMLElement} */(templateContents).querySelector("#robot-3d");
+    this.container = /** @type {HTMLElement} */ (
+      templateContents
+    ).querySelector("#robot-3d");
     this.container.appendChild(this.world.renderer.domElement);
 
     shadowRoot.appendChild(templateContents);
@@ -62,10 +68,11 @@ class Robot3D extends HTMLElement {
   }
 
   updateRobots() {
-    const currentRobotState = robotState();
+    const currentRobotState = robot()?.state();
     const currentSequence = program();
     const currentProgrammerState = programmerState();
     const currentJogState = jogState();
+    const previewRobot = previewRobotControl()
 
     if (!currentRobotState?.position) {
       return;
@@ -92,24 +99,30 @@ class Robot3D extends HTMLElement {
     }
 
     const currentRobot = popRobot();
+    if (previewRobot !== currentRobot) {
+      setPreviewRobotControl(currentRobot)
+    }
     currentRobot.update(
       kinematics,
-      currentSequence.commands.length === 0 ? 'current' : 'current-ghost',
+      currentSequence.commands.length === 0 ? "current" : "current-ghost",
       undefined
     );
     kinematics.applyJointPosition(currentPosition.joints, currentRobot);
     kinematics.applyEffectorPosition(currentPosition.effector, currentRobot);
 
-    let previousRobot = currentRobot
+    let previousRobot = currentRobot;
     currentSequence.commands.forEach((currentCommand, index) => {
-      if (currentCommand.type !== "effector" && currentCommand.type !== "joints") {
+      if (
+        currentCommand.type !== "effector" &&
+        currentCommand.type !== "joints"
+      ) {
         return;
       }
 
       const robot = popRobot();
       robot.update(
         kinematics,
-        'ghost',
+        "ghost",
         index === currentProgrammerState.selectedIndex
           ? currentJogState
           : undefined
@@ -119,14 +132,18 @@ class Robot3D extends HTMLElement {
       if (currentCommand.type === "joints") {
         kinematics.applyJointPosition(currentCommand.data, robot);
       } else {
-        kinematics.applyJointsFromEffectorPosition(previousRobot, currentCommand.data, robot);
+        kinematics.applyJointsFromEffectorPosition(
+          previousRobot,
+          currentCommand.data,
+          robot
+        );
       }
       if (currentCommand.type === "effector") {
         kinematics.applyEffectorPosition(currentCommand.data, robot);
       } else {
         kinematics.applyEffectorFromJointPosition(robot);
       }
-      previousRobot = robot
+      previousRobot = robot;
 
       // This does not trigger a re-signal, and I hate it.
       // The way to fix this is to move the entire "updateRobots" sequence into the "updateProgram" loop
