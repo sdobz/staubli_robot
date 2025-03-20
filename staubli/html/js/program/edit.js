@@ -119,7 +119,7 @@ createComponent({
   attrsFn: (_state, _attrs) => {
     const currentState = programmerState();
     const currentProgran = program();
-    const currentCommand = currentProgran.commands[currentState.selectedIndex]
+    const currentCommand = currentProgran.commands[currentState.selectedIndex];
 
     function doCloseEditing() {
       setProgrammerState({
@@ -131,6 +131,7 @@ createComponent({
     function onChangeName(e) {
       patchCommand({
         name: e.target.value,
+        type: currentCommand.type,
       });
     }
 
@@ -171,9 +172,9 @@ createComponent({
 
       ".raw-command-code": {
         properties: {
-          innerHTML: JSON.stringify(currentCommand, undefined, 2)
-        }
-      }
+          innerHTML: JSON.stringify(currentCommand, undefined, 2),
+        },
+      },
     };
   },
 });
