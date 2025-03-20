@@ -24,12 +24,15 @@ createComponent({
       </thead>
       <tbody class="positions"></tbody>
     </table>
-    <div role="group">
-      <select class="command-to-add" aria-label="Command To Add" required>
-        <option selected value="joints">Set Joints</option>
-        <option value="tool-position">Move</option>
-      </select>
-      <button class="add-command">Add</button>
+    <div class="horizontal-stack">
+      <button class="item-edit">Edit</button>
+      <div role="group">
+        <select class="command-to-add" aria-label="Command To Add" required>
+          <option selected value="joints">Set Joints</option>
+          <option value="tool-position">Move</option>
+        </select>
+        <button class="add-command">Add</button>
+      </div>
     </div>
   `,
   attrsFn: (_state, _attrs) => {

@@ -210,7 +210,7 @@ export function patchCommand(patch) {
   }
 
   if (
-    !patch.position ||
+    patch.position &&
     positionType(currentCommand.position) !== positionType(patch.position)
   ) {
     console.error("Attempt to update command with invalid position");
