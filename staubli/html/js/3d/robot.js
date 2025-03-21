@@ -236,7 +236,7 @@ export class RobotControl {
       this.world.render();
       setTimeout(() => {
         // updateRobots may re-order robots. This ensures that the "unhover" will not fire on the previous robot
-        this.kinematics.updateJointPositionCommand(this);
+        this.kinematics.updateCommand(this);
       });
     };
     dragControls.updateJoint = (joint, angle) => {
@@ -281,13 +281,9 @@ export class RobotControl {
       this.world.orbit.enabled = !isDragging;
 
       this.dragging = isDragging;
-
-      // if (isDragging) {
-      //   this.kinematics.setPredecessor(this.urdfRoot);
-      // }
-
+      
       if (!isDragging) {
-        this.kinematics.updateEffectorPositionCommand(this);
+        this.kinematics.updateCommand(this);
       }
     });
 

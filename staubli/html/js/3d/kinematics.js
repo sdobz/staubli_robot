@@ -144,15 +144,6 @@ export class Kinematics {
     return effectorPosition;
   }
 
-  /**
-   *
-   * @param {RobotControl} renderSource
-   */
-  updateEffectorPositionCommand(renderSource) {
-    const effector = this.determineEffectorPosition(renderSource);
-
-    patchCommand({ type: "effector", data: effector });
-  }
 
   /**
    * @param {RobotControl} renderSource
@@ -173,10 +164,25 @@ export class Kinematics {
     return jointPosition;
   }
 
-  updateJointPositionCommand(renderSource) {
-    const joints = this.determineJointPosition(renderSource);
+  /**
+   * @param {RobotControl} renderSource 
+   */
+  updateCommand(renderSource) {
+    const currentProgrammerState = programmerState();
+    const currentProgram = program();
+    const currentCommandType =
+      currentProgram.commands[currentProgrammerState.selectedIndex]?.type;
+    if (!currentCommandType) {
+      return;
+    }
 
-    patchCommand({ type: 'joints', data: joints });
+    if (currentCommandType === "joints") {
+      const joints = this.determineJointPosition(renderSource);
+      patchCommand({ type: "joints", data: joints });
+    } else if (currentCommandType === "effector") {
+      const effector = this.determineEffectorPosition(renderSource);
+      patchCommand({ type: "effector", data: effector });
+    }
   }
 
   drawHelper(scene) {
@@ -192,7 +198,7 @@ export class Kinematics {
   #ikRoot() {
     if (!this._ikRoot) {
       this._ikRoot = urdfRobotToIKRoot(this.urdfRoot);
-      /** @type {Joint} */(this._ikRoot).setDoF(); // Lock the base
+      /** @type {Joint} */ (this._ikRoot).setDoF(); // Lock the base
     }
     return this._ikRoot;
   }
