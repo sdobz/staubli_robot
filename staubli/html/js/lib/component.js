@@ -78,7 +78,6 @@ export function createComponent({
     }
 
     disconnectedCallback() {
-      console.log("Custom element removed from page.");
     }
 
     adoptedCallback() {

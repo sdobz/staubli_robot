@@ -1,24 +1,22 @@
 import { createComponent, html } from "../lib/component.js";
-import { jogState, setJogState } from "./state.js";
+import { jogState, program, programmerState, setJogState } from "./state.js";
 
 /** @import { JogMode, JogSpace } from './state.js' */
 
 createComponent({
-  tag: "command-editor",
+  tag: "tool-position-editor",
   template: html`
-    <article class="vertical-stack">
-      <h3>Viewport Jog Mode</h3>
-      <div role="group">
-        <button data-mode="translate-effector">Translate</button>
-        <button data-mode="rotate-effector">Rotate</button>
-        <button data-mode="drag-joint">Joint</button>
-      </div>
-      <h4>Coordinate Space</h4>
-      <div role="group">
-        <button data-space="local">Tool</button>
-        <button data-space="world">World</button>
-      </div>
-    </article>
+    <h3>Viewport Jog Mode</h3>
+    <div role="group">
+      <button data-mode="translate-effector">Translate</button>
+      <button data-mode="rotate-effector">Rotate</button>
+      <button data-mode="drag-joint">Joint</button>
+    </div>
+    <h4>Coordinate Space</h4>
+    <div role="group">
+      <button data-space="local">Tool</button>
+      <button data-space="world">World</button>
+    </div>
   `,
   attrsFn: (_state, attrs) => {
     const currentJogState = jogState();
@@ -94,6 +92,36 @@ createComponent({
       ...buildModeAttrs("drag-joint"),
       ...buildSpaceAttrs("local"),
       ...buildSpaceAttrs("world"),
+    };
+  },
+});
+
+createComponent({
+  tag: "command-editor",
+  template: html` <article class="vertical-stack command-editor"></article> `,
+  attrsFn: (_state, attrs) => {
+    let editor;
+    const currentProgrammerState = programmerState();
+    const currentProgram = program();
+    const currentCommandType =
+      currentProgram.commands[currentProgrammerState.selectedIndex]?.type;
+
+    switch (currentCommandType) {
+      case "effector":
+      case "joints":
+        editor = "<tool-position-editor></tool-position-editor>";
+        break;
+      default:
+        editor = "<h2>Select Command</h2>";
+        break;
+    }
+
+    return {
+      ".command-editor": {
+        properties: {
+          innerHTML: editor,
+        },
+      },
     };
   },
 });
