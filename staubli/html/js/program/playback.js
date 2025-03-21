@@ -1,7 +1,9 @@
-import { robot } from "../robot.js";
+import { robot, robotApi, setRobot } from "../robot.js";
 import { createEffect } from "../lib/state.js";
 import { program, programmerState, setProgrammerState } from "./state.js";
 import { createComponent, html } from "../lib/component.js";
+import { RobotPreview } from "../3d/preview.js";
+import { previewRobotControl } from "../3d/viewport.js";
 
 /** @import { PlaybackEnum, ProgrammerState } from "./state.js" */
 
@@ -45,7 +47,7 @@ createEffect(() => {
   };
   setProgrammerState(busyState);
 
-  currentRobot[nextCommand.type](nextCommand.data).then(() => {
+  currentRobot.execute(nextCommand).then(() => {
     const newSequence = program();
     const newState = programmerState();
 
@@ -74,16 +76,32 @@ createEffect(() => {
 createComponent({
   tag: "playback-control",
   template: html`
+    <div class="horizontal-stack">
+    <label>
+      <input type="checkbox" name="preview" class="sequence-preview" />
+      Preview
+    </label>
     <div role="group">
-      <button class="sequence-preview">preview</button>
       <button class="sequence-jog">jog</button>
       <button class="sequence-play">play</button>
       <button class="sequence-stop">stop</button>
+    </div>
     </div>
   `,
   attrsFn: () => {
     const currentState = programmerState();
     const currentSequence = program();
+    const currentRobot = robot()
+    const currentPreviewRobot = previewRobotControl()
+
+    const isPreview = currentRobot.name === "preview"
+    function doTogglePreview() {
+      if (isPreview) {
+        setRobot(robotApi)
+      } else {
+        setRobot(new RobotPreview(currentPreviewRobot, currentRobot.state()))
+      }
+    }
 
     /**
      * @param {PlaybackEnum} playback
@@ -100,7 +118,6 @@ createComponent({
     }
 
     const doPlay = makePlaybackHandler("play");
-    const doPreview = makePlaybackHandler("preview");
     const doStop = makePlaybackHandler("stopped");
     const doJog = makePlaybackHandler("jog");
 
@@ -140,10 +157,11 @@ createComponent({
       },
       ".sequence-preview": {
         attributes: {
-          disabled: emptyDisabled || busyDisabled,
+          disabled: busyDisabled,
+          checked: isPreview ? "checked" : undefined
         },
         eventListeners: {
-          click: doPreview,
+          change: doTogglePreview,
         },
       },
     };

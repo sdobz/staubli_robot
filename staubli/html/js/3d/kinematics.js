@@ -23,11 +23,10 @@ import {
   programmerState,
 } from "../program/state.js";
 import { MathUtils, Quaternion, Vector3 } from "three";
-import { positionType } from "../robot.js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import {Object3D} from 'three' */
-/** @import {Position, EffectorPosition, JointPosition} from '../robot.js' */
+/** @import {EffectorPosition, JointPosition} from '../robot-types' */
 /** @import {RobotControl} from './robot.js' */
 /** @import {Joint} from 'closed-chain-ik-js' */
 

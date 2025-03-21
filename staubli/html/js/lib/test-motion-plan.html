@@ -1,0 +1,38 @@
+<html>
+    <script type="module">
+        import {MotionPlan} from "./motion-plan.js"
+
+        const unitMotionPlan = new MotionPlan(1, -1, 1, 2)
+        console.log(unitMotionPlan)
+        console.log("total time:", unitMotionPlan.totalTime())
+        for (let t=0; t<=unitMotionPlan.totalTime(); t+=0.5) {
+            console.log(`${t.toFixed(2)}: ${unitMotionPlan.position(t).toFixed(2)}`)
+        }
+
+        console.log("Test plan")
+        const plannedMotion = MotionPlan.planConstraints({maxAcceleration: 1, maxVelocity: 1}, 0, 3)
+        console.log(plannedMotion)
+
+        let sibling
+
+        console.log("Sibling, shifted")
+        sibling = (MotionPlan.planSibling(plannedMotion, 3, 6))
+        console.log(sibling, sibling.totalTime())
+
+        console.log("Sibling, reversed")
+        sibling = (MotionPlan.planSibling(plannedMotion, 6, 3))
+        console.log(sibling, sibling.totalTime())
+
+        console.log("Sibling, doubled")
+        sibling = (MotionPlan.planSibling(plannedMotion, 0, 7))
+        console.log(sibling, sibling.totalTime())
+
+        console.log("Sibling, halved")
+        sibling = (MotionPlan.planSibling(plannedMotion, 0, 2))
+        console.log(sibling, sibling.totalTime())
+
+        console.log("Sibling, stationary")
+        sibling = (MotionPlan.planSibling(plannedMotion, 1, 1))
+        console.log(sibling, sibling.totalTime())
+    </script>
+</html>

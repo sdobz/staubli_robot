@@ -1,6 +1,6 @@
 import { getItem, listItems, removeItem, setItem } from "../lib/storage.js";
 import { createSignal } from "../lib/state.js";
-import { positionType, robotState } from "../robot.js";
+import { robot } from "../robot.js";
 
 /**
  * @typedef {"translate-effector" | "rotate-effector" | "drag-joint"} JogMode
@@ -21,7 +21,7 @@ const [jogState, setJogState] = createSignal({
 });
 export { jogState, setJogState };
 
-/** @import { Position, JointPosition, EffectorPosition, RobotState } from '../robot.js' */
+/** @import { Position, JointPosition, EffectorPosition, RobotState } from '../robot-types' */
 
 /** @typedef {"stopped" | "play" | "preview" | "jog" } PlaybackEnum */
 /** @typedef {"none" | "sequence" | "item" } EditingEnum */
@@ -174,7 +174,7 @@ export function addCommand() {
     currentIndex = -1;
   }
   const deriveFromPosition =
-    currentCommand?._derivedState?.position || robotState().position;
+    currentCommand?._derivedState?.position || robot().state().position;
 
   if (!deriveFromPosition) {
     console.error("Add command without position");
