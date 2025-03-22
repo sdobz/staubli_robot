@@ -18,6 +18,7 @@ import { PointerURDFDragControls } from "urdf-loader/URDFDragControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 
 import { Kinematics } from "./kinematics.js";
+import { createSignal } from "../lib/state.js";
 
 /** @import { Object3D } from "three" */
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
@@ -45,6 +46,41 @@ import { Kinematics } from "./kinematics.js";
 //   globalRobotIndex += 1
 // }
 
+const mmToM = 1 / 1000;
+
+/**
+ * @typedef {"stl"} LoaderEnum
+ */
+/**
+ * @typedef {Object} ToolProperties
+ * @property {string} name
+ * @property {string} meshUrl
+ * @property {number} scale
+ */
+
+/** @type {ToolProperties} */
+const flangeTool = {
+  name: "Naked Flange",
+  meshUrl: "effectors/flange.stl",
+  scale: mmToM
+}
+const flangeTool2 = {
+  name: "Naked Flange (copy)",
+  meshUrl: "effectors/flange.stl",
+  scale: mmToM
+}
+
+export const STOCK_TOOLS = [flangeTool, flangeTool2]
+
+// TODO: this seems like a "scene/setup" concern?
+/** @typedef {readonly [() => ToolProperties, (set: ToolProperties) => void]} */
+const [toolProperties, setToolProperties] = createSignal(flangeTool);
+export { toolProperties, setToolProperties };
+
+const LOADER_EXTENSION_MAP = {
+  stl: STLLoader
+}
+
 export function loadRobot() {
   return new Promise((resolve, reject) => {
     let urdfRoot;
@@ -69,17 +105,24 @@ export function loadRobot() {
   });
 }
 
-export function loadTool() {
+/**
+ * @param {ToolProperties} properties 
+ */
+export function loadTool(properties) {
+  const Loader = LOADER_EXTENSION_MAP[properties.meshUrl.split(".").slice(-1)[0]];
+  if (!Loader) {
+    throw new Error(`Unknown loader for url ${properties.meshUrl}`)
+  }
+
   return new Promise((resolve, reject) => {
-    const stlLoader = new STLLoader();
+    const stlLoader = new Loader();
     stlLoader.load(
-      "effectors/flange.stl",
+      properties.meshUrl,
       (geometry) => {
-        const mmToM = 1 / 1000;
         const mesh = new Mesh(geometry, effectorMaterial);
-        mesh.scale.x = mmToM;
-        mesh.scale.y = mmToM;
-        mesh.scale.z = mmToM;
+        mesh.scale.x = properties.scale;
+        mesh.scale.y = properties.scale;
+        mesh.scale.z = properties.scale;
 
         resolve(mesh);
       },
@@ -96,7 +139,6 @@ export function loadTool() {
 export class RobotControl {
   /**
    *
-   * @param {Object3D} toolRoot
    * @param {World} world
    */
   constructor(urdfRoot, toolRoot, world) {
@@ -281,7 +323,7 @@ export class RobotControl {
       this.world.orbit.enabled = !isDragging;
 
       this.dragging = isDragging;
-      
+
       if (!isDragging) {
         this.kinematics.updateCommand(this);
       }

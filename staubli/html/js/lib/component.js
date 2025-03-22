@@ -29,7 +29,7 @@ export function html(strings) {
  * }>} AttrMap
  */
 
-/** @type {<S>(setup: {tag: string, opts?: ElementDefinitionOptions, observedAttributes?: string[], template: HTMLTemplateElement, stateFn?: () => S, attrsFn: (state: S, attrs: Record<string, string>) => AttrMap}) => void} */
+/** @type {<S>(setup: {tag: string, opts?: ElementDefinitionOptions, observedAttributes?: string[], template: HTMLTemplateElement, stateFn?: () => S, attrsFn: (state: S, attrs: Record<string, string>, element: HTMLElement) => AttrMap}) => void} */
 export function createComponent({
   tag,
   opts,
@@ -45,7 +45,6 @@ export function createComponent({
     constructor() {
       super();
 
-      const boundAttrsFn = attrsFn.bind(this);
       const state = stateFn ? stateFn() : undefined;
 
       const [attrs, setAttrs] = createSignal({});
@@ -68,7 +67,7 @@ export function createComponent({
         if (!effectAttrs) {
           return;
         }
-        const attrsMap = boundAttrsFn(state, effectAttrs);
+        const attrsMap = attrsFn(state, effectAttrs, this);
         this.handleAttrMap(attrsMap);
       });
     }

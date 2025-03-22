@@ -21,7 +21,7 @@ const [jogState, setJogState] = createSignal({
 });
 export { jogState, setJogState };
 
-/** @import { Position, JointPosition, EffectorPosition, RobotState } from '../robot-types' */
+/** @import { Position, JointPosition, EffectorPosition, RobotState, Command, CommandType } from '../robot-types' */
 
 /** @typedef {"stopped" | "play" | "preview" | "jog" } PlaybackEnum */
 /** @typedef {"none" | "sequence" | "item" } EditingEnum */
@@ -51,33 +51,6 @@ const [programmerState, setProgrammerState] = createSignal(
   initialProgrammerState
 );
 export { programmerState, setProgrammerState };
-
-/**
- * @typedef {Object} AnyCommand
- * @property {string} name
- * @property {RobotState} [_derivedState]
- */
-
-/**
- * @typedef {Object} JointsCommandType
- * @property {"joints"} type
- * @property {JointPosition} data
- *
- * @typedef {JointsCommandType & AnyCommand} JointsCommand
- */
-
-/**
- * @typedef {Object} EffectorCommandType
- * @property {"effector"} type
- * @property {EffectorPosition} data
- *
- * @typedef {EffectorCommandType & AnyCommand} EffectorCommand
- */
-
-/**
- * @typedef {JointsCommand | EffectorCommand} Command
- * @typedef {Command["type"]} CommandType
- */
 
 /**
  * @typedef {Object} Program
@@ -173,10 +146,10 @@ export function addCommand() {
   if (!currentCommand) {
     currentIndex = -1;
   }
-  const deriveFromPosition =
-    currentCommand?._derivedState?.position || robot().state().position;
+  const deriveFromState =
+    currentCommand?._derivedState || robot().state();
 
-  if (!deriveFromPosition) {
+  if (!deriveFromState) {
     console.error("Add command without position");
     return;
   }
@@ -189,15 +162,22 @@ export function addCommand() {
       newCommand = {
         name: defaultProgramName(),
         type: "joints",
-        data: deriveFromPosition.joints,
+        data: deriveFromState.position.joints,
       };
       break;
     case "effector":
       newCommand = {
         name: defaultProgramName(),
         type: "effector",
-        data: deriveFromPosition.effector,
+        data: deriveFromState.position.effector,
       };
+      break;
+    case "tool":
+      newCommand = {
+        name: defaultProgramName(),
+        type: "tool",
+        data: deriveFromState.tool_offset
+      }
       break;
     default:
       throw new Error(`Unknown command type: ${currentProgrammerState.commandToAdd}`)

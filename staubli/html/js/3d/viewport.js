@@ -2,14 +2,14 @@ import { Vector3, ArrowHelper } from "three";
 
 import { html } from "../lib/component.js";
 import { createEffect, createSignal } from "../lib/state.js";
-import { loadRobot, loadTool, RobotControl } from "./robot.js";
+import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot.js";
 import { program, programmerState, jogState } from "../program/state.js";
 import { World } from "./world.js";
 import { Kinematics } from "./kinematics.js";
 import { robot } from "../robot.js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
-/** @import { Object3D } from 'three' */
+/** @import { Object3D, Mesh } from 'three' */
 
 /** @import { JointPosition, EffectorPosition } from '../robot-types.d.ts' */
 
@@ -36,12 +36,8 @@ class Robot3D extends HTMLElement {
       this.world.fitCameraToSelection([this.urdfRoot]);
       this.updateRobots();
     });
-
-    loadTool().then((result) => {
-      this.toolRoot = result;
-
-      this.updateRobots();
-    });
+    /** @type {Mesh | undefined} */
+    this.toolRoot = undefined;
 
     const shadowRoot = this.attachShadow({ mode: "open" });
     document.querySelectorAll("link").forEach((linkElement) => {
@@ -65,6 +61,19 @@ class Robot3D extends HTMLElement {
       // todo: what happens if this happens in the middle of a drag?
       this.updateRobots();
     });
+
+    createEffect(() => {
+      const props = toolProperties();
+
+      while (this.robots.length > 0) {
+        this.robots.pop().dispose();
+      }
+
+      loadTool(props).then((result) => {
+        this.toolRoot = result;
+        this.updateRobots();
+      });
+    });
   }
 
   updateRobots() {
@@ -72,7 +81,7 @@ class Robot3D extends HTMLElement {
     const currentSequence = program();
     const currentProgrammerState = programmerState();
     const currentJogState = jogState();
-    const previewRobot = previewRobotControl()
+    const previewRobot = previewRobotControl();
 
     if (!currentRobotState?.position) {
       return;
@@ -100,7 +109,7 @@ class Robot3D extends HTMLElement {
 
     const currentRobot = popRobot();
     if (previewRobot !== currentRobot) {
-      setPreviewRobotControl(currentRobot)
+      setPreviewRobotControl(currentRobot);
     }
     currentRobot.update(
       kinematics,

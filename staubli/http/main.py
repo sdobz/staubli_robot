@@ -42,17 +42,24 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
                 "j6": where[1].j6
             }
         }
-
+    def _tool_offset(self):
+        tool_offset = self.controller.robot.tool_offset()
+        return self._format_effector_location(tool_offset)
     
     def api_robot(self):
         return {
             "position": self._position(),
+            "tool_offset": self._tool_offset(),
             "elbow": self.controller.elbow,
             "speed": 20
         }
     def api_position(self):
         return {
             "position": self._position()
+        }
+    def api_tool_offset(self):
+        return {
+            "tool_offset": self._tool_offset()
         }
     
     def api_effector(self, data):
@@ -78,6 +85,18 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
         )
         self.controller.robot.jog_joint(joint_location)
         return self.api_position()
+    
+    def api_tool(self, data):
+        tool_location = EffectorLocation(
+            data["x"],
+            data["y"],
+            data["z"],
+            data["yaw"],
+            data["pitch"],
+            data["roll"]
+        )
+        self.controller.robot.tool_transform(tool_location)
+        return self.api_tool_offset()
 
     def api_elbow(self):
         self.controller.on_elbow()

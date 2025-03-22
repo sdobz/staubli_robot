@@ -120,6 +120,23 @@ class Robot:
                 joint_split[5],
             ),
         )
+    
+    def tool_offset(self) -> EffectorLocation:
+        self._write_command("LISTL hand.tool")
+        self._readline()
+        tool_line = self._readline()
+        self._read_dot()
+        tool_split = self._parse_floats(tool_line)
+
+        return EffectorLocation(
+            tool_split[0],
+            tool_split[1],
+            tool_split[2],
+            tool_split[3],
+            tool_split[4],
+            tool_split[5],
+        )
+
 
     def jog_absolute(self, effector_location: EffectorLocation):
         effector_location_string = effector_location.format()
@@ -138,6 +155,17 @@ class Robot:
         self._readline()
         self._read_dot()
         self._write_command("do move jog0")
+        self._readline()
+        self._read_dot()
+    
+    def tool_transform(self, tool_transform: EffectorLocation):
+        tool_transform_string = tool_transform.format()
+        self._write_command(
+            "do set hand.tool = trans(" + tool_transform_string + ")"
+        )
+        self._readline()
+        self._read_dot()
+        self._write_command("TOOL hand.tool")
         self._readline()
         self._read_dot()
     

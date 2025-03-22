@@ -9,6 +9,7 @@ class SerialEmulator:
     joint_location = JointLocation(-0.000, -90.001, 89.993, 0.000, -0.000, -0.005)
     effector_location = EffectorLocation(-0.077, 0.000, 985.000, 179.999, 0.008, 179.995)
     jog0_location = EffectorLocation(-0.077, 0.000, 985.000, 179.999, 0.008, 179.995)
+    tool_location = EffectorLocation(0.000, 0.000, 0.000, 0.000, 0.000, 0.000)
     monitor_speed = 100
     buffer = ""
     baud = 9600
@@ -46,6 +47,13 @@ class SerialEmulator:
             self.handle_do_move()
             self.buffer = "<emulator move jog0 response>\n."
             return
+        if cmd.startswith("do set hand.tool"):
+            print(">>> setting hand.tool point")
+            self.handle_set_tool(cmd)
+            self.buffer = "<emulator set hand.tool response>\n."
+        if cmd.startswith("TOOL hand.tool"):
+            print(">>> setting tool hand.tool")
+            self.buffer = "<emulator TOOL hand.tool response>\n."
         if cmd.startswith("do drive "):
             self.handle_do_drive(cmd)
             self.buffer = "<emulator do drive response>\n."
@@ -58,6 +66,13 @@ class SerialEmulator:
                 {self.effector_location.x:3f}   {self.effector_location.y:3f}   {self.effector_location.z:3f}   {self.effector_location.yaw:3f}   {self.effector_location.pitch:3f}   {self.effector_location.roll:3f}   0.000
                 J1        J2        J3        J4        J5        J6
                 {self.joint_location.j1:3f}   {self.joint_location.j2:3f}   {self.joint_location.j3:3f}   {self.joint_location.j4:3f}   {self.joint_location.j5:3f}   {self.joint_location.j6:3f}
+                .""")
+            return
+        if cmd.startswith("LISTL hand.tool"):
+            print(">>> concocting LISTL")
+            self.buffer = dedent(f"""\
+                X.jt1 y/jt2 z/jt3 y/jt4 p/jt5 r/jt6
+                {self.tool_location.x:3f}   {self.tool_location.y:3f}   {self.tool_location.z:3f}   {self.tool_location.yaw:3f}   {self.tool_location.pitch:3f}   {self.tool_location.roll:3f}
                 .""")
             return
         if cmd.startswith("do above"):
@@ -81,6 +96,13 @@ class SerialEmulator:
         if match:
             values = list(map(float, match.group(1).split(',')))
             self.jog0_location = EffectorLocation(*values)
+    
+    def handle_set_tool(self, cmd):
+        pattern = r"trans\(([^)]+)\)"
+        match = re.search(pattern, cmd)
+        if match:
+            values = list(map(float, match.group(1).split(',')))
+            self.tool_location = EffectorLocation(*values)
     
     def handle_do_move(self):
         delta = self.effector_location - self.jog0_location

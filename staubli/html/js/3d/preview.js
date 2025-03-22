@@ -35,6 +35,11 @@ export class RobotPreview {
       case "effector":
         await this.#accelEffector(command.data);
         break;
+      case "tool":
+        this.setState({
+          ...this.state(),
+          tool_offset: command.data
+        })
     }
   }
 

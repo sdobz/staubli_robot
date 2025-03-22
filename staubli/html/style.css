@@ -19,6 +19,13 @@ pre.current {
   gap: 2rem;
 }
 
+.horizontal-label {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--pico-form-element-spacing-horizontal);
+}
+
 #robot-3d {
   width: 33vw;
   max-height: 100vh;
