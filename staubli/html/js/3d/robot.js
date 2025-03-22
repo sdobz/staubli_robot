@@ -3,7 +3,14 @@
  * It just knows about three coordinates
  */
 
-import { LoadingManager, MathUtils, Mesh, Quaternion, Vector3 } from "three";
+import {
+  LoadingManager,
+  MathUtils,
+  Mesh,
+  Quaternion,
+  Vector3,
+  Object3D,
+} from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import URDFLoader from "urdf-loader/URDFLoader.js";
 import {
@@ -20,7 +27,6 @@ import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { Kinematics } from "./kinematics.js";
 import { createSignal } from "../lib/state.js";
 
-/** @import { Object3D } from "three" */
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { EffectorPosition, JointPosition, Position, RobotState } from "../robot" */
 /** @import { JogState } from "../program/state.js" */
@@ -62,15 +68,15 @@ const mmToM = 1 / 1000;
 const flangeTool = {
   name: "Naked Flange",
   meshUrl: "effectors/flange.stl",
-  scale: mmToM
-}
+  scale: mmToM,
+};
 const flangeTool2 = {
   name: "Naked Flange (copy)",
   meshUrl: "effectors/flange.stl",
-  scale: mmToM
-}
+  scale: mmToM,
+};
 
-export const STOCK_TOOLS = [flangeTool, flangeTool2]
+export const STOCK_TOOLS = [flangeTool, flangeTool2];
 
 // TODO: this seems like a "scene/setup" concern?
 /** @typedef {readonly [() => ToolProperties, (set: ToolProperties) => void]} */
@@ -78,8 +84,8 @@ const [toolProperties, setToolProperties] = createSignal(flangeTool);
 export { toolProperties, setToolProperties };
 
 const LOADER_EXTENSION_MAP = {
-  stl: STLLoader
-}
+  stl: STLLoader,
+};
 
 export function loadRobot() {
   return new Promise((resolve, reject) => {
@@ -106,12 +112,13 @@ export function loadRobot() {
 }
 
 /**
- * @param {ToolProperties} properties 
+ * @param {ToolProperties} properties
  */
 export function loadTool(properties) {
-  const Loader = LOADER_EXTENSION_MAP[properties.meshUrl.split(".").slice(-1)[0]];
+  const Loader =
+    LOADER_EXTENSION_MAP[properties.meshUrl.split(".").slice(-1)[0]];
   if (!Loader) {
-    throw new Error(`Unknown loader for url ${properties.meshUrl}`)
+    throw new Error(`Unknown loader for url ${properties.meshUrl}`);
   }
 
   return new Promise((resolve, reject) => {
@@ -347,9 +354,50 @@ export class RobotControl {
     delete this.transformControls;
   }
 
+  #setupOffsetControl(currentOffset) {
+    if (this.offsetControls) {
+      return this.offsetControls;
+    }
+
+    this.toolOffsetPoint = new Object3D();
+    this.tool.add(this.toolOffsetPoint); // Parent to `this.tool`
+    this.toolOffsetPoint.position.set(currentOffset); // Example local position
+
+    this.offsetControls = new TransformControls(
+      this.world.camera,
+      this.world.renderer.domElement
+    );
+    this.offsetControls.attach(this.toolOffsetPoint); // Attach to local point
+    this.world.scene.add(this.offsetControls);
+
+    this.offsetControls.addEventListener("change", () => {
+      console.log("Local Position:", this.toolOffsetPoint.position);
+    });
+
+    this.offsetControls.addEventListener("mouseDown", () => {
+      this.world.orbit.enabled = false;
+    });
+    this.offsetControls.addEventListener("mouseUp", () => {
+      this.world.orbit.enabled = true;
+    });
+  }
+
+  #removeOffsetControl() {
+    if (this.offsetControls) {
+      this.world.scene.remove(this.offsetControls);
+      this.offsetControls.dispose();
+      delete this.offsetControls;
+    }
+
+    if (this.toolOffsetPoint) {
+      delete this.toolOffsetPoint;
+    }
+  }
+
   dispose() {
     this.#removeToolControl();
     this.#removeURDFControl();
+    this.#removeOffsetControl();
     this.world.scene.remove(this.robot);
     this.world.scene.remove(this.tool);
     // this.robot.dispose();
