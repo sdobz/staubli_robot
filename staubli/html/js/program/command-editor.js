@@ -205,7 +205,7 @@ createComponent({
     const currentProgram = program();
     const currentCommand =
       currentProgram.commands[currentProgrammerState.selectedIndex];
-    if (currentCommand.type !== "tool") {
+    if (currentCommand?.type !== "tool") {
       return {};
     }
     const toolOffset = currentCommand.data;

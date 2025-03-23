@@ -27,8 +27,8 @@ import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { Kinematics } from "./kinematics.js";
 import { createSignal } from "../lib/state.js";
 
-/** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
-/** @import { EffectorPosition, JointPosition, Position, RobotState } from "../robot" */
+/** @import { URDFJoint, URDFRobot, URDFLink } from "urdf-loader/URDFClasses"; */
+/** @import { Position, JointPosition, EffectorPosition, RobotState, Command, CommandType } from '../robot-types' */
 /** @import { JogState } from "../program/state.js" */
 /** @import { World } from "./world" */
 
@@ -152,8 +152,13 @@ export class RobotControl {
     this.urdfRoot = urdfRoot;
     /**@type {URDFRobot} */
     this.robot = urdfRoot.clone(true);
-    /**@type {Object3D} */
+
+    this.toolOffset = new Object3D();
+
+    /**@type {Mesh} */
     this.tool = toolRoot.clone(true);
+    this.tool.add(this.toolOffset);
+
     this.world = world;
   }
 
@@ -165,11 +170,18 @@ export class RobotControl {
   /**
    * @param {Kinematics} kinematics
    * @param {RobotModeEnum} mode
+   * @param {CommandType} [commandType]
    * @param {JogState} [jogState]
    */
-  update(kinematics, mode, jogState) {
+  update(kinematics, mode, commandType, jogState) {
     this.kinematics = kinematics;
-    const dragControlsEnabled = jogState?.mode === "drag-joint";
+    const isMoveCommand =
+      commandType === "effector" || commandType === "joints";
+
+    const dragControlsEnabled =
+      isMoveCommand && jogState?.mode === "drag-joint";
+
+    const offsetControlEnabled = commandType === "tool";
 
     let material;
     if (mode === "ghost") {
@@ -214,8 +226,9 @@ export class RobotControl {
     }
 
     const effectorControlEnabled =
-      jogState?.mode === "rotate-effector" ||
-      jogState?.mode === "translate-effector";
+      isMoveCommand &&
+      (jogState?.mode === "rotate-effector" ||
+        jogState?.mode === "translate-effector");
 
     if (effectorControlEnabled) {
       const controls = this.#setupToolControl();
@@ -229,6 +242,25 @@ export class RobotControl {
     } else {
       this.#removeToolControl();
     }
+
+    if (offsetControlEnabled) {
+      this.#setupOffsetControl();
+    } else {
+      this.#removeOffsetControl();
+    }
+  }
+
+  attachmentPoint() {
+    /** @type {URDFLink}  */
+    let link;
+
+    this.robot.traverse((obj) => {
+      if (obj.name === "tool0") {
+        link = obj;
+      }
+    });
+
+    return link;
   }
 
   #setupURDFControl() {
@@ -354,44 +386,58 @@ export class RobotControl {
     delete this.transformControls;
   }
 
-  #setupOffsetControl(currentOffset) {
+  /**
+   * Tool is parent, offset is child
+   */
+  orientTool() {
+    if (this.toolOffset.parent === this.tool) {
+      return
+    }
+
+    
+  }
+
+  /**
+   * Offset is parent, 
+   */
+  orientOffset() {
+
+  }
+
+  #setupOffsetControl() {
     if (this.offsetControls) {
       return this.offsetControls;
     }
-
-    this.toolOffsetPoint = new Object3D();
-    this.tool.add(this.toolOffsetPoint); // Parent to `this.tool`
-    this.toolOffsetPoint.position.set(currentOffset); // Example local position
 
     this.offsetControls = new TransformControls(
       this.world.camera,
       this.world.renderer.domElement
     );
-    this.offsetControls.attach(this.toolOffsetPoint); // Attach to local point
-    this.world.scene.add(this.offsetControls);
+    this.offsetControls.setSpace("local");
+
+    this.offsetControls.attach(this.tool); // Attach to local point
+    this.world.scene.add(this.offsetControls.getHelper());
 
     this.offsetControls.addEventListener("change", () => {
-      console.log("Local Position:", this.toolOffsetPoint.position);
+      this.world.render();
     });
 
     this.offsetControls.addEventListener("mouseDown", () => {
       this.world.orbit.enabled = false;
     });
     this.offsetControls.addEventListener("mouseUp", () => {
+      this.kinematics.updateCommand(this);
       this.world.orbit.enabled = true;
     });
   }
 
   #removeOffsetControl() {
-    if (this.offsetControls) {
-      this.world.scene.remove(this.offsetControls);
-      this.offsetControls.dispose();
-      delete this.offsetControls;
+    if (!this.offsetControls) {
+      return;
     }
-
-    if (this.toolOffsetPoint) {
-      delete this.toolOffsetPoint;
-    }
+    this.world.scene.remove(this.offsetControls.getHelper());
+    this.offsetControls.dispose();
+    delete this.offsetControls;
   }
 
   dispose() {

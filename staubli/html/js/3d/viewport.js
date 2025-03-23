@@ -114,55 +114,78 @@ class Robot3D extends HTMLElement {
     currentRobot.update(
       kinematics,
       currentSequence.commands.length === 0 ? "current" : "current-ghost",
+      undefined,
       undefined
     );
     kinematics.applyJointPosition(currentPosition.joints, currentRobot);
     kinematics.applyEffectorPosition(currentPosition.effector, currentRobot);
+    kinematics.applyToolOffset(currentRobotState.tool_offset, currentRobot);
 
     let previousRobot = currentRobot;
+    let previousState = currentRobotState;
     currentSequence.commands.forEach((currentCommand, index) => {
-      if (
-        currentCommand.type !== "effector" &&
-        currentCommand.type !== "joints"
-      ) {
-        return;
-      }
-
+      let nextState = previousState;
       const robot = popRobot();
+
       robot.update(
         kinematics,
         "ghost",
+        index === currentProgrammerState.selectedIndex
+          ? currentCommand.type
+          : undefined,
         index === currentProgrammerState.selectedIndex
           ? currentJogState
           : undefined
       );
 
+      if (currentCommand.type === "tool") {
+        nextState = {
+          ...nextState,
+          tool_offset: currentCommand.data,
+        };
+      }
+
+      kinematics.applyToolOffset(nextState.tool_offset, robot);
+
       // This order is important: kinematics derives one from the other
       if (currentCommand.type === "joints") {
         kinematics.applyJointPosition(currentCommand.data, robot);
-      } else {
+        kinematics.applyEffectorFromJointPosition(robot);
+
+        nextState = {
+          ...nextState,
+          position: {
+            joints: currentCommand.data,
+            effector: kinematics.determineEffectorPosition(robot),
+          },
+        };
+      } else if (currentCommand.type === "effector") {
+        kinematics.applyEffectorPosition(currentCommand.data, robot);
         kinematics.applyJointsFromEffectorPosition(
           previousRobot,
           currentCommand.data,
           robot
         );
-      }
-      if (currentCommand.type === "effector") {
-        kinematics.applyEffectorPosition(currentCommand.data, robot);
-      } else {
-        kinematics.applyEffectorFromJointPosition(robot);
-      }
-      previousRobot = robot;
 
-      // This does not trigger a re-signal, and I hate it.
-      // The way to fix this is to move the entire "updateRobots" sequence into the "updateProgram" loop
-      currentCommand._derivedState = {
-        ...currentRobotState,
-        position: {
-          effector: kinematics.determineEffectorPosition(robot),
-          joints: kinematics.determineJointPosition(robot),
-        },
-      };
+        nextState = {
+          ...nextState,
+          position: {
+            effector: currentCommand.data,
+            joints: kinematics.determineJointPosition(robot),
+          },
+        };
+      } else {
+        kinematics.applyEffectorPosition(
+          previousState.position.effector,
+          robot
+        );
+        kinematics.applyJointPosition(previousState.position.joints, robot);
+      }
+
+      previousRobot = robot;
+      // This is some BS rederivation. Derived state should be its own signal (that... could be used to updateRobots?)
+      currentCommand._derivedState = nextState;
+      previousState = nextState;
     });
 
     while (previousRobots.length > 0) {

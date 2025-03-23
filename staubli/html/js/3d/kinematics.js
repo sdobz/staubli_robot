@@ -22,7 +22,7 @@ import {
   program,
   programmerState,
 } from "../program/state.js";
-import { MathUtils, Quaternion, Vector3 } from "three";
+import { MathUtils, PositionalAudio, Quaternion, Vector3 } from "three";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import {Object3D} from 'three' */
@@ -41,6 +41,21 @@ export class Kinematics {
   constructor(urdfRoot) {
     this.urdfRoot = urdfRoot;
     this.baseOffset = urdfRoot.joints["base_link-base"].position;
+  }
+
+  /**
+   * @param {EffectorPosition} toolOffset
+   * @param {RobotControl} renderTarget
+   */
+  applyToolOffset(toolOffset, renderTarget) {
+    const { x, y, z, yaw, pitch, roll } = toolOffset;
+
+    const quaternion = createZYZQuaternion(yaw, pitch, roll);
+
+    const attachment = renderTarget.toolOffset;
+    attachment.setRotationFromQuaternion(quaternion);
+    attachment.position.set(x * mmToM / renderTarget.tool.scale.x, y * mmToM / renderTarget.tool.scale.x, z * mmToM / renderTarget.tool.scale.x);
+    attachment.updateMatrix()
   }
 
   /**
@@ -70,8 +85,8 @@ export class Kinematics {
   applyJointsFromTool(predecessor, renderTarget) {
     const solvedIKRoot = this.#solveIK(
       predecessor,
-      renderTarget.tool.position,
-      renderTarget.tool.quaternion
+      renderTarget.toolOffset.getWorldPosition(),
+      renderTarget.toolOffset.getWorldQuaternion()
     );
 
     setUrdfFromIK(renderTarget.robot, solvedIKRoot);
@@ -102,12 +117,28 @@ export class Kinematics {
    * @param {RobotControl} renderTarget
    */
   applyEffectorPosition(effectorPosition, renderTarget) {
-    setObjectEffectorPosition(
-      renderTarget.tool,
-      effectorPosition,
-      this.baseOffset,
-      mmToM
+    console.log("Apply eff")
+    const goalPosition = new Vector3(
+      effectorPosition.x * mmToM + this.baseOffset.x,
+      effectorPosition.y * mmToM + this.baseOffset.y,
+      effectorPosition.z * mmToM + this.baseOffset.z
     );
+    const goalQuaternion = createZYZQuaternion(
+      effectorPosition.yaw,
+      effectorPosition.pitch,
+      effectorPosition.roll
+    );
+
+    moveParentBasedOnChild(
+      renderTarget.tool,
+      renderTarget.toolOffset,
+      goalPosition,
+      goalQuaternion
+    );
+
+    debugZ("tool", renderTarget.tool)
+    debugZ("offset", renderTarget.toolOffset)
+    debugZ("attachment", renderTarget.attachmentPoint())
   }
 
   /**
@@ -115,12 +146,34 @@ export class Kinematics {
    * @param {RobotControl} renderTarget
    */
   applyEffectorFromJointPosition(renderTarget) {
-    renderTarget.robot.traverse((obj) => {
-      if (obj.name === "tool0") {
-        renderTarget.tool.position.setFromMatrixPosition(obj.matrixWorld);
-        renderTarget.tool.quaternion.setFromRotationMatrix(obj.matrixWorld);
-      }
-    });
+    const flange = renderTarget.attachmentPoint();
+    const tool = renderTarget.tool;
+    const attachment = renderTarget.toolOffset;
+    // Compute the world position and quaternion of the flange
+    const flangeWorldPosition = new Vector3();
+    const flangeWorldQuaternion = new Quaternion();
+    flange.getWorldPosition(flangeWorldPosition);
+    flange.getWorldQuaternion(flangeWorldQuaternion);
+
+    // Compute the world position and quaternion of the attachment
+    const attachmentWorldPosition = new Vector3();
+    const attachmentWorldQuaternion = new Quaternion();
+    attachment.getWorldPosition(attachmentWorldPosition);
+    attachment.getWorldQuaternion(attachmentWorldQuaternion);
+
+    // Compute the delta transform needed to align attachment with flange
+    const deltaPosition = new Vector3().subVectors(
+      flangeWorldPosition,
+      attachmentWorldPosition
+    );
+    const deltaQuaternion = new Quaternion().multiplyQuaternions(
+      flangeWorldQuaternion,
+      attachmentWorldQuaternion.invert()
+    );
+
+    // Apply the transformation to tool
+    tool.position.add(deltaPosition);
+    tool.quaternion.premultiply(deltaQuaternion);
   }
 
   /**
@@ -131,19 +184,32 @@ export class Kinematics {
   determineEffectorPosition(renderSource) {
     let effectorPosition;
 
-    renderSource.robot.traverse((obj) => {
-      if (obj.name === "tool0") {
-        effectorPosition = getObjectEffectorWorldPosition(
-          obj,
-          this.baseOffset,
-          mmToM
-        );
-      }
-    });
+    effectorPosition = getObjectEffectorWorldPosition(
+      renderSource.tool,
+      this.baseOffset,
+      mmToM
+    );
 
     return effectorPosition;
   }
 
+  /**
+   *
+   * @param {RobotControl} renderSource
+   * @returns {EffectorPosition}
+   */
+  determineToolOffset(renderSource) {
+    let toolOffset;
+    let attachment = renderSource.toolOffset;
+
+    toolOffset = getObjectEffectorPosition(
+      attachment,
+      new Vector3(0, 0, 0),
+      mmToM / renderSource.tool.scale.z
+    );
+
+    return toolOffset;
+  }
 
   /**
    * @param {RobotControl} renderSource
@@ -165,7 +231,7 @@ export class Kinematics {
   }
 
   /**
-   * @param {RobotControl} renderSource 
+   * @param {RobotControl} renderSource
    */
   updateCommand(renderSource) {
     const currentProgrammerState = programmerState();
@@ -182,6 +248,9 @@ export class Kinematics {
     } else if (currentCommandType === "effector") {
       const effector = this.determineEffectorPosition(renderSource);
       patchCommand({ type: "effector", data: effector });
+    } else if (currentCommandType === "tool") {
+      const toolOffset = this.determineToolOffset(renderSource);
+      patchCommand({ type: "tool", data: toolOffset });
     }
   }
 
@@ -365,4 +434,42 @@ export function setObjectEffectorPosition(
 
   object.setRotationFromQuaternion(createZYZQuaternion(yaw, pitch, roll));
   object.updateMatrixWorld(true);
+}
+
+/**
+ *
+ * @param {Object3D} parent
+ * @param {Object3D} child
+ * @param {Vector3} goalPosition
+ * @param {Quaternion} goalQuaternion
+ */
+function moveParentBasedOnChild(parent, child, goalPosition, goalQuaternion) {
+  // Compute the world position and quaternion of the flange
+  const childWorldPosition = new Vector3();
+  const childWorldQuaternion = new Quaternion();
+  child.getWorldPosition(childWorldPosition);
+  child.getWorldQuaternion(childWorldQuaternion);
+
+  const deltaPosition = new Vector3().subVectors(
+    goalPosition,
+    childWorldPosition
+  );
+  const deltaQuaternion = new Quaternion().multiplyQuaternions(
+    goalQuaternion,
+    childWorldQuaternion.invert()
+  );
+
+  parent.position.add(deltaPosition);
+  parent.quaternion.premultiply(deltaQuaternion);
+  parent.updateMatrixWorld(true)
+}
+
+/**
+ * @param {string} m
+ * @param {Object3D} o 
+ */
+function debugZ(m, o) {
+  const v = new Vector3()
+  o.getWorldPosition(v)
+  console.log(m, "world z", v.z, "local z", o.position.z)
 }
