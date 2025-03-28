@@ -119,7 +119,6 @@ class Robot3D extends HTMLElement {
     );
     kinematics.applyJointPosition(currentPosition.joints, currentRobot);
     kinematics.applyEffectorPosition(currentPosition.effector, currentRobot);
-    kinematics.applyToolOffset(currentRobotState.tool_offset, currentRobot);
 
     let previousRobot = currentRobot;
     let previousState = currentRobotState;
@@ -127,30 +126,10 @@ class Robot3D extends HTMLElement {
       let nextState = previousState;
       const robot = popRobot();
 
-      robot.update(
-        kinematics,
-        "ghost",
-        index === currentProgrammerState.selectedIndex
-          ? currentCommand.type
-          : undefined,
-        index === currentProgrammerState.selectedIndex
-          ? currentJogState
-          : undefined
-      );
-
-      if (currentCommand.type === "tool") {
-        nextState = {
-          ...nextState,
-          tool_offset: currentCommand.data,
-        };
-      }
-
-      kinematics.applyToolOffset(nextState.tool_offset, robot);
-
       // This order is important: kinematics derives one from the other
       if (currentCommand.type === "joints") {
         kinematics.applyJointPosition(currentCommand.data, robot);
-        kinematics.applyEffectorFromJointPosition(robot);
+        kinematics.applyEffectorFromJointPosition(robot, nextState.tool_offset);
 
         nextState = {
           ...nextState,
@@ -164,6 +143,7 @@ class Robot3D extends HTMLElement {
         kinematics.applyJointsFromEffectorPosition(
           previousRobot,
           currentCommand.data,
+          nextState.tool_offset,
           robot
         );
 
@@ -174,13 +154,35 @@ class Robot3D extends HTMLElement {
             joints: kinematics.determineJointPosition(robot),
           },
         };
-      } else {
-        kinematics.applyEffectorPosition(
-          previousState.position.effector,
-          robot
-        );
-        kinematics.applyJointPosition(previousState.position.joints, robot);
+      } else if (currentCommand.type === "tool") {
+        const nextToolOffset = currentCommand.data
+        kinematics.applyJointPosition(nextState.position.joints, robot);
+        // Update effector position to keep robot joints stationary for the next state
+        kinematics.applyEffectorFromJointPosition(robot, nextToolOffset);
+
+        const nextEffectorPosition = kinematics.determineEffectorPosition(robot)
+
+        nextState = {
+          ...nextState,
+          tool_offset: nextToolOffset,
+          position: {
+            effector: nextEffectorPosition,
+            joints: nextState.position.joints
+          }
+        }
       }
+
+      robot.update(
+        kinematics,
+        "ghost",
+        nextState.tool_offset,
+        index === currentProgrammerState.selectedIndex
+          ? currentCommand.type
+          : undefined,
+        index === currentProgrammerState.selectedIndex
+          ? currentJogState
+          : undefined
+      );
 
       previousRobot = robot;
       // This is some BS rederivation. Derived state should be its own signal (that... could be used to updateRobots?)

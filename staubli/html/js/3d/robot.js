@@ -153,11 +153,8 @@ export class RobotControl {
     /**@type {URDFRobot} */
     this.robot = urdfRoot.clone(true);
 
-    this.toolOffset = new Object3D();
-
     /**@type {Mesh} */
     this.tool = toolRoot.clone(true);
-    this.tool.add(this.toolOffset);
 
     this.world = world;
   }
@@ -170,10 +167,11 @@ export class RobotControl {
   /**
    * @param {Kinematics} kinematics
    * @param {RobotModeEnum} mode
+   * @param {EffectorPosition} toolOffset
    * @param {CommandType} [commandType]
    * @param {JogState} [jogState]
    */
-  update(kinematics, mode, commandType, jogState) {
+  update(kinematics, mode, toolOffset, commandType, jogState) {
     this.kinematics = kinematics;
     const isMoveCommand =
       commandType === "effector" || commandType === "joints";
@@ -231,7 +229,7 @@ export class RobotControl {
         jogState?.mode === "translate-effector");
 
     if (effectorControlEnabled) {
-      const controls = this.#setupToolControl();
+      const controls = this.#setupToolControl(toolOffset);
       controls.setSpace(jogState.space);
       if (jogState.mode === "rotate-effector") {
         controls.setMode("rotate");
@@ -344,7 +342,11 @@ export class RobotControl {
     delete this.dragControls;
   }
 
-  #setupToolControl() {
+  /**
+   * 
+   * @param {EffectorPosition} toolOffset 
+   */
+  #setupToolControl(toolOffset) {
     if (this.transformControls) {
       return this.transformControls;
     }
@@ -354,7 +356,7 @@ export class RobotControl {
       this.world.renderer.domElement
     );
     this.transformControls.addEventListener("change", () => {
-      this.kinematics.applyJointsFromTool(this, this);
+      this.kinematics.applyJointsFromTool(this, toolOffset, this);
       this.world.render();
     });
     this.transformControls.addEventListener("dragging-changed", (event) => {
@@ -384,24 +386,6 @@ export class RobotControl {
     this.world.scene.remove(gizmo);
     this.transformControls.dispose();
     delete this.transformControls;
-  }
-
-  /**
-   * Tool is parent, offset is child
-   */
-  orientTool() {
-    if (this.toolOffset.parent === this.tool) {
-      return
-    }
-
-    
-  }
-
-  /**
-   * Offset is parent, 
-   */
-  orientOffset() {
-
   }
 
   #setupOffsetControl() {
