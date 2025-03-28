@@ -31,6 +31,10 @@ createComponent({
   `,
   attrsFn: (_state, attrs) => {
     const currentJogState = jogState();
+    const currentState = programmerState();
+    const currentProgran = program();
+    const currentCommand = currentProgran.commands[currentState.selectedIndex];
+
     /**
      * @param {JogMode} mode
      */
@@ -59,6 +63,8 @@ createComponent({
           },
           attributes: {
             "aria-current": ariaCurrentMode(forMode),
+            // ugh, tech debt
+            "disabled": forMode === "drag-joint" && currentCommand?.type === "tool" ? "true" : undefined
           },
         },
       };
@@ -109,7 +115,7 @@ createComponent({
 
 createComponent({
   tag: "effector-position-editor",
-  observedAttributes: ["x"],
+  observedAttributes: ["x", "y", "z", "yaw", "pitch", "roll"],
   template: html`
     <div class="vertical-stack">
       <div class="horizontal-stack">
@@ -188,6 +194,7 @@ createComponent({
   template: html`
     <article class="vertical-stack">
       <h2>Tool Offset Editor</h2>
+      <robot-position-editor></robot-position-editor>
       <select class="tool-display" aria-label="Tool Display" required></select>
       <effector-position-editor></effector-position-editor>
     </article>

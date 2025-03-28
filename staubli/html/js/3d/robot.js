@@ -242,7 +242,14 @@ export class RobotControl {
     }
 
     if (offsetControlEnabled) {
-      this.#setupOffsetControl();
+      const controls = this.#setupOffsetControl();
+      controls.setSpace(jogState.space);
+      if (jogState.mode === "rotate-effector") {
+        controls.setMode("rotate");
+      }
+      if (jogState.mode === "translate-effector") {
+        controls.setMode("translate");
+      }
     } else {
       this.#removeOffsetControl();
     }
@@ -397,7 +404,6 @@ export class RobotControl {
       this.world.camera,
       this.world.renderer.domElement
     );
-    this.offsetControls.setSpace("local");
 
     this.offsetControls.attach(this.tool); // Attach to local point
     this.world.scene.add(this.offsetControls.getHelper());
@@ -413,6 +419,8 @@ export class RobotControl {
       this.kinematics.updateCommand(this);
       this.world.orbit.enabled = true;
     });
+
+    return this.offsetControls
   }
 
   #removeOffsetControl() {
