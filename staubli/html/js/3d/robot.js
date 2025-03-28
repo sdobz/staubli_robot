@@ -3,7 +3,14 @@
  * It just knows about three coordinates
  */
 
-import { LoadingManager, MathUtils, Mesh, Quaternion, Vector3 } from "three";
+import {
+  LoadingManager,
+  MathUtils,
+  Mesh,
+  Quaternion,
+  Vector3,
+  Object3D,
+} from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import URDFLoader from "urdf-loader/URDFLoader.js";
 import {
@@ -18,10 +25,10 @@ import { PointerURDFDragControls } from "urdf-loader/URDFDragControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 
 import { Kinematics } from "./kinematics.js";
+import { createSignal } from "../lib/state.js";
 
-/** @import { Object3D } from "three" */
-/** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
-/** @import { EffectorPosition, JointPosition, Position, RobotState } from "../robot" */
+/** @import { URDFJoint, URDFRobot, URDFLink } from "urdf-loader/URDFClasses"; */
+/** @import { Position, JointPosition, EffectorPosition, RobotState, Command, CommandType } from '../robot-types' */
 /** @import { JogState } from "../program/state.js" */
 /** @import { World } from "./world" */
 
@@ -44,6 +51,41 @@ import { Kinematics } from "./kinematics.js";
 
 //   globalRobotIndex += 1
 // }
+
+const mmToM = 1 / 1000;
+
+/**
+ * @typedef {"stl"} LoaderEnum
+ */
+/**
+ * @typedef {Object} ToolProperties
+ * @property {string} name
+ * @property {string} meshUrl
+ * @property {number} scale
+ */
+
+/** @type {ToolProperties} */
+const flangeTool = {
+  name: "Naked Flange",
+  meshUrl: "effectors/flange.stl",
+  scale: mmToM,
+};
+const flangeTool2 = {
+  name: "Naked Flange (copy)",
+  meshUrl: "effectors/flange.stl",
+  scale: mmToM,
+};
+
+export const STOCK_TOOLS = [flangeTool, flangeTool2];
+
+// TODO: this seems like a "scene/setup" concern?
+/** @typedef {readonly [() => ToolProperties, (set: ToolProperties) => void]} */
+const [toolProperties, setToolProperties] = createSignal(flangeTool);
+export { toolProperties, setToolProperties };
+
+const LOADER_EXTENSION_MAP = {
+  stl: STLLoader,
+};
 
 export function loadRobot() {
   return new Promise((resolve, reject) => {
@@ -69,17 +111,25 @@ export function loadRobot() {
   });
 }
 
-export function loadTool() {
+/**
+ * @param {ToolProperties} properties
+ */
+export function loadTool(properties) {
+  const Loader =
+    LOADER_EXTENSION_MAP[properties.meshUrl.split(".").slice(-1)[0]];
+  if (!Loader) {
+    throw new Error(`Unknown loader for url ${properties.meshUrl}`);
+  }
+
   return new Promise((resolve, reject) => {
-    const stlLoader = new STLLoader();
+    const stlLoader = new Loader();
     stlLoader.load(
-      "effectors/flange.stl",
+      properties.meshUrl,
       (geometry) => {
-        const mmToM = 1 / 1000;
         const mesh = new Mesh(geometry, effectorMaterial);
-        mesh.scale.x = mmToM;
-        mesh.scale.y = mmToM;
-        mesh.scale.z = mmToM;
+        mesh.scale.x = properties.scale;
+        mesh.scale.y = properties.scale;
+        mesh.scale.z = properties.scale;
 
         resolve(mesh);
       },
@@ -96,15 +146,16 @@ export function loadTool() {
 export class RobotControl {
   /**
    *
-   * @param {Object3D} toolRoot
    * @param {World} world
    */
   constructor(urdfRoot, toolRoot, world) {
     this.urdfRoot = urdfRoot;
     /**@type {URDFRobot} */
     this.robot = urdfRoot.clone(true);
-    /**@type {Object3D} */
+
+    /**@type {Mesh} */
     this.tool = toolRoot.clone(true);
+
     this.world = world;
   }
 
@@ -116,11 +167,19 @@ export class RobotControl {
   /**
    * @param {Kinematics} kinematics
    * @param {RobotModeEnum} mode
+   * @param {EffectorPosition} toolOffset
+   * @param {CommandType} [commandType]
    * @param {JogState} [jogState]
    */
-  update(kinematics, mode, jogState) {
+  update(kinematics, mode, toolOffset, commandType, jogState) {
     this.kinematics = kinematics;
-    const dragControlsEnabled = jogState?.mode === "drag-joint";
+    const isMoveCommand =
+      commandType === "effector" || commandType === "joints";
+
+    const dragControlsEnabled =
+      isMoveCommand && jogState?.mode === "drag-joint";
+
+    const offsetControlEnabled = commandType === "tool";
 
     let material;
     if (mode === "ghost") {
@@ -165,11 +224,12 @@ export class RobotControl {
     }
 
     const effectorControlEnabled =
-      jogState?.mode === "rotate-effector" ||
-      jogState?.mode === "translate-effector";
+      isMoveCommand &&
+      (jogState?.mode === "rotate-effector" ||
+        jogState?.mode === "translate-effector");
 
     if (effectorControlEnabled) {
-      const controls = this.#setupToolControl();
+      const controls = this.#setupToolControl(toolOffset);
       controls.setSpace(jogState.space);
       if (jogState.mode === "rotate-effector") {
         controls.setMode("rotate");
@@ -180,6 +240,32 @@ export class RobotControl {
     } else {
       this.#removeToolControl();
     }
+
+    if (offsetControlEnabled) {
+      const controls = this.#setupOffsetControl();
+      controls.setSpace(jogState.space);
+      if (jogState.mode === "rotate-effector") {
+        controls.setMode("rotate");
+      }
+      if (jogState.mode === "translate-effector") {
+        controls.setMode("translate");
+      }
+    } else {
+      this.#removeOffsetControl();
+    }
+  }
+
+  attachmentPoint() {
+    /** @type {URDFLink}  */
+    let link;
+
+    this.robot.traverse((obj) => {
+      if (obj.name === "tool0") {
+        link = obj;
+      }
+    });
+
+    return link;
   }
 
   #setupURDFControl() {
@@ -236,7 +322,7 @@ export class RobotControl {
       this.world.render();
       setTimeout(() => {
         // updateRobots may re-order robots. This ensures that the "unhover" will not fire on the previous robot
-        this.kinematics.updateJointPositionCommand(this);
+        this.kinematics.updateCommand(this);
       });
     };
     dragControls.updateJoint = (joint, angle) => {
@@ -263,7 +349,11 @@ export class RobotControl {
     delete this.dragControls;
   }
 
-  #setupToolControl() {
+  /**
+   * 
+   * @param {EffectorPosition} toolOffset 
+   */
+  #setupToolControl(toolOffset) {
     if (this.transformControls) {
       return this.transformControls;
     }
@@ -273,7 +363,7 @@ export class RobotControl {
       this.world.renderer.domElement
     );
     this.transformControls.addEventListener("change", () => {
-      this.kinematics.applyJointsFromTool(this, this);
+      this.kinematics.applyJointsFromTool(this, toolOffset, this);
       this.world.render();
     });
     this.transformControls.addEventListener("dragging-changed", (event) => {
@@ -282,12 +372,8 @@ export class RobotControl {
 
       this.dragging = isDragging;
 
-      // if (isDragging) {
-      //   this.kinematics.setPredecessor(this.urdfRoot);
-      // }
-
       if (!isDragging) {
-        this.kinematics.updateEffectorPositionCommand(this);
+        this.kinematics.updateCommand(this);
       }
     });
 
@@ -309,9 +395,47 @@ export class RobotControl {
     delete this.transformControls;
   }
 
+  #setupOffsetControl() {
+    if (this.offsetControls) {
+      return this.offsetControls;
+    }
+
+    this.offsetControls = new TransformControls(
+      this.world.camera,
+      this.world.renderer.domElement
+    );
+
+    this.offsetControls.attach(this.tool); // Attach to local point
+    this.world.scene.add(this.offsetControls.getHelper());
+
+    this.offsetControls.addEventListener("change", () => {
+      this.world.render();
+    });
+
+    this.offsetControls.addEventListener("mouseDown", () => {
+      this.world.orbit.enabled = false;
+    });
+    this.offsetControls.addEventListener("mouseUp", () => {
+      this.kinematics.updateCommand(this);
+      this.world.orbit.enabled = true;
+    });
+
+    return this.offsetControls
+  }
+
+  #removeOffsetControl() {
+    if (!this.offsetControls) {
+      return;
+    }
+    this.world.scene.remove(this.offsetControls.getHelper());
+    this.offsetControls.dispose();
+    delete this.offsetControls;
+  }
+
   dispose() {
     this.#removeToolControl();
     this.#removeURDFControl();
+    this.#removeOffsetControl();
     this.world.scene.remove(this.robot);
     this.world.scene.remove(this.tool);
     // this.robot.dispose();

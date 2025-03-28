@@ -29,7 +29,12 @@ export interface JointsCommand extends CommandMeta {
   data: JointPosition;
 }
 
-export type Command = EffectorCommand | JointsCommand;
+export interface ToolCommand extends CommandMeta {
+  type: "tool";
+  data: EffectorPosition;
+}
+
+export type Command = EffectorCommand | JointsCommand | ToolCommand;
 export type CommandType = Command["type"];
 
 export interface Position {
@@ -43,6 +48,7 @@ export interface RobotState {
   position: Position;
   elbow: ElbowEnum;
   speed: number;
+  tool_offset: EffectorPosition;
 }
 
 export interface RobotInterface {

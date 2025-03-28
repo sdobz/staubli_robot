@@ -2,14 +2,14 @@ import { Vector3, ArrowHelper } from "three";
 
 import { html } from "../lib/component.js";
 import { createEffect, createSignal } from "../lib/state.js";
-import { loadRobot, loadTool, RobotControl } from "./robot.js";
+import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot.js";
 import { program, programmerState, jogState } from "../program/state.js";
 import { World } from "./world.js";
 import { Kinematics } from "./kinematics.js";
 import { robot } from "../robot.js";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
-/** @import { Object3D } from 'three' */
+/** @import { Object3D, Mesh } from 'three' */
 
 /** @import { JointPosition, EffectorPosition } from '../robot-types.d.ts' */
 
@@ -36,12 +36,8 @@ class Robot3D extends HTMLElement {
       this.world.fitCameraToSelection([this.urdfRoot]);
       this.updateRobots();
     });
-
-    loadTool().then((result) => {
-      this.toolRoot = result;
-
-      this.updateRobots();
-    });
+    /** @type {Mesh | undefined} */
+    this.toolRoot = undefined;
 
     const shadowRoot = this.attachShadow({ mode: "open" });
     document.querySelectorAll("link").forEach((linkElement) => {
@@ -65,6 +61,19 @@ class Robot3D extends HTMLElement {
       // todo: what happens if this happens in the middle of a drag?
       this.updateRobots();
     });
+
+    createEffect(() => {
+      const props = toolProperties();
+
+      while (this.robots.length > 0) {
+        this.robots.pop().dispose();
+      }
+
+      loadTool(props).then((result) => {
+        this.toolRoot = result;
+        this.updateRobots();
+      });
+    });
   }
 
   updateRobots() {
@@ -72,7 +81,7 @@ class Robot3D extends HTMLElement {
     const currentSequence = program();
     const currentProgrammerState = programmerState();
     const currentJogState = jogState();
-    const previewRobot = previewRobotControl()
+    const previewRobot = previewRobotControl();
 
     if (!currentRobotState?.position) {
       return;
@@ -100,60 +109,85 @@ class Robot3D extends HTMLElement {
 
     const currentRobot = popRobot();
     if (previewRobot !== currentRobot) {
-      setPreviewRobotControl(currentRobot)
+      setPreviewRobotControl(currentRobot);
     }
     currentRobot.update(
       kinematics,
       currentSequence.commands.length === 0 ? "current" : "current-ghost",
+      undefined,
       undefined
     );
     kinematics.applyJointPosition(currentPosition.joints, currentRobot);
     kinematics.applyEffectorPosition(currentPosition.effector, currentRobot);
 
     let previousRobot = currentRobot;
+    let previousState = currentRobotState;
     currentSequence.commands.forEach((currentCommand, index) => {
-      if (
-        currentCommand.type !== "effector" &&
-        currentCommand.type !== "joints"
-      ) {
-        return;
+      let nextState = previousState;
+      const robot = popRobot();
+
+      // This order is important: kinematics derives one from the other
+      if (currentCommand.type === "joints") {
+        kinematics.applyJointPosition(currentCommand.data, robot);
+        kinematics.applyEffectorFromJointPosition(robot, nextState.tool_offset);
+
+        nextState = {
+          ...nextState,
+          position: {
+            joints: currentCommand.data,
+            effector: kinematics.determineEffectorPosition(robot),
+          },
+        };
+      } else if (currentCommand.type === "effector") {
+        kinematics.applyEffectorPosition(currentCommand.data, robot);
+        kinematics.applyJointsFromEffectorPosition(
+          previousRobot,
+          currentCommand.data,
+          nextState.tool_offset,
+          robot
+        );
+
+        nextState = {
+          ...nextState,
+          position: {
+            effector: currentCommand.data,
+            joints: kinematics.determineJointPosition(robot),
+          },
+        };
+      } else if (currentCommand.type === "tool") {
+        const nextToolOffset = currentCommand.data
+        kinematics.applyJointPosition(nextState.position.joints, robot);
+        // Update effector position to keep robot joints stationary for the next state
+        kinematics.applyEffectorFromJointPosition(robot, nextToolOffset);
+
+        const nextEffectorPosition = kinematics.determineEffectorPosition(robot)
+
+        nextState = {
+          ...nextState,
+          tool_offset: nextToolOffset,
+          position: {
+            effector: nextEffectorPosition,
+            joints: nextState.position.joints
+          }
+        }
       }
 
-      const robot = popRobot();
       robot.update(
         kinematics,
         "ghost",
+        nextState.tool_offset,
+        index === currentProgrammerState.selectedIndex
+          ? currentCommand.type
+          : undefined,
         index === currentProgrammerState.selectedIndex
           ? currentJogState
           : undefined
       );
 
-      // This order is important: kinematics derives one from the other
-      if (currentCommand.type === "joints") {
-        kinematics.applyJointPosition(currentCommand.data, robot);
-      } else {
-        kinematics.applyJointsFromEffectorPosition(
-          previousRobot,
-          currentCommand.data,
-          robot
-        );
-      }
-      if (currentCommand.type === "effector") {
-        kinematics.applyEffectorPosition(currentCommand.data, robot);
-      } else {
-        kinematics.applyEffectorFromJointPosition(robot);
-      }
       previousRobot = robot;
-
-      // This does not trigger a re-signal, and I hate it.
-      // The way to fix this is to move the entire "updateRobots" sequence into the "updateProgram" loop
-      currentCommand._derivedState = {
-        ...currentRobotState,
-        position: {
-          effector: kinematics.determineEffectorPosition(robot),
-          joints: kinematics.determineJointPosition(robot),
-        },
-      };
+      // This is some BS rederivation. Derived state should be its own signal (that... could be used to updateRobots?)
+      currentCommand._derivedState = nextState;
+      previousState = nextState;
     });
 
     while (previousRobots.length > 0) {

@@ -16,12 +16,7 @@ import {
   Solver,
   urdfRobotToIKRoot,
 } from "closed-chain-ik-js";
-import {
-  jogState,
-  patchCommand,
-  program,
-  programmerState,
-} from "../program/state.js";
+import { patchCommand, program, programmerState } from "../program/state.js";
 import { MathUtils, Quaternion, Vector3 } from "three";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
@@ -32,6 +27,7 @@ import { MathUtils, Quaternion, Vector3 } from "three";
 
 const mmToM = 1 / 1000;
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];
+const zeroOffset = new Vector3(0, 0, 0);
 
 export class Kinematics {
   /**
@@ -46,33 +42,58 @@ export class Kinematics {
   /**
    * @param {RobotControl} predecessor
    * @param {EffectorPosition} effectorPosition
+   * @param {EffectorPosition} toolOffset
    * @param {RobotControl} renderTarget
    */
-  applyJointsFromEffectorPosition(predecessor, effectorPosition, renderTarget) {
-    const { x, y, z, yaw, pitch, roll } = effectorPosition;
-
-    const position = new Vector3(
-      x * mmToM + this.baseOffset.x,
-      y * mmToM + this.baseOffset.y,
-      z * mmToM + this.baseOffset.z
+  applyJointsFromEffectorPosition(
+    predecessor,
+    effectorPosition,
+    toolOffset,
+    renderTarget
+  ) {
+    const toolPosition = effectorToThree(
+      effectorPosition,
+      mmToM,
+      this.baseOffset,
+      newThreePosition()
     );
-    const quaternion = createZYZQuaternion(yaw, pitch, roll);
+    const toolOffsetThree = effectorToThree(
+      toolOffset,
+      mmToM,
+      zeroOffset,
+      newThreePosition()
+    );
+    const flangePosition = subtractToolOffset(
+      toolPosition,
+      toolOffsetThree,
+      newThreePosition()
+    );
 
-    const solvedIKRoot = this.#solveIK(predecessor, position, quaternion);
+    const solvedIKRoot = this.#solveIK(predecessor, flangePosition);
 
     setUrdfFromIK(renderTarget.robot, solvedIKRoot);
   }
 
   /**
    * @param {RobotControl} predecessor
+   * @param {EffectorPosition} toolOffset
    * @param {RobotControl} renderTarget
    */
-  applyJointsFromTool(predecessor, renderTarget) {
-    const solvedIKRoot = this.#solveIK(
-      predecessor,
-      renderTarget.tool.position,
-      renderTarget.tool.quaternion
+  applyJointsFromTool(predecessor, toolOffset, renderTarget) {
+    const toolPosition = threePositionFromObjectPosition(renderTarget.tool);
+    const toolOffsetThree = effectorToThree(
+      toolOffset,
+      mmToM,
+      zeroOffset,
+      newThreePosition()
     );
+    const flangePosition = subtractToolOffset(
+      toolPosition,
+      toolOffsetThree,
+      newThreePosition()
+    );
+
+    const solvedIKRoot = this.#solveIK(predecessor, flangePosition);
 
     setUrdfFromIK(renderTarget.robot, solvedIKRoot);
   }
@@ -102,25 +123,31 @@ export class Kinematics {
    * @param {RobotControl} renderTarget
    */
   applyEffectorPosition(effectorPosition, renderTarget) {
-    setObjectEffectorPosition(
-      renderTarget.tool,
-      effectorPosition,
-      this.baseOffset,
-      mmToM
-    );
+    const toolPosition = threePositionFromObjectPosition(renderTarget.tool);
+    effectorToThree(effectorPosition, mmToM, this.baseOffset, toolPosition);
+    renderTarget.tool.updateMatrixWorld(true);
   }
 
   /**
    *
    * @param {RobotControl} renderTarget
+   * @param {EffectorPosition} toolOffset
    */
-  applyEffectorFromJointPosition(renderTarget) {
-    renderTarget.robot.traverse((obj) => {
-      if (obj.name === "tool0") {
-        renderTarget.tool.position.setFromMatrixPosition(obj.matrixWorld);
-        renderTarget.tool.quaternion.setFromRotationMatrix(obj.matrixWorld);
-      }
-    });
+  applyEffectorFromJointPosition(renderTarget, toolOffset) {
+    const flangePosition = threePositionFromObjectWorldPosition(
+      renderTarget.attachmentPoint()
+    );
+    const toolOffsetThree = effectorToThree(
+      toolOffset,
+      mmToM,
+      zeroOffset,
+      newThreePosition()
+    );
+
+    const toolPosition = threePositionFromObjectPosition(renderTarget.tool);
+    addToolOffset(flangePosition, toolOffsetThree, toolPosition);
+
+    renderTarget.tool.updateMatrixWorld(true);
   }
 
   /**
@@ -129,29 +156,39 @@ export class Kinematics {
    * @returns {EffectorPosition}
    */
   determineEffectorPosition(renderSource) {
-    let effectorPosition;
+    const effectorPosition = newEffectorPosition();
+    const toolPosition = threePositionFromObjectPosition(renderSource.tool);
 
-    renderSource.robot.traverse((obj) => {
-      if (obj.name === "tool0") {
-        effectorPosition = getObjectEffectorWorldPosition(
-          obj,
-          this.baseOffset,
-          mmToM
-        );
-      }
-    });
-
-    return effectorPosition;
+    return threeToEffector(
+      toolPosition,
+      mmToM,
+      this.baseOffset,
+      effectorPosition
+    );
   }
 
   /**
    *
    * @param {RobotControl} renderSource
+   * @returns {EffectorPosition}
    */
-  updateEffectorPositionCommand(renderSource) {
-    const effector = this.determineEffectorPosition(renderSource);
+  determineToolOffset(renderSource) {
+    const toolPosition = threePositionFromObjectPosition(renderSource.tool);
+    const flangePosition = threePositionFromObjectWorldPosition(
+      renderSource.attachmentPoint()
+    );
 
-    patchCommand({ type: "effector", data: effector });
+    const toolOffsetThree = subtractThreePositions(
+      flangePosition,
+      toolPosition,
+      newThreePosition()
+    );
+    return threeToEffector(
+      toolOffsetThree,
+      mmToM,
+      zeroOffset,
+      newEffectorPosition()
+    );
   }
 
   /**
@@ -173,10 +210,28 @@ export class Kinematics {
     return jointPosition;
   }
 
-  updateJointPositionCommand(renderSource) {
-    const joints = this.determineJointPosition(renderSource);
+  /**
+   * @param {RobotControl} renderSource
+   */
+  updateCommand(renderSource) {
+    const currentProgrammerState = programmerState();
+    const currentProgram = program();
+    const currentCommandType =
+      currentProgram.commands[currentProgrammerState.selectedIndex]?.type;
+    if (!currentCommandType) {
+      return;
+    }
 
-    patchCommand({ type: 'joints', data: joints });
+    if (currentCommandType === "joints") {
+      const joints = this.determineJointPosition(renderSource);
+      patchCommand({ type: "joints", data: joints });
+    } else if (currentCommandType === "effector") {
+      const effector = this.determineEffectorPosition(renderSource);
+      patchCommand({ type: "effector", data: effector });
+    } else if (currentCommandType === "tool") {
+      const toolOffset = this.determineToolOffset(renderSource);
+      patchCommand({ type: "tool", data: toolOffset });
+    }
   }
 
   drawHelper(scene) {
@@ -192,12 +247,12 @@ export class Kinematics {
   #ikRoot() {
     if (!this._ikRoot) {
       this._ikRoot = urdfRobotToIKRoot(this.urdfRoot);
-      /** @type {Joint} */(this._ikRoot).setDoF(); // Lock the base
+      /** @type {Joint} */ (this._ikRoot).setDoF(); // Lock the base
     }
     return this._ikRoot;
   }
 
-  #solveIK(predecessor, position, quaternion) {
+  #solveIK(predecessor, flangePosition) {
     const ikRoot = this.#ikRoot();
     setIKFromUrdf(ikRoot, predecessor.robot);
 
@@ -209,8 +264,9 @@ export class Kinematics {
       this._goal.makeClosure(effectorLink);
     }
     const goal = this._goal;
+    const { position, rotation } = flangePosition;
     goal.setPosition(position.x, position.y, position.z);
-    goal.setQuaternion(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+    goal.setQuaternion(rotation.x, rotation.y, rotation.z, rotation.w);
 
     if (!this._solver) {
       this._solver = new Solver([ikRoot]);
@@ -250,32 +306,31 @@ export class Kinematics {
 
 // https://chatgpt.com/c/67cd432e-cb74-800c-b5f7-4cb90809cbfa
 
+const ZVEC = new Vector3(0, 0, 1);
+const YVEC = new Vector3(0, 1, 0);
+const XVEC = new Vector3(0, 0, 1);
+const qYaw = new Quaternion();
+const qPitch = new Quaternion();
+const qRoll = new Quaternion();
+
 /**
  *
  * @param {number} yawDeg
  * @param {number} pitchDeg
  * @param {number} rollDeg
+ * @param {Quaternion} target
  */
-export function createZYZQuaternion(yawDeg, pitchDeg, rollDeg) {
-  const qYaw = new Quaternion().setFromAxisAngle(
-    new Vector3(0, 0, 1),
-    MathUtils.degToRad(yawDeg)
-  );
-  const qPitch = new Quaternion().setFromAxisAngle(
-    new Vector3(0, 1, 0),
-    MathUtils.degToRad(pitchDeg)
-  );
-  const qRoll = new Quaternion().setFromAxisAngle(
-    new Vector3(0, 0, 1),
-    MathUtils.degToRad(rollDeg)
-  );
+export function zyzToQuaternion(yawDeg, pitchDeg, rollDeg, target) {
+  qYaw.setFromAxisAngle(ZVEC, MathUtils.degToRad(yawDeg));
+  qPitch.setFromAxisAngle(YVEC, MathUtils.degToRad(pitchDeg));
+  qRoll.setFromAxisAngle(XVEC, MathUtils.degToRad(rollDeg));
 
   // Combine the rotations in the correct order: Yaw → Pitch → Roll
-  const qFinal = new Quaternion();
-  qFinal.multiplyQuaternions(qYaw, qPitch);
-  qFinal.multiply(qRoll);
 
-  return qFinal;
+  target.multiplyQuaternions(qYaw, qPitch);
+  target.multiply(qRoll);
+
+  return target;
 }
 
 // https://amu.hal.science/hal-03848730/document
@@ -285,9 +340,10 @@ export function createZYZQuaternion(yawDeg, pitchDeg, rollDeg) {
 /**
  *
  * @param {Quaternion} q
+ * @param {EffectorPosition} target
  * @returns
  */
-export function quaternionToZYZ(q) {
+export function quaternionToZYZ(q, target) {
   const qr = q.w,
     qz = q.z,
     qy = q.y,
@@ -297,66 +353,199 @@ export function quaternionToZYZ(q) {
   const pitch = Math.acos(2 * (qr * qr + qz * qz) - 1);
   const yaw = Math.atan2(qz, qr) + Math.atan2(-qx, qy);
 
+  target.yaw = MathUtils.radToDeg(yaw);
+  target.pitch = MathUtils.radToDeg(pitch);
+  target.roll = MathUtils.radToDeg(roll);
+  return target;
+}
+
+/**
+ * @typedef {Object} ThreePosition
+ * @prop {Vector3} position
+ * @prop {Quaternion} rotation
+ */
+
+/**
+ * @returns {EffectorPosition}
+ */
+function newEffectorPosition() {
   return {
-    yaw: MathUtils.radToDeg(yaw),
-    pitch: MathUtils.radToDeg(pitch),
-    roll: MathUtils.radToDeg(roll),
+    x: 0,
+    y: 0,
+    z: 0,
+    yaw: 0,
+    pitch: 0,
+    roll: 0,
   };
 }
 
 /**
- * @param {Object3D} object
- * @param {Vector3} offset
- * @param {number} scale
- * @returns {EffectorPosition}
+ * @returns {ThreePosition}
  */
-export function getObjectEffectorPosition(object, offset, scale) {
+function newThreePosition() {
   return {
-    x: (object.position.x - offset.x) / scale,
-    y: (object.position.y - offset.y) / scale,
-    z: (object.position.z - offset.z) / scale,
-    ...quaternionToZYZ(object.quaternion),
-  };
-}
-
-/**
- * @param {Object3D} object
- * @param {Vector3} offset
- * @param {number} scale
- * @returns {EffectorPosition}
- */
-export function getObjectEffectorWorldPosition(object, offset, scale) {
-  const worldPosition = new Vector3();
-  const worldQuaternion = new Quaternion();
-
-  object.getWorldPosition(worldPosition);
-  object.getWorldQuaternion(worldQuaternion);
-  return {
-    x: (worldPosition.x - offset.x) / scale,
-    y: (worldPosition.y - offset.y) / scale,
-    z: (worldPosition.z - offset.z) / scale,
-    ...quaternionToZYZ(worldQuaternion),
+    position: new Vector3(),
+    rotation: new Quaternion(),
   };
 }
 
 /**
  *
  * @param {Object3D} object
- * @param {EffectorPosition} effectorPosition
- * @param {Vector3} offset
- * @param {number} scale
+ * @returns {ThreePosition}
  */
-export function setObjectEffectorPosition(
-  object,
-  effectorPosition,
-  offset,
-  scale
-) {
-  const { x, y, z, yaw, pitch, roll } = effectorPosition;
-  object.position.x = x * scale + offset.x;
-  object.position.y = y * scale + offset.y;
-  object.position.z = z * scale + offset.z;
+function threePositionFromObjectPosition(object) {
+  return {
+    position: object.position,
+    rotation: object.quaternion,
+  };
+}
 
-  object.setRotationFromQuaternion(createZYZQuaternion(yaw, pitch, roll));
-  object.updateMatrixWorld(true);
+/**
+ *
+ * @param {Object3D} object
+ * @returns {ThreePosition}
+ */
+function threePositionFromObjectWorldPosition(object) {
+  const threePosition = newThreePosition();
+  object.getWorldPosition(threePosition.position);
+  object.getWorldQuaternion(threePosition.rotation);
+  return threePosition;
+}
+
+/**
+ * @param {ThreePosition} threePosition
+ * @param {number} scale
+ * @param {Vector3} offset
+ * @param {EffectorPosition} target
+ * @returns {EffectorPosition}
+ */
+function threeToEffector(threePosition, scale, offset, target) {
+  const { position, rotation } = threePosition;
+
+  target.x = (position.x - offset.x) / scale;
+  target.y = (position.y - offset.y) / scale;
+  target.z = (position.z - offset.z) / scale;
+
+  quaternionToZYZ(rotation, target);
+  return target;
+}
+
+/**
+ * @param {EffectorPosition} effectorPosition
+ * @param {number} scale
+ * @param {Vector3} offset
+ * @param {ThreePosition} target
+ * @returns {ThreePosition}
+ */
+function effectorToThree(effectorPosition, scale, offset, target) {
+  const { position, rotation } = target;
+  position.x = effectorPosition.x * scale + offset.x;
+  position.y = effectorPosition.y * scale + offset.y;
+  position.z = effectorPosition.z * scale + offset.z;
+
+  zyzToQuaternion(
+    effectorPosition.yaw,
+    effectorPosition.pitch,
+    effectorPosition.roll,
+    rotation
+  );
+  return target;
+}
+
+// https://chatgpt.com/c/67e7012d-3e74-800c-aaef-9596397372cd
+
+/**
+ * Combines a flange transform with a tool offset to compute the tool transform.
+ * @param {ThreePosition} flange - The position of the flange.
+ * @param {ThreePosition} toolOffset - The position offset of the tool relative to the flange.
+ * @param {ThreePosition} target
+ * @returns {ThreePosition} The computed tool transform.
+ */
+export function addToolOffset(flange, toolOffset, target) {
+  target.position
+    .copy(toolOffset.position)
+    .applyQuaternion(flange.rotation)
+    .add(flange.position);
+  target.rotation.copy(flange.rotation).multiply(toolOffset.rotation);
+
+  return target;
+}
+
+/**
+ * Computes the flange transform given a tool transform and tool offset.
+ * @param {Vector3} toolPosition - The position of the tool.
+ * @param {Quaternion} toolRotation - The orientation of the tool.
+ * @param {Vector3} toolOffsetPosition - The position offset of the tool relative to the flange.
+ * @param {Quaternion} toolOffsetRotation - The orientation offset of the tool relative to the flange.
+ * @returns {{position: Vector3, orientation: Quaternion}} The computed flange transform.
+ */
+function computeFlangeFromTool(
+  toolPosition,
+  toolRotation,
+  toolOffsetPosition,
+  toolOffsetRotation
+) {
+  // Compute the inverse of the tool orientation
+  const inverseToolRotation = toolOffsetRotation.clone().invert();
+
+  // Compute the flange orientation by reversing the tool transformation
+  const targetRotation = toolRotation.clone().multiply(inverseToolRotation);
+
+  // Compute the inverse rotated tool offset
+  const inverseRotatedToolOffset = toolOffsetPosition
+    .clone()
+    .applyQuaternion(targetRotation.clone().invert());
+
+  // Compute the flange position by subtracting the transformed tool offset
+  const targetPosition = toolPosition.clone().sub(inverseRotatedToolOffset);
+
+  return { position: targetPosition, orientation: targetRotation };
+}
+
+const inverseToolRotation = new Quaternion();
+const inverseTargetRotation = new Quaternion();
+const inverseRotatedToolOffset = new Vector3();
+
+/**
+ * Combines a flange transform with a tool offset to compute the tool transform.
+ * @param {ThreePosition} tool - The position of the flange.
+ * @param {ThreePosition} toolOffset - The position offset of the tool relative to the flange.
+ * @param {ThreePosition} target
+ * @returns {ThreePosition} The computed tool transform.
+ */
+function subtractToolOffset(tool, toolOffset, target) {
+  inverseToolRotation.copy(toolOffset.rotation).invert();
+
+  target.rotation.copy(tool.rotation).multiply(inverseToolRotation);
+
+  inverseTargetRotation.copy(target.rotation).invert();
+
+  inverseRotatedToolOffset
+    .copy(toolOffset.position)
+    .applyQuaternion(target.rotation);
+  // .applyQuaternion(inverseTargetRotation);
+
+  // Compute the flange position by subtracting the transformed tool offset
+  target.position.copy(tool.position).sub(inverseRotatedToolOffset);
+
+  return target;
+}
+
+const inversePos1Rotation = new Quaternion();
+
+// https://chatgpt.com/c/67e70dc3-6574-800c-b13f-1b7c90fad2c6
+/**
+ *
+ * @param {ThreePosition} pos1
+ * @param {ThreePosition} pos2
+ * @param {ThreePosition} target
+ */
+function subtractThreePositions(pos1, pos2, target) {
+  target.position.copy(pos2.position).sub(pos1.position);
+  inversePos1Rotation.copy(pos1.rotation).invert();
+
+  target.rotation.copy(pos2.rotation).multiply(inversePos1Rotation);
+  target.rotation.normalize();
+  return target;
 }
