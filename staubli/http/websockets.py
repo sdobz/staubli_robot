@@ -39,6 +39,10 @@ class WebsocketWrapper:
     def __init__(self, wrapped):
         self.wrapped = wrapped
 
+    @property
+    def in_waiting(self):
+        return self.wrapped.in_waiting
+
     def readline(self):
         response = self.wrapped.readline()
         self.broadcast("readline", response)

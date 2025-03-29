@@ -66,7 +66,8 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
         }
     
     def api_serial(self, data):
-        self.controller.robot.exec(data)
+        self.controller.robot.exec(data["command"])
+        return {}
     
     def api_effector(self, data):
         effector_location = EffectorLocation(

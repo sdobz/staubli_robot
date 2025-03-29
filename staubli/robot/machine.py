@@ -65,6 +65,15 @@ class Robot:
         print((b"> " + l.strip()).decode("ascii"), file=sys.stderr)
         return l
 
+    def _read_unknown(self, timeout):
+        end_time = time.monotonic() + timeout
+        while time.monotonic() < end_time:
+            while self.serial.in_waiting > 0:
+                self.serial.read(self.serial.in_waiting)
+                end_time = time.monotonic() + timeout
+
+            time.sleep(0.05)
+
     def _read_dot(self):
         while True:
             l = self.serial.read(1)
@@ -181,6 +190,10 @@ class Robot:
             self._write_command(f"do drive {joint_number},{delta_angle:3f},{speed}")
             self._readline()
             self._read_dot()
+    
+    def exec(self, command):
+        self._write_command(command)
+        self._read_unknown(2)
 
     def above(self):
         self._write_command("do above")
