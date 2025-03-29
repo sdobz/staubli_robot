@@ -65,6 +65,9 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
             "tool_offset": self._tool_offset()
         }
     
+    def api_serial(self, data):
+        self.controller.robot.exec(data)
+    
     def api_effector(self, data):
         effector_location = EffectorLocation(
             data["x"],

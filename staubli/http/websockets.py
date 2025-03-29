@@ -10,9 +10,7 @@ def broadcast_to_websockets(payload):
     for client in clients:
         try:
             msg = json.dumps(payload)
-            print("sending ws:", msg)
             client.send(msg)
-            print("done.")
         except Exception as e:
             print(e)
             print("disconnected!")

@@ -26,6 +26,18 @@ pre.current {
   gap: var(--pico-form-element-spacing-horizontal);
 }
 
+.vh70 {
+  height: 70vh;
+}
+
+.vh30 {
+  height: 30vh;
+}
+
+.overflow-auto {
+  overflow: auto;
+}
+
 #robot-3d {
   width: 33vw;
   max-height: 100vh;
