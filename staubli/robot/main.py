@@ -1,5 +1,7 @@
 import serial
 import sys
+
+from staubli.http.websockets import WebsocketWrapper
 from .machine import EffectorLocation, Robot
 from .controller import handle_input
 from staubli.config import Config, env_exists
@@ -16,18 +18,18 @@ class Main:
 
     def initialize(self):
         try:
-            self.ser = serial.Serial(
+            self.ser = WebsocketWrapper(serial.Serial(
                 self.config.serial_device,
                 9600,
                 timeout=1,
                 bytesize=8,
                 parity=serial.PARITY_NONE,
                 stopbits=1,
-            )
+            ))
         except Exception as e:
             print(e)
             print("Exception starting serial, starting emulator")
-            self.ser = SerialEmulator()
+            self.ser = WebsocketWrapper(SerialEmulator())
     
         self.robot = Robot(self.ser)
         self.robot.speed(20)

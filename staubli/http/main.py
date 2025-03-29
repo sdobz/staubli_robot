@@ -1,8 +1,11 @@
 import os
 from http.server import HTTPServer
 from functools import partial
+import threading
+import socketserver
 
 from staubli.config import Config, env_exists
+from staubli.http.websockets import start_websocket_server
 from staubli.robot.main import Main, ControllerDelegate
 from staubli.robot.machine import EffectorLocation, JointLocation
 from .router import RoutingStaticHTTPRequestHandler
@@ -108,6 +111,9 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
     def api_reset(self):
         self.controller.on_reset()
 
+class ThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
+    """Threaded HTTP Server."""
+
 def run(server_class: HTTPServer, handler_class: RobotHTTPRequestHandler, config: Config=Config()):
     port = int(config.http_port)
     server_address = ('', port)
@@ -127,8 +133,8 @@ def main():
     env_file = ".env"
     config = Config.from_env(env_file) if env_exists(env_file) else Config()
 
-
-    run(server_class=HTTPServer, handler_class=RobotHTTPRequestHandler, config=config)
+    threading.Thread(target=start_websocket_server, daemon=True).start()
+    run(server_class=ThreadingHTTPServer, handler_class=RobotHTTPRequestHandler, config=config)
 
 if __name__ == '__main__':
     main()
