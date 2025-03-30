@@ -32,7 +32,7 @@ def websocket_handler(ws):
         print("WebSocket client disconnected")
 
 def start_websocket_server():
-    server = websockets.sync.server.serve(websocket_handler, "localhost", 8765)
+    server = websockets.sync.server.serve(websocket_handler, "", 8765)
     server.serve_forever() 
 
 class WebsocketWrapper:

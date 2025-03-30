@@ -133,8 +133,16 @@ class Robot:
     def tool_offset(self) -> EffectorLocation:
         self._write_command("LISTL hand.tool")
         self._readline()
-        tool_line = self._readline()
+        self._readline()
+        potential_dot = self.serial.read(1)
+        if potential_dot == b'.':
+            # No point defined
+            return EffectorLocation(0, 0, 0, 0, 0, 0)
+        name_and_values = self._readline()
         self._read_dot()
+
+        # strip the variable name from the float list
+        tool_line = b" ".join(name_and_values.strip().split(b" ")[1:])
         tool_split = self._parse_floats(tool_line)
 
         return EffectorLocation(
@@ -152,7 +160,7 @@ class Robot:
         self._write_command("do set jog0 = trans(" + effector_location_string + ")")
         self._readline()
         self._read_dot()
-        self._write_command("do move jog0")
+        self._write_command("do moves jog0")
         self._readline()
         self._read_dot()
 
@@ -167,6 +175,15 @@ class Robot:
         self._readline()
         self._read_dot()
     
+    def jog_joint(self, joing_location: JointLocation):
+        joint_location_string = joing_location.format()
+        self._write_command("do set #jog1 = #PPOINT(" + joint_location_string + ")")
+        self._readline()
+        self._read_dot()
+        self._write_command("do move #jog1")
+        self._readline()
+        self._read_dot()
+    
     def tool_transform(self, tool_transform: EffectorLocation):
         tool_transform_string = tool_transform.format()
         self._write_command(
@@ -177,19 +194,6 @@ class Robot:
         self._write_command("TOOL hand.tool")
         self._readline()
         self._read_dot()
-    
-    def jog_joint(self, joint_location: JointLocation):
-        speed = 20
-        where = self.where()
-        delta = joint_location - where[1]
-        for joint_attr in joint_attrs:
-            joint_number = joint_attr[1]
-            delta_angle = getattr(delta, joint_attr)
-            if delta_angle == 0:
-                continue
-            self._write_command(f"do drive {joint_number},{delta_angle:3f},{speed}")
-            self._readline()
-            self._read_dot()
     
     def exec(self, command):
         self._write_command(command)

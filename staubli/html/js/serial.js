@@ -25,7 +25,7 @@ createComponent({
     </article>
   `,
   stateFn: () => {
-    const socket = new WebSocket("ws://localhost:8765");
+    const socket = new WebSocket(`ws://${location.hostname}:8765`);
     /** @type readonly [() => WebsocketMessage[], (set: WebsocketMessage[]) => void] */
     const [messages, setMessages] = createSignal([]);
     socket.onmessage = (event) => {

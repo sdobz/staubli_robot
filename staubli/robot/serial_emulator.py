@@ -9,7 +9,7 @@ class SerialEmulator:
     joint_location = JointLocation(-0.000, -90.001, 89.993, 0.000, -0.000, -0.005)
     effector_location = EffectorLocation(-0.077, 0.000, 985.000, 179.999, 0.008, 179.995)
     jog0_location = EffectorLocation(-0.077, 0.000, 985.000, 179.999, 0.008, 179.995)
-    tool_location = EffectorLocation(0.000, 0.000, 0.000, 0.000, 0.000, 0.000)
+    tool_location = None
     monitor_speed = 100
     buffer = ""
     baud = 9600
@@ -44,22 +44,32 @@ class SerialEmulator:
             return
         if cmd.startswith("do set jog0"):
             print(">>> setting jog0")
-            self.handle_set_jog(cmd)
+            self.handle_set_jog0(cmd)
             self.buffer = "<emulator set jog0 response>\n."
             return
-        if cmd.startswith("do move jog0"):
+        if cmd.startswith("do moves jog0"):
             print(">>> moving to jog0")
-            self.handle_do_move()
-            self.buffer = "<emulator move jog0 response>\n."
+            self.handle_do_moves()
+            self.buffer = "<emulator moves jog0 response>\n."
+            return
+        if cmd.startswith("do set #jog1"):
+            print(">>> setting #jog1")
+            self.handle_set_jog1(cmd)
+            self.buffer = "<emulator set #jog1 response>\n."
+            return
+        if cmd.startswith("do move #jog1"):
+            print(">>> moving to #jog1")
+            self.handle_do_move_precise()
+            self.buffer = "<emulator move #jog1 response>\n."
             return
         if cmd.startswith("do set hand.tool"):
             print(">>> setting hand.tool point")
             self.handle_set_tool(cmd)
-            self.buffer = "<emulator set hand.tool response>\n."
+            self.buffer = "<emulator set hand tool response>\n."
             return
         if cmd.startswith("TOOL hand.tool"):
             print(">>> setting tool hand.tool")
-            self.buffer = "<emulator TOOL hand.tool response>\n."
+            self.buffer = "<emulator tool response>\n."
             return
         if cmd.startswith("do drive "):
             self.handle_do_drive(cmd)
@@ -76,10 +86,18 @@ class SerialEmulator:
                 .""")
             return
         if cmd.startswith("LISTL hand.tool"):
+            if self.tool_location is None:
+                print(">>> concocting empty LISTL")
+                self.buffer = dedent(f"""\
+                 
+                 X/J1      Y/J2      Z/J3      y/J4      p/J5      r/J6
+                .""")
+                return
             print(">>> concocting LISTL")
             self.buffer = dedent(f"""\
-                X.jt1 y/jt2 z/jt3 y/jt4 p/jt5 r/jt6
-                {self.tool_location.x:3f}   {self.tool_location.y:3f}   {self.tool_location.z:3f}   {self.tool_location.yaw:3f}   {self.tool_location.pitch:3f}   {self.tool_location.roll:3f}
+                 
+                 X/J1      Y/J2      Z/J3      y/J4      p/J5      r/J6
+                 hand.tool {self.tool_location.x:3f}   {self.tool_location.y:3f}   {self.tool_location.z:3f}   {self.tool_location.yaw:3f}   {self.tool_location.pitch:3f}   {self.tool_location.roll:3f}
                 .""")
             return
         if cmd.startswith("do above"):
@@ -104,12 +122,19 @@ class SerialEmulator:
             <unknown command line 2>
         .""")
     
-    def handle_set_jog(self, cmd):
+    def handle_set_jog0(self, cmd):
         pattern = r"trans\(([^)]+)\)"
         match = re.search(pattern, cmd)
         if match:
             values = list(map(float, match.group(1).split(',')))
             self.jog0_location = EffectorLocation(*values)
+    
+    def handle_set_jog1(self, cmd):
+        pattern = r"PPOINT\(([^)]+)\)"
+        match = re.search(pattern, cmd)
+        if match:
+            values = list(map(float, match.group(1).split(',')))
+            self.jog1_location = JointLocation(*values)
     
     def handle_set_tool(self, cmd):
         pattern = r"trans\(([^)]+)\)"
@@ -118,7 +143,7 @@ class SerialEmulator:
             values = list(map(float, match.group(1).split(',')))
             self.tool_location = EffectorLocation(*values)
     
-    def handle_do_move(self):
+    def handle_do_moves(self):
         delta = self.effector_location - self.jog0_location
 
         angle_distance = max(abs(delta.yaw), abs(delta.pitch), abs(delta.roll))
@@ -129,6 +154,23 @@ class SerialEmulator:
         print(f">>> moving {linear_distance}mm and {angle_distance}deg ({ms_delay}ms)")
         time.sleep(ms_delay / 1000)
         self.effector_location = self.jog0_location
+
+    def handle_do_move_precise(self):
+        delta = self.joint_location - self.jog1_location
+
+        angle_distance = max(
+            abs(delta.j1),
+            abs(delta.j2),
+            abs(delta.j3),
+            abs(delta.j4),
+            abs(delta.j5),
+            abs(delta.j6)
+        )
+
+        ms_delay = angle_distance / self.monitor_speed
+        print(f">>> moving {angle_distance}deg ({ms_delay}ms)")
+        time.sleep(ms_delay / 1000)
+        self.joint_location = self.jog1_location
 
     def handle_do_drive(self, cmd):
         drive, delta, command_speed = "".join(cmd.split(" ")[2:]).split(",")

@@ -103,7 +103,10 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
             data["roll"]
         )
         self.controller.robot.tool_transform(tool_location)
-        return self.api_tool_offset()
+        return {
+            "position": self._position(),
+            "tool_offset": self._tool_offset()
+        }
 
     def api_elbow(self):
         self.controller.on_elbow()
