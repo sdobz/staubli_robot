@@ -173,16 +173,22 @@ export class Kinematics {
    * @returns {EffectorPosition}
    */
   determineToolOffset(renderSource) {
+    // https://chatgpt.com/c/67e9861b-0920-800c-9f3a-84b648c0d9bb
     const toolPosition = threePositionFromObjectPosition(renderSource.tool);
-    const flangePosition = threePositionFromObjectWorldPosition(
-      renderSource.attachmentPoint()
+    toolPosition.position = toolPosition.position.clone(); // worldToLocal mutates this value
+    toolPosition.rotation = toolPosition.rotation.clone(); // premultiply mutates this value
+
+    const flange = renderSource.attachmentPoint();
+    const flangeRotation = new Quaternion();
+    flange.getWorldQuaternion(flangeRotation);
+    const inverseFlangeRotation = flangeRotation.invert();
+
+    flange.worldToLocal(toolPosition.position);
+    toolPosition.rotation = toolPosition.rotation.premultiply(
+      inverseFlangeRotation
     );
 
-    const toolOffsetThree = subtractThreePositions(
-      flangePosition,
-      toolPosition,
-      newThreePosition()
-    );
+    const toolOffsetThree = toolPosition;
     return threeToEffector(
       toolOffsetThree,
       mmToM,
@@ -529,23 +535,5 @@ function subtractToolOffset(tool, toolOffset, target) {
   // Compute the flange position by subtracting the transformed tool offset
   target.position.copy(tool.position).sub(inverseRotatedToolOffset);
 
-  return target;
-}
-
-const inversePos1Rotation = new Quaternion();
-
-// https://chatgpt.com/c/67e70dc3-6574-800c-b13f-1b7c90fad2c6
-/**
- *
- * @param {ThreePosition} pos1
- * @param {ThreePosition} pos2
- * @param {ThreePosition} target
- */
-function subtractThreePositions(pos1, pos2, target) {
-  target.position.copy(pos2.position).sub(pos1.position);
-  inversePos1Rotation.copy(pos1.rotation).invert();
-
-  target.rotation.copy(pos2.rotation).multiply(inversePos1Rotation);
-  target.rotation.normalize();
   return target;
 }
