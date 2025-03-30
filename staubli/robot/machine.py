@@ -133,8 +133,16 @@ class Robot:
     def tool_offset(self) -> EffectorLocation:
         self._write_command("LISTL hand.tool")
         self._readline()
-        tool_line = self._readline()
+        self._readline()
+        potential_dot = self.serial.read(1)
+        if potential_dot == b'.':
+            # No point defined
+            return EffectorLocation(0, 0, 0, 0, 0, 0)
+        name_and_values = self._readline()
         self._read_dot()
+
+        # strip the variable name from the float list
+        tool_line = b" ".join(name_and_values.strip().split(b" ")[1:])
         tool_split = self._parse_floats(tool_line)
 
         return EffectorLocation(

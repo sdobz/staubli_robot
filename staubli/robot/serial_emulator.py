@@ -9,7 +9,7 @@ class SerialEmulator:
     joint_location = JointLocation(-0.000, -90.001, 89.993, 0.000, -0.000, -0.005)
     effector_location = EffectorLocation(-0.077, 0.000, 985.000, 179.999, 0.008, 179.995)
     jog0_location = EffectorLocation(-0.077, 0.000, 985.000, 179.999, 0.008, 179.995)
-    tool_location = EffectorLocation(0.000, 0.000, 0.000, 0.000, 0.000, 0.000)
+    tool_location = None
     monitor_speed = 100
     buffer = ""
     baud = 9600
@@ -55,11 +55,11 @@ class SerialEmulator:
         if cmd.startswith("do set hand.tool"):
             print(">>> setting hand.tool point")
             self.handle_set_tool(cmd)
-            self.buffer = "<emulator set hand.tool response>\n."
+            self.buffer = "<emulator set hand tool response>\n."
             return
         if cmd.startswith("TOOL hand.tool"):
             print(">>> setting tool hand.tool")
-            self.buffer = "<emulator TOOL hand.tool response>\n."
+            self.buffer = "<emulator tool response>\n."
             return
         if cmd.startswith("do drive "):
             self.handle_do_drive(cmd)
@@ -76,10 +76,18 @@ class SerialEmulator:
                 .""")
             return
         if cmd.startswith("LISTL hand.tool"):
+            if self.tool_location is None:
+                print(">>> concocting empty LISTL")
+                self.buffer = dedent(f"""\
+                 
+                 X/J1      Y/J2      Z/J3      y/J4      p/J5      r/J6
+                .""")
+                return
             print(">>> concocting LISTL")
             self.buffer = dedent(f"""\
-                X.jt1 y/jt2 z/jt3 y/jt4 p/jt5 r/jt6
-                {self.tool_location.x:3f}   {self.tool_location.y:3f}   {self.tool_location.z:3f}   {self.tool_location.yaw:3f}   {self.tool_location.pitch:3f}   {self.tool_location.roll:3f}
+                 
+                 X/J1      Y/J2      Z/J3      y/J4      p/J5      r/J6
+                 hand.tool {self.tool_location.x:3f}   {self.tool_location.y:3f}   {self.tool_location.z:3f}   {self.tool_location.yaw:3f}   {self.tool_location.pitch:3f}   {self.tool_location.roll:3f}
                 .""")
             return
         if cmd.startswith("do above"):
