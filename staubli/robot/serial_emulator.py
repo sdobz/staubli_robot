@@ -13,6 +13,11 @@ class SerialEmulator:
     monitor_speed = 100
     buffer = ""
     baud = 9600
+
+    @property
+    def in_waiting(self):
+        return len(self.buffer)
+
     def readline(self):
         print(">>> serial.readline()")
         buffer_lines = self.buffer.split("\n")
@@ -51,9 +56,11 @@ class SerialEmulator:
             print(">>> setting hand.tool point")
             self.handle_set_tool(cmd)
             self.buffer = "<emulator set hand.tool response>\n."
+            return
         if cmd.startswith("TOOL hand.tool"):
             print(">>> setting tool hand.tool")
             self.buffer = "<emulator TOOL hand.tool response>\n."
+            return
         if cmd.startswith("do drive "):
             self.handle_do_drive(cmd)
             self.buffer = "<emulator do drive response>\n."
@@ -89,6 +96,13 @@ class SerialEmulator:
                 <high power line 1>
                 <high power line 2>
                 .""")
+            return
+        
+        print(">>> unknown command")
+        self.buffer = dedent("""\
+            <unknown command line 1>
+            <unknown command line 2>
+        .""")
     
     def handle_set_jog(self, cmd):
         pattern = r"trans\(([^)]+)\)"

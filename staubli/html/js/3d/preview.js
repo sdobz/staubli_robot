@@ -60,7 +60,7 @@ export class RobotPreview {
     await this.#animatePlans(constraints, starts, stops, (positions) => {
       const currentJoints = jointPositionFromArray(positions);
       this.control.kinematics.applyJointPosition(currentJoints, this.control);
-      this.control.kinematics.applyEffectorFromJointPosition(this.control);
+      this.control.kinematics.applyEffectorFromJointPosition(this.control, initialState.tool_offset);
       this.control.world.render();
     });
 
@@ -98,6 +98,7 @@ export class RobotPreview {
       this.control.kinematics.applyJointsFromEffectorPosition(
         this.control,
         currentEffector,
+        initialState.tool_offset,
         this.control
       );
       this.control.world.render();

@@ -1,6 +1,7 @@
 { pkgs, ... }: let
   pythonPackages = ps: with ps; [
     pyserial
+    websockets
     setuptools
   ];
 in rec {
