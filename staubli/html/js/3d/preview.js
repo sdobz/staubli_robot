@@ -36,10 +36,22 @@ export class RobotPreview {
         await this.#accelEffector(command.data);
         break;
       case "tool":
+        const currentState = this.state();
+        this.control.kinematics.applyEffectorFromJointPosition(
+          this.control,
+          command.data
+        );
         this.setState({
-          ...this.state(),
-          tool_offset: command.data
-        })
+          ...currentState,
+          tool_offset: command.data,
+          position: {
+            joints: currentState.position.joints,
+            effector: this.control.kinematics.determineEffectorPosition(
+              this.control
+            ),
+          },
+        });
+        break;
     }
   }
 
@@ -60,7 +72,10 @@ export class RobotPreview {
     await this.#animatePlans(constraints, starts, stops, (positions) => {
       const currentJoints = jointPositionFromArray(positions);
       this.control.kinematics.applyJointPosition(currentJoints, this.control);
-      this.control.kinematics.applyEffectorFromJointPosition(this.control, initialState.tool_offset);
+      this.control.kinematics.applyEffectorFromJointPosition(
+        this.control,
+        initialState.tool_offset
+      );
       this.control.world.render();
     });
 
@@ -127,7 +142,7 @@ export class RobotPreview {
 
     return new Promise((resolve, reject) => {
       const startTime = performance.now();
-      const finishTime = startTime + duration * 1000
+      const finishTime = startTime + duration * 1000;
       /**
        * @param {DOMHighResTimeStamp} currentTime
        */
