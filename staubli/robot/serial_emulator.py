@@ -4,10 +4,13 @@ import time
 import re
 import math
 
+INITIAL_JOINT_LOCATION = JointLocation(-0.000, -90.001, 89.993, 0.000, -0.000, -0.005)
+INITIAL_EFFECTOR_LOCATION = EffectorLocation(-0.077, 0.000, 985.000, 179.999, 0.008, 179.995)
+
 class SerialEmulator:
     # Derived from a "where" after a "do ready"
-    joint_location = JointLocation(-0.000, -90.001, 89.993, 0.000, -0.000, -0.005)
-    effector_location = EffectorLocation(-0.077, 0.000, 985.000, 179.999, 0.008, 179.995)
+    joint_location = INITIAL_JOINT_LOCATION
+    effector_location = INITIAL_EFFECTOR_LOCATION
     jog0_location = EffectorLocation(-0.077, 0.000, 985.000, 179.999, 0.008, 179.995)
     tool_location = None
     monitor_speed = 100
@@ -114,6 +117,12 @@ class SerialEmulator:
                 <high power line 1>
                 <high power line 2>
                 .""")
+            return
+        if cmd.startswith("do ready"):
+            print(">>> resetting")
+            self.buffer = "<ready>\n."
+            self.joint_location = INITIAL_JOINT_LOCATION
+            self.effector_location = INITIAL_EFFECTOR_LOCATION
             return
         
         print(">>> unknown command")
