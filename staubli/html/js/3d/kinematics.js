@@ -279,7 +279,7 @@ export class Kinematics {
     }
     const solver = this._solver;
 
-    const settleIterations = 5;
+    const settleIterations = 10;
     let isConverged = false;
     for (let i = 0; i < settleIterations; i++) {
       // update drive goals from the new location

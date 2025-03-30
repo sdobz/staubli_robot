@@ -42,11 +42,11 @@ import { createSignal } from "../lib/state.js";
 //  */
 // function nameRobot(r) {
 //   console.log("Naming robot", globalRobotIndex)
-//   r.name = `robot-${globalRobotIndex}`
+//   r.debugName = `robot-${globalRobotIndex}`
 //   let localRobotIndex = 0
 
 //   r.traverse(c => {
-//     c.name = `robot-${globalRobotIndex}-${localRobotIndex}`
+//     c.debugName = `robot-${globalRobotIndex}-${localRobotIndex}`
 //   })
 
 //   globalRobotIndex += 1
@@ -152,6 +152,7 @@ export class RobotControl {
     this.urdfRoot = urdfRoot;
     /**@type {URDFRobot} */
     this.robot = urdfRoot.clone(true);
+    // nameRobot(this.robot)
 
     /**@type {Mesh} */
     this.tool = toolRoot.clone(true);
@@ -168,10 +169,11 @@ export class RobotControl {
    * @param {Kinematics} kinematics
    * @param {RobotModeEnum} mode
    * @param {EffectorPosition} toolOffset
+   * @param {RobotControl} predecessor
    * @param {CommandType} [commandType]
    * @param {JogState} [jogState]
    */
-  update(kinematics, mode, toolOffset, commandType, jogState) {
+  update(kinematics, mode, toolOffset, predecessor, commandType, jogState) {
     this.kinematics = kinematics;
     const isMoveCommand =
       commandType === "effector" || commandType === "joints";
@@ -229,7 +231,7 @@ export class RobotControl {
         jogState?.mode === "translate-effector");
 
     if (effectorControlEnabled) {
-      const controls = this.#setupToolControl(toolOffset);
+      const controls = this.#setupToolControl(predecessor, toolOffset);
       controls.setSpace(jogState.space);
       if (jogState.mode === "rotate-effector") {
         controls.setMode("rotate");
@@ -357,9 +359,10 @@ export class RobotControl {
 
   /**
    *
+   * @param {RobotControl} predecessor
    * @param {EffectorPosition} toolOffset
    */
-  #setupToolControl(toolOffset) {
+  #setupToolControl(predecessor, toolOffset) {
     if (this.transformControls) {
       return this.transformControls;
     }
@@ -369,7 +372,7 @@ export class RobotControl {
       this.world.renderer.domElement
     );
     this.transformControls.addEventListener("change", () => {
-      this.kinematics.applyJointsFromTool(this, toolOffset, this);
+      this.kinematics.applyJointsFromTool(predecessor, toolOffset, this);
       this.world.render();
     });
     this.transformControls.addEventListener("dragging-changed", (event) => {
