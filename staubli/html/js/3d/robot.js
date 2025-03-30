@@ -218,7 +218,7 @@ export class RobotControl {
     });
 
     if (dragControlsEnabled) {
-      this.#setupURDFControl();
+      this.#setupURDFControl(toolOffset);
     } else {
       this.#removeURDFControl();
     }
@@ -268,7 +268,12 @@ export class RobotControl {
     return link;
   }
 
-  #setupURDFControl() {
+  /**
+   *
+   * @param {EffectorPosition} toolOffset
+   * @returns
+   */
+  #setupURDFControl(toolOffset) {
     if (this.dragControls) {
       return;
     }
@@ -327,6 +332,7 @@ export class RobotControl {
     };
     dragControls.updateJoint = (joint, angle) => {
       this.robot.joints?.[joint.name].setJointValue(angle);
+      this.kinematics.applyEffectorFromJointPosition(this, toolOffset);
       this.world.render();
     };
     dragControls.onHover = (joint) => {
@@ -350,8 +356,8 @@ export class RobotControl {
   }
 
   /**
-   * 
-   * @param {EffectorPosition} toolOffset 
+   *
+   * @param {EffectorPosition} toolOffset
    */
   #setupToolControl(toolOffset) {
     if (this.transformControls) {
@@ -420,7 +426,7 @@ export class RobotControl {
       this.world.orbit.enabled = true;
     });
 
-    return this.offsetControls
+    return this.offsetControls;
   }
 
   #removeOffsetControl() {
