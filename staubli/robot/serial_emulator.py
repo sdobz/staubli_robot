@@ -80,9 +80,9 @@ class SerialEmulator:
             self.buffer = dedent(f"""\
                 
                 X         Y         Z         y         p         r       Hand
-                {self.effector_location.x:3f}   {self.effector_location.y:3f}   {self.effector_location.z:3f}   {self.effector_location.yaw:3f}   {self.effector_location.pitch:3f}   {self.effector_location.roll:3f}   0.000
+                {self.effector_location.x:.3f}   {self.effector_location.y:.3f}   {self.effector_location.z:.3f}   {self.effector_location.yaw:.3f}   {self.effector_location.pitch:.3f}   {self.effector_location.roll:.3f}   0.000
                 J1        J2        J3        J4        J5        J6
-                {self.joint_location.j1:3f}   {self.joint_location.j2:3f}   {self.joint_location.j3:3f}   {self.joint_location.j4:3f}   {self.joint_location.j5:3f}   {self.joint_location.j6:3f}
+                {self.joint_location.j1:.3f}   {self.joint_location.j2:.3f}   {self.joint_location.j3:.3f}   {self.joint_location.j4:.3f}   {self.joint_location.j5:.3f}   {self.joint_location.j6:.3f}
                 .""")
             return
         if cmd.startswith("LISTL hand.tool"):
@@ -97,7 +97,7 @@ class SerialEmulator:
             self.buffer = dedent(f"""\
                  
                  X/J1      Y/J2      Z/J3      y/J4      p/J5      r/J6
-                 hand.tool {self.tool_location.x:3f}   {self.tool_location.y:3f}   {self.tool_location.z:3f}   {self.tool_location.yaw:3f}   {self.tool_location.pitch:3f}   {self.tool_location.roll:3f}
+                 hand.tool {self.tool_location.x:.3f}   {self.tool_location.y:.3f}   {self.tool_location.z:.3f}   {self.tool_location.yaw:.3f}   {self.tool_location.pitch:.3f}   {self.tool_location.roll:.3f}
                 .""")
             return
         if cmd.startswith("do above"):
