@@ -8,15 +8,16 @@ import {
   setJogState,
 } from "./state.js";
 import { setToolProperties, STOCK_TOOLS } from "../3d/robot.js";
+import { commandRobotRef } from "../3d/viewport.js";
 
 /** @import { JogMode, JogSpace } from './state.js' */
-/** @import { EffectorPosition } from '../robot-types' */
+/** @import { EffectorPosition, JointPosition } from '../robot-types' */
 
 createComponent({
-  tag: "robot-position-editor",
+  tag: "jog-mode-editor",
   template: html`
     <article class="vertical-stack">
-      <h3>Viewport Jog Mode</h3>
+      <h4>Viewport Jog Mode</h4>
       <div role="group">
         <button data-mode="translate-effector">Translate</button>
         <button data-mode="rotate-effector">Rotate</button>
@@ -64,7 +65,10 @@ createComponent({
           attributes: {
             "aria-current": ariaCurrentMode(forMode),
             // ugh, tech debt
-            "disabled": forMode === "drag-joint" && currentCommand?.type === "tool" ? "true" : undefined
+            disabled:
+              forMode === "drag-joint" && currentCommand?.type === "tool"
+                ? "true"
+                : undefined,
           },
         },
       };
@@ -190,11 +194,171 @@ createComponent({
 });
 
 createComponent({
+  tag: "joint-position-editor",
+  observedAttributes: ["j1", "j2", "j3", "j4", "j5", "j6"],
+  template: html`
+    <div class="vertical-stack">
+      <div class="horizontal-stack">
+        <label class="horizontal-label">
+          J1
+          <input class="joint-position-editor-j1" />
+        </label>
+        <label class="horizontal-label">
+          J2
+          <input class="joint-position-editor-j2" />
+        </label>
+        <label class="horizontal-label">
+          J3
+          <input class="joint-position-editor-j3" />
+        </label>
+      </div>
+      <div class="horizontal-stack">
+        <label class="horizontal-label">
+          J4
+          <input class="joint-position-editor-j4" />
+        </label>
+        <label class="horizontal-label">
+          J5
+          <input class="joint-position-editor-j5" />
+        </label>
+        <label class="horizontal-label">
+          J6
+          <input class="joint-position-editor-j6" />
+        </label>
+      </div>
+    </div>
+  `,
+  attrsFn: (_state, attrs, element) => {
+    // @ts-ignore
+    element.value = {
+      j1: parseFloat(attrs.j1),
+      j2: parseFloat(attrs.j2),
+      j3: parseFloat(attrs.j3),
+      j4: parseFloat(attrs.j4),
+      j5: parseFloat(attrs.j5),
+      j6: parseFloat(attrs.j6),
+    };
+
+    function makeHandler(field) {
+      return {
+        [`.joint-position-editor-${field}`]: {
+          properties: {
+            // @ts-ignore
+            value: element.value[field],
+          },
+          eventListeners: {
+            change: (e) => {
+              // @ts-ignore
+              element.value[field] = parseFloat(e.target.value);
+              e.stopPropagation();
+              element.dispatchEvent(new Event("change"));
+            },
+          },
+        },
+      };
+    }
+
+    return {
+      ...makeHandler("j1"),
+      ...makeHandler("j2"),
+      ...makeHandler("j3"),
+      ...makeHandler("j4"),
+      ...makeHandler("j5"),
+      ...makeHandler("j6"),
+    };
+  },
+});
+
+createComponent({
+  tag: "robot-position-editor",
+  template: html`
+    <article class="vertical-stack">
+      <h2>Robot Position Editor</h2>
+      <jog-mode-editor></jog-mode-editor>
+      <effector-position-editor></effector-position-editor>
+      <joint-position-editor></joint-position-editor>
+    </article>
+  `,
+  attrsFn: (state, attrs) => {
+    const currentProgrammerState = programmerState();
+    const currentProgram = program();
+    const currentCommand =
+      currentProgram.commands[currentProgrammerState.selectedIndex];
+    const effectorPosition = currentCommand._derivedState.position.effector;
+    const jointPosition = currentCommand._derivedState.position.joints;
+
+    function onChangeEffectorPosition(e) {
+      // TODO: tech debt. stinky!
+      const robot = commandRobotRef.commandRobot;
+      if (!robot) {
+        return;
+      }
+      /** @type {EffectorPosition} */
+      const newEffectorPosition = e.target.value;
+
+      robot.kinematics.applyEffectorPosition(newEffectorPosition, robot);
+      robot.kinematics.applyJointsFromEffectorPosition(
+        commandRobotRef.commandRobot,
+        newEffectorPosition,
+        currentCommand._derivedState.tool_offset,
+        commandRobotRef.commandRobot
+      );
+      robot.kinematics.updateCommand(robot);
+    }
+
+    function onChangeJointPosition(e) {
+      const robot = commandRobotRef.commandRobot;
+      if (!robot) {
+        return;
+      }
+      /** @type {JointPosition} */
+      const newJointPosition = e.target.value;
+
+      robot.kinematics.applyJointPosition(newJointPosition, robot);
+      robot.kinematics.applyEffectorFromJointPosition(
+        commandRobotRef.commandRobot,
+        currentCommand._derivedState.tool_offset
+      );
+      robot.kinematics.updateCommand(robot);
+    }
+
+    return {
+      "effector-position-editor": {
+        attributes: {
+          x: effectorPosition.x.toFixed(3),
+          y: effectorPosition.y.toFixed(3),
+          z: effectorPosition.z.toFixed(3),
+          yaw: effectorPosition.yaw.toFixed(3),
+          pitch: effectorPosition.pitch.toFixed(3),
+          roll: effectorPosition.roll.toFixed(3),
+        },
+        eventListeners: {
+          change: onChangeEffectorPosition,
+        },
+      },
+      "joint-position-editor": {
+        attributes: {
+          j1: jointPosition.j1.toFixed(3),
+          j2: jointPosition.j2.toFixed(3),
+          j3: jointPosition.j3.toFixed(3),
+          j4: jointPosition.j4.toFixed(3),
+          j5: jointPosition.j5.toFixed(3),
+          j6: jointPosition.j6.toFixed(3),
+        },
+        eventListeners: {
+          change: onChangeJointPosition,
+        },
+      },
+    };
+  },
+});
+
+createComponent({
   tag: "tool-offset-editor",
   template: html`
     <article class="vertical-stack">
       <h2>Tool Offset Editor</h2>
-      <robot-position-editor></robot-position-editor>
+      <jog-mode-editor></jog-mode-editor>
       <select class="tool-display" aria-label="Tool Display" required></select>
       <effector-position-editor></effector-position-editor>
     </article>
@@ -225,7 +389,7 @@ createComponent({
     }
 
     function onSelectToolDisplay(e) {
-      setToolProperties(STOCK_TOOLS[e.target.value])
+      setToolProperties(STOCK_TOOLS[e.target.value]);
     }
     const displayIndex = state.selectedDisplayIndex();
 

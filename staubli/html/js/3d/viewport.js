@@ -19,6 +19,10 @@ const robot3DTemplate = html` <div id="robot-3d"></div> `;
 export const previewRobotRef = {
   previewRobot: null,
 };
+/** @type {{commandRobot: RobotControl | null}} */
+export const commandRobotRef = {
+  commandRobot: null,
+};
 
 class Robot3D extends HTMLElement {
   constructor() {
@@ -123,6 +127,7 @@ class Robot3D extends HTMLElement {
 
     let previousRobot = currentRobot;
     let previousState = currentRobotState;
+    commandRobotRef.commandRobot = null;
     currentSequence.commands.forEach((currentCommand, index) => {
       let nextState = previousState;
       const robot = popRobot();
@@ -173,18 +178,18 @@ class Robot3D extends HTMLElement {
           },
         };
       }
+      const isSelected = index === currentProgrammerState.selectedIndex;
+      if (isSelected) {
+        commandRobotRef.commandRobot = robot;
+      }
 
       robot.update(
         kinematics,
         "ghost",
         nextState.tool_offset,
         previousRobot,
-        index === currentProgrammerState.selectedIndex
-          ? currentCommand.type
-          : undefined,
-        index === currentProgrammerState.selectedIndex
-          ? currentJogState
-          : undefined
+        isSelected ? currentCommand.type : undefined,
+        isSelected ? currentJogState : undefined
       );
 
       previousRobot = robot;
