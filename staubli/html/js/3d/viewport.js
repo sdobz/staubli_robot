@@ -11,17 +11,24 @@ import { robot } from "../robot.js";
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { Object3D, Mesh } from 'three' */
 
-/** @import { JointPosition, EffectorPosition } from '../robot-types.d.ts' */
+/** @import { JointPosition, EffectorPosition, Command, RobotState } from '../robot-types.d.ts' */
+
+/**
+ * @typedef {Object} DerivedState
+ * @prop {Command} command
+ * @prop {RobotState} state
+ * @prop {RobotControl} robot
+ */
+
+/** @type {readonly [() => DerivedState[], (set: DerivedState[]) => void]} */
+const [derivedState, setDerivedState] = createSignal([]);
+export { derivedState };
 
 const robot3DTemplate = html` <div id="robot-3d"></div> `;
 
 /** @type {{previewRobot: RobotControl | null}} */
 export const previewRobotRef = {
   previewRobot: null,
-};
-/** @type {{commandRobot: RobotControl | null}} */
-export const commandRobotRef = {
-  commandRobot: null,
 };
 
 class Robot3D extends HTMLElement {
@@ -127,7 +134,8 @@ class Robot3D extends HTMLElement {
 
     let previousRobot = currentRobot;
     let previousState = currentRobotState;
-    commandRobotRef.commandRobot = null;
+    /** @type {DerivedState[]} */
+    let nextDerivedState = [];
     currentSequence.commands.forEach((currentCommand, index) => {
       let nextState = previousState;
       const robot = popRobot();
@@ -179,9 +187,6 @@ class Robot3D extends HTMLElement {
         };
       }
       const isSelected = index === currentProgrammerState.selectedIndex;
-      if (isSelected) {
-        commandRobotRef.commandRobot = robot;
-      }
 
       robot.update(
         kinematics,
@@ -192,9 +197,13 @@ class Robot3D extends HTMLElement {
         isSelected ? currentJogState : undefined
       );
 
+      nextDerivedState.push({
+        command: currentCommand,
+        robot: robot,
+        state: nextState,
+      });
+
       previousRobot = robot;
-      // This is some BS rederivation. Derived state should be its own signal (that... could be used to updateRobots?)
-      currentCommand._derivedState = nextState;
       previousState = nextState;
     });
 
@@ -202,6 +211,7 @@ class Robot3D extends HTMLElement {
       previousRobots.pop().dispose();
     }
 
+    setDerivedState(nextDerivedState);
     this.world.render();
   }
 

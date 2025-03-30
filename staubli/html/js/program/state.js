@@ -2,6 +2,7 @@ import { getItem, listItems, removeItem, setItem } from "../lib/storage.js";
 import { createSignal } from "../lib/state.js";
 import { bindParam } from "../lib/url.js";
 import { robot } from "../robot.js";
+import { derivedState } from "../3d/viewport.js";
 
 /**
  * @typedef {"translate-effector" | "rotate-effector" | "drag-joint"} JogMode
@@ -143,11 +144,11 @@ export function addCommand() {
   const currentProgram = program();
 
   let currentIndex = currentProgrammerState.selectedIndex;
-  const currentCommand = currentProgram.commands[currentIndex];
-  if (!currentCommand) {
+  const derived = derivedState()[currentIndex]
+  if (!derived) {
     currentIndex = -1;
   }
-  const deriveFromState = currentCommand?._derivedState || robot().state();
+  const deriveFromState = derived?.state || robot().state();
 
   if (!deriveFromState) {
     console.error("Add command without position");

@@ -1,6 +1,5 @@
 interface CommandMeta {
   name: string;
-  _derivedState?: RobotState;
 }
 
 export interface EffectorPosition {

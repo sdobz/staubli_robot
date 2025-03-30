@@ -8,7 +8,7 @@ import {
   setJogState,
 } from "./state.js";
 import { setToolProperties, STOCK_TOOLS } from "../3d/robot.js";
-import { commandRobotRef } from "../3d/viewport.js";
+import { derivedState } from "../3d/viewport.js";
 
 /** @import { JogMode, JogSpace } from './state.js' */
 /** @import { EffectorPosition, JointPosition } from '../robot-types' */
@@ -281,43 +281,36 @@ createComponent({
   `,
   attrsFn: (state, attrs) => {
     const currentProgrammerState = programmerState();
-    const currentProgram = program();
-    const currentCommand =
-      currentProgram.commands[currentProgrammerState.selectedIndex];
-    const effectorPosition = currentCommand._derivedState.position.effector;
-    const jointPosition = currentCommand._derivedState.position.joints;
+    const derived = derivedState()[currentProgrammerState.selectedIndex];
+    if (!derived) {
+      return {};
+    }
+    const effectorPosition = derived.state.position.effector;
+    const jointPosition = derived.state.position.joints;
+    const robot = derived.robot;
 
     function onChangeEffectorPosition(e) {
-      // TODO: tech debt. stinky!
-      const robot = commandRobotRef.commandRobot;
-      if (!robot) {
-        return;
-      }
       /** @type {EffectorPosition} */
       const newEffectorPosition = e.target.value;
 
       robot.kinematics.applyEffectorPosition(newEffectorPosition, robot);
       robot.kinematics.applyJointsFromEffectorPosition(
-        commandRobotRef.commandRobot,
+        robot,
         newEffectorPosition,
-        currentCommand._derivedState.tool_offset,
-        commandRobotRef.commandRobot
+        derived.state.tool_offset,
+        robot
       );
       robot.kinematics.updateCommand(robot);
     }
 
     function onChangeJointPosition(e) {
-      const robot = commandRobotRef.commandRobot;
-      if (!robot) {
-        return;
-      }
       /** @type {JointPosition} */
       const newJointPosition = e.target.value;
 
       robot.kinematics.applyJointPosition(newJointPosition, robot);
       robot.kinematics.applyEffectorFromJointPosition(
-        commandRobotRef.commandRobot,
-        currentCommand._derivedState.tool_offset
+        robot,
+        derived.state.tool_offset
       );
       robot.kinematics.updateCommand(robot);
     }
