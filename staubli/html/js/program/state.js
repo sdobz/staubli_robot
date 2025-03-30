@@ -1,5 +1,6 @@
 import { getItem, listItems, removeItem, setItem } from "../lib/storage.js";
 import { createSignal } from "../lib/state.js";
+import { bindParam } from "../lib/url.js";
 import { robot } from "../robot.js";
 
 /**
@@ -146,8 +147,7 @@ export function addCommand() {
   if (!currentCommand) {
     currentIndex = -1;
   }
-  const deriveFromState =
-    currentCommand?._derivedState || robot().state();
+  const deriveFromState = currentCommand?._derivedState || robot().state();
 
   if (!deriveFromState) {
     console.error("Add command without position");
@@ -176,11 +176,13 @@ export function addCommand() {
       newCommand = {
         name: defaultProgramName(),
         type: "tool",
-        data: deriveFromState.tool_offset
-      }
+        data: deriveFromState.tool_offset,
+      };
       break;
     default:
-      throw new Error(`Unknown command type: ${currentProgrammerState.commandToAdd}`)
+      throw new Error(
+        `Unknown command type: ${currentProgrammerState.commandToAdd}`
+      );
   }
 
   const oldCommands = currentProgram.commands;
@@ -191,7 +193,7 @@ export function addCommand() {
     ...oldCommands.slice(currentIndex + 1),
   ];
 
-  const selectedIndex = currentIndex + 1
+  const selectedIndex = currentIndex + 1;
 
   setProgram({
     ...currentProgram,
@@ -254,6 +256,7 @@ export function loadProgram(id) {
   setProgrammerState(initialProgrammerState);
 }
 
+
 export function deleteProgram() {
   const currentProgram = program();
   if (currentProgram.id) {
@@ -262,6 +265,29 @@ export function deleteProgram() {
   }
   setProgram(initialProgram);
 }
+
+// Order on params is important:
+// When history is popped
+// first update program
+//  causing the programmer state to revert to "initial" (resetting selected index)
+// then update index
+bindParam(
+  "program",
+  () => program().id || "",
+  (newProgramId) =>
+    newProgramId === "" ? setProgram(initialProgram) : loadProgram(newProgramId)
+);
+
+bindParam(
+  "index",
+  () => programmerState().selectedIndex.toString(),
+  (newIndexStr) =>
+    setProgrammerState({
+      ...programmerState(),
+      selectedIndex: parseInt(newIndexStr) || 0,
+    })
+);
+
 
 /**
  * Performs a deep merge of objects and returns new object. Does not modify
