@@ -94,7 +94,7 @@ class Robot:
         self.serial.write(command.encode("ascii") + b"\r")
 
     def speed(self, speed):
-        self._write_command(f"speed {speed:2f}")
+        self._write_command(f"speed {speed:.2f}")
         self._readline()
         self._read_dot()
 

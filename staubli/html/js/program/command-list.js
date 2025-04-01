@@ -18,7 +18,6 @@ createComponent({
           <th scope="col">select</th>
           <th scope="col">name</th>
           <th scope="col">type</th>
-          <th scope="col">speed</th>
           <th scope="col">delete</th>
         </tr>
       </thead>
@@ -31,6 +30,7 @@ createComponent({
           <option selected value="joints">Joint Position</option>
           <option value="effector">Linear Move</option>
           <option value="tool">Tool Offset</option>
+          <option value="speed">Speed</option>
         </select>
         <button class="add-command">Add</button>
       </div>
@@ -128,7 +128,6 @@ createComponent({
         </td>
         <th scope="row">${command.name}</th>
         <td>${command.type}</td>
-        <td>...</td>
         <td><button class="command-delete">X</button></td>
       </tr>
     `
@@ -136,7 +135,9 @@ createComponent({
       .join("\n");
 
     const busyDisabled = isBusy ? "true" : undefined;
-    const selectedDisabled = !currentProgram.commands[currentState.selectedIndex]
+    const selectedDisabled = !currentProgram.commands[
+      currentState.selectedIndex
+    ]
       ? "true"
       : undefined;
 

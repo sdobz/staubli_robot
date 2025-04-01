@@ -144,7 +144,7 @@ export function addCommand() {
   const currentProgram = program();
 
   let currentIndex = currentProgrammerState.selectedIndex;
-  const derived = derivedState()[currentIndex]
+  const derived = derivedState()[currentIndex];
   if (!derived) {
     currentIndex = -1;
   }
@@ -178,6 +178,13 @@ export function addCommand() {
         name: defaultProgramName(),
         type: "tool",
         data: deriveFromState.tool_offset,
+      };
+      break;
+    case "speed":
+      newCommand = {
+        name: defaultProgramName(),
+        type: "speed",
+        data: { speed: deriveFromState.speed },
       };
       break;
     default:
@@ -257,7 +264,6 @@ export function loadProgram(id) {
   setProgrammerState(initialProgrammerState);
 }
 
-
 export function deleteProgram() {
   const currentProgram = program();
   if (currentProgram.id) {
@@ -288,7 +294,6 @@ bindParam(
       selectedIndex: parseInt(newIndexStr) || 0,
     })
 );
-
 
 /**
  * Performs a deep merge of objects and returns new object. Does not modify

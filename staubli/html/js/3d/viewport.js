@@ -140,7 +140,6 @@ class Robot3D extends HTMLElement {
       let nextState = previousState;
       const robot = popRobot();
 
-      // This order is important: kinematics derives one from the other
       if (currentCommand.type === "joints") {
         kinematics.applyJointPosition(currentCommand.data, robot);
         kinematics.applyEffectorFromJointPosition(robot, nextState.tool_offset);
@@ -184,6 +183,14 @@ class Robot3D extends HTMLElement {
             effector: nextEffectorPosition,
             joints: nextState.position.joints,
           },
+        };
+      } else if (currentCommand.type === "speed") {
+        kinematics.applyJointPosition(nextState.position.joints, robot);
+        kinematics.applyEffectorPosition(nextState.position.effector, robot);
+
+        nextState = {
+          ...nextState,
+          speed: currentCommand.data.speed,
         };
       }
       const isSelected = index === currentProgrammerState.selectedIndex;

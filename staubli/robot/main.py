@@ -32,6 +32,7 @@ class Main:
             self.ser = WebsocketWrapper(SerialEmulator())
     
         self.robot = Robot(self.ser)
+        # TODO: unify initial speed
         self.robot.speed(20)
 
     def loop(self):
@@ -46,17 +47,24 @@ angles = [5, 10, 15, 30, 45]
 
 class ControllerDelegate:
     robot: Robot
+    speed: float
     positions: list[EffectorLocation] = None
 
     def __init__(self, robot, ser):
         self.robot = robot
         self.ser = ser
+        # TODO: unify initial speed
+        self.speed = 20
         self.distance = 100
         self.angle_index = 4
         self.elbow = "above"
         self.positions = read()
         print(self.positions)
         self.positions_index = 0
+    
+    def set_speed(self, new_speed: float):
+        self.speed = new_speed
+        self.robot.speed(new_speed)
 
     def angle_step(self):
         return angles[self.angle_index]

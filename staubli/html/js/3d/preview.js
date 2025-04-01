@@ -35,6 +35,12 @@ export class RobotPreview {
       case "effector":
         await this.#accelEffector(command.data);
         break;
+      case "speed":
+        this.setState({
+          ...this.state(),
+          speed: command.data.speed,
+        });
+        break;
       case "tool":
         const currentState = this.state();
         this.control.kinematics.applyEffectorFromJointPosition(
@@ -65,7 +71,7 @@ export class RobotPreview {
 
     const constraints = {
       maxAcceleration: 10,
-      maxVelocity: 100,
+      maxVelocity: initialState.speed * 5,
     };
     const starts = jointPositionToArray(initialJoints);
     const stops = jointPositionToArray(jointPosition);
@@ -100,7 +106,7 @@ export class RobotPreview {
 
     const constraints = {
       maxAcceleration: 50,
-      maxVelocity: 500,
+      maxVelocity: initialState.speed * 25,
     };
     const starts = effectorPositionToArray(initialEffector);
     const stops = effectorPositionToArray(effectorPosition);
