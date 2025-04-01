@@ -98,7 +98,7 @@ createComponent({
     function doTogglePreview() {
       if (isPreview) {
         setRobot(robotApi);
-      } else {
+      } else if (currentPreviewRobot !== null) {
         setRobot(new RobotPreview(currentPreviewRobot, currentRobot.state()));
       }
     }
@@ -108,7 +108,7 @@ createComponent({
      */
     function makePlaybackHandler(playback) {
       return () => {
-        if (isBusy) return;
+        if (isBusy && playback !== "stopped") return;
 
         setProgrammerState({
           ...currentState,
@@ -130,6 +130,9 @@ createComponent({
     ]
       ? "true"
       : undefined;
+    const stoppedDisabled =
+      currentState.playback === "stopped" ? "true" : undefined;
+
     return {
       ".sequence-play": {
         attributes: {
@@ -149,7 +152,7 @@ createComponent({
       },
       ".sequence-stop": {
         attributes: {
-          disabled: emptyDisabled || busyDisabled,
+          disabled: emptyDisabled || stoppedDisabled,
         },
         eventListeners: {
           click: doStop,
