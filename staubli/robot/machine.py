@@ -20,7 +20,7 @@ class EffectorLocation:
         return EffectorLocation(l[0], l[1], l[2], l[3], l[4], l[5])
 
     def format(self) -> str:
-        return f"{self.x:3f}, {self.y:3f}, {self.z:3f}, {self.yaw:3f}, {self.pitch:3f}, {self.roll:3f}"
+        return f"{self.x:.3f}, {self.y:.3f}, {self.z:.3f}, {self.yaw:.3f}, {self.pitch:.3f}, {self.roll:.3f}"
     
     def __sub__(self, other):
         return EffectorLocation(
@@ -44,7 +44,7 @@ class JointLocation:
     j6: float
 
     def format(self) -> str:
-        return f"{self.j1:3f}, {self.j2:3f}, {self.j3:3f}, {self.j4:3f}, {self.j5:3f}, {self.j6:3f}"
+        return f"{self.j1:.3f}, {self.j2:.3f}, {self.j3:.3f}, {self.j4:.3f}, {self.j5:.3f}, {self.j6:.3f}"
 
     def __sub__(self, other):
         return JointLocation(

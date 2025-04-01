@@ -1,7 +1,7 @@
 import { Vector3, ArrowHelper } from "three";
 
 import { html } from "../lib/component.js";
-import { createEffect, createSignal } from "../lib/state.js";
+import { createEffect, createSignal, untrack } from "../lib/state.js";
 import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot.js";
 import { program, programmerState, jogState } from "../program/state.js";
 import { World } from "./world.js";
@@ -11,13 +11,25 @@ import { robot } from "../robot.js";
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { Object3D, Mesh } from 'three' */
 
-/** @import { JointPosition, EffectorPosition } from '../robot-types.d.ts' */
+/** @import { JointPosition, EffectorPosition, Command, RobotState } from '../robot-types.d.ts' */
+
+/**
+ * @typedef {Object} DerivedState
+ * @prop {Command} command
+ * @prop {RobotState} state
+ * @prop {RobotControl} robot
+ */
+
+/** @type {readonly [() => DerivedState[], (set: DerivedState[]) => void]} */
+const [derivedState, setDerivedState] = createSignal([]);
+export { derivedState };
 
 const robot3DTemplate = html` <div id="robot-3d"></div> `;
 
-/** @type readonly [() => RobotControl | null, (set: RobotControl) => void] */
-const [previewRobotControl, setPreviewRobotControl] = createSignal(null);
-export { previewRobotControl };
+/** @type {{previewRobot: RobotControl | null}} */
+export const previewRobotRef = {
+  previewRobot: null,
+};
 
 class Robot3D extends HTMLElement {
   constructor() {
@@ -81,7 +93,6 @@ class Robot3D extends HTMLElement {
     const currentSequence = program();
     const currentProgrammerState = programmerState();
     const currentJogState = jogState();
-    const previewRobot = previewRobotControl();
 
     if (!currentRobotState?.position) {
       return;
@@ -104,12 +115,13 @@ class Robot3D extends HTMLElement {
 
     const currentPosition = currentRobotState.position;
     if (!currentPosition.effector || !currentPosition.joints) {
-      console.error("Missing current poistion");
+      console.error("Missing current position");
+      return;
     }
 
     const currentRobot = popRobot();
-    if (previewRobot !== currentRobot) {
-      setPreviewRobotControl(currentRobot);
+    if (previewRobotRef.previewRobot !== currentRobot) {
+      previewRobotRef.previewRobot = currentRobot;
     }
     currentRobot.update(
       kinematics,
@@ -122,6 +134,8 @@ class Robot3D extends HTMLElement {
 
     let previousRobot = currentRobot;
     let previousState = currentRobotState;
+    /** @type {DerivedState[]} */
+    let nextDerivedState = [];
     currentSequence.commands.forEach((currentCommand, index) => {
       let nextState = previousState;
       const robot = popRobot();
@@ -155,38 +169,41 @@ class Robot3D extends HTMLElement {
           },
         };
       } else if (currentCommand.type === "tool") {
-        const nextToolOffset = currentCommand.data
+        const nextToolOffset = currentCommand.data;
         kinematics.applyJointPosition(nextState.position.joints, robot);
         // Update effector position to keep robot joints stationary for the next state
         kinematics.applyEffectorFromJointPosition(robot, nextToolOffset);
 
-        const nextEffectorPosition = kinematics.determineEffectorPosition(robot)
+        const nextEffectorPosition =
+          kinematics.determineEffectorPosition(robot);
 
         nextState = {
           ...nextState,
           tool_offset: nextToolOffset,
           position: {
             effector: nextEffectorPosition,
-            joints: nextState.position.joints
-          }
-        }
+            joints: nextState.position.joints,
+          },
+        };
       }
+      const isSelected = index === currentProgrammerState.selectedIndex;
 
       robot.update(
         kinematics,
         "ghost",
         nextState.tool_offset,
-        index === currentProgrammerState.selectedIndex
-          ? currentCommand.type
-          : undefined,
-        index === currentProgrammerState.selectedIndex
-          ? currentJogState
-          : undefined
+        previousRobot,
+        isSelected ? currentCommand.type : undefined,
+        isSelected ? currentJogState : undefined
       );
 
+      nextDerivedState.push({
+        command: currentCommand,
+        robot: robot,
+        state: nextState,
+      });
+
       previousRobot = robot;
-      // This is some BS rederivation. Derived state should be its own signal (that... could be used to updateRobots?)
-      currentCommand._derivedState = nextState;
       previousState = nextState;
     });
 
@@ -194,6 +211,7 @@ class Robot3D extends HTMLElement {
       previousRobots.pop().dispose();
     }
 
+    setDerivedState(nextDerivedState);
     this.world.render();
   }
 

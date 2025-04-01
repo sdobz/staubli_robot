@@ -3,7 +3,7 @@ import { createEffect } from "../lib/state.js";
 import { program, programmerState, setProgrammerState } from "./state.js";
 import { createComponent, html } from "../lib/component.js";
 import { RobotPreview } from "../3d/preview.js";
-import { previewRobotControl } from "../3d/viewport.js";
+import { previewRobotRef } from "../3d/viewport.js";
 
 /** @import { PlaybackEnum, ProgrammerState } from "./state.js" */
 
@@ -77,29 +77,29 @@ createComponent({
   tag: "playback-control",
   template: html`
     <div class="horizontal-stack">
-    <label>
-      <input type="checkbox" name="preview" class="sequence-preview" />
-      Preview
-    </label>
-    <div role="group">
-      <button class="sequence-jog">jog</button>
-      <button class="sequence-play">play</button>
-      <button class="sequence-stop">stop</button>
-    </div>
+      <label>
+        <input type="checkbox" name="preview" class="sequence-preview" />
+        Preview
+      </label>
+      <div role="group">
+        <button class="sequence-jog">jog</button>
+        <button class="sequence-play">play</button>
+        <button class="sequence-stop">stop</button>
+      </div>
     </div>
   `,
   attrsFn: () => {
     const currentState = programmerState();
     const currentSequence = program();
-    const currentRobot = robot()
-    const currentPreviewRobot = previewRobotControl()
+    const currentRobot = robot();
+    const currentPreviewRobot = previewRobotRef.previewRobot;
 
-    const isPreview = currentRobot.name === "preview"
+    const isPreview = currentRobot.name === "preview";
     function doTogglePreview() {
       if (isPreview) {
-        setRobot(robotApi)
+        setRobot(robotApi);
       } else {
-        setRobot(new RobotPreview(currentPreviewRobot, currentRobot.state()))
+        setRobot(new RobotPreview(currentPreviewRobot, currentRobot.state()));
       }
     }
 
@@ -158,7 +158,7 @@ createComponent({
       ".sequence-preview": {
         attributes: {
           disabled: busyDisabled,
-          checked: isPreview ? "checked" : undefined
+          checked: isPreview ? "checked" : undefined,
         },
         eventListeners: {
           change: doTogglePreview,
