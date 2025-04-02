@@ -54,7 +54,7 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
             "position": self._position(),
             "tool_offset": self._tool_offset(),
             "elbow": self.controller.elbow,
-            "speed": 20
+            "speed": self.controller.speed
         }
     def api_position(self):
         return {
@@ -106,6 +106,12 @@ class RobotHTTPRequestHandler(RoutingStaticHTTPRequestHandler):
         return {
             "position": self._position(),
             "tool_offset": self._tool_offset()
+        }
+    
+    def api_speed(self, data):
+        self.controller.set_speed(data["speed"])
+        return {
+            "speed": self.controller.speed
         }
 
     def api_elbow(self):

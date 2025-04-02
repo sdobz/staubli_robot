@@ -33,6 +33,11 @@ export interface ToolCommand extends CommandMeta {
   data: EffectorPosition;
 }
 
+export interface SpeedCommand extends CommandMeta {
+  type: "speed";
+  data: { speed: number };
+}
+
 export interface SerialCommand extends CommandMeta {
   type: "serial";
   data: { command: string };
@@ -42,6 +47,7 @@ export type Command =
   | EffectorCommand
   | JointsCommand
   | ToolCommand
+  | SpeedCommand
   | SerialCommand;
 export type CommandType = Command["type"];
 

@@ -421,6 +421,51 @@ createComponent({
 });
 
 createComponent({
+  tag: "speed-editor",
+  template: html`
+    <article>
+      <h2>Speed Editor</h2>
+      <label class="horizontal-label">
+        Speed
+        <input class="speed-editor-input" />
+      </label>
+    </article>
+  `,
+  attrsFn: (_state, _attrs, _element) => {
+    const currentProgrammerState = programmerState();
+    const currentProgram = program();
+    const currentCommand =
+      currentProgram.commands[currentProgrammerState.selectedIndex];
+    if (!currentCommand || currentCommand.type !== "speed") {
+      return {};
+    }
+    return {
+      ".speed-editor-input": {
+        properties: {
+          value: currentCommand.data.speed.toString(),
+        },
+        eventListeners: {
+          change: (e) => {
+            // @ts-ignore
+            const value = e.target.value;
+            const floatValue = parseFloat(value);
+            if (isNaN(value)) {
+              return;
+            }
+            patchCommand({
+              type: "speed",
+              data: {
+                speed: floatValue,
+              },
+            });
+          },
+        },
+      },
+    };
+  },
+});
+
+createComponent({
   tag: "command-editor",
   template: html` <div class="command-editor"></div> `,
   attrsFn: (_state, attrs) => {
@@ -437,6 +482,9 @@ createComponent({
         break;
       case "tool":
         editor = "<tool-offset-editor></tool-offset-editor>";
+        break;
+      case "speed":
+        editor = "<speed-editor></speed-editor>";
         break;
       default:
         editor =

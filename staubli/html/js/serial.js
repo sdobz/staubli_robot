@@ -70,9 +70,16 @@ createComponent({
       setPendingCommand(e.target.value);
     }
 
+    function onKeypress(e) {
+      if (e.key === "Enter") {
+        onChangePendingCommand(e);
+        doSendCommand();
+      }
+    }
+
     function doSendCommand() {
       if (busy()) {
-        return
+        return;
       }
       setBusy(true);
       robot()
@@ -81,7 +88,7 @@ createComponent({
           name: "adhoc",
           data: {
             command: pendingCommand(),
-          }
+          },
         })
         .then(() => {
           setPendingCommand("");
@@ -89,7 +96,7 @@ createComponent({
         });
     }
 
-    const busyDisabled = busy() ? "true" : undefined
+    const busyDisabled = busy() ? "true" : undefined;
 
     return {
       pre: {
@@ -97,18 +104,19 @@ createComponent({
       },
       ".monitor-input": {
         attributes: {
-          disabled: busyDisabled
+          disabled: busyDisabled,
         },
         properties: {
           value: pendingCommand(),
         },
         eventListeners: {
           change: onChangePendingCommand,
+          keypress: onKeypress,
         },
       },
       ".monitor-send": {
         attributes: {
-          disabled: busyDisabled
+          disabled: busyDisabled,
         },
         eventListeners: {
           click: doSendCommand,
