@@ -1,3 +1,7 @@
+![screenshot of the software](writeup/07-implementation/overview.png)
+
+![picture of a yellow robot arm on a black fabricated base with a yellow concrete counterweight](writeup/02-fabricating-base/09-mounted.jpg)
+
 ## Building a new SD image on Windows
 
 1. Environment setup:
