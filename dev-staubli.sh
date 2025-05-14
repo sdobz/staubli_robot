@@ -7,7 +7,7 @@ source .env
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR"
 
-UPLOAD_USER="$(whoami)"
+UPLOAD_USER="staubli"
 
 echo "Sending local files to /home/$UPLOAD_USER/staubli"
 

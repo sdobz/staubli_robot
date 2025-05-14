@@ -73,6 +73,7 @@
         pkgs.rsync
         pkgs.curl
         pkgs.typescript
+        pkgs.git-crypt
       ];
       shellHook = ''
         if [ -e .venv ] && [ ! -L .venv ]; then
