@@ -106,6 +106,9 @@ Joint interpolation uses 6 axes based on the joint angle. Linear interpolation u
 
 ![playback video](07-implementation/playback.mp4)
 
+https://github.com/user-attachments/assets/b8d4f3e3-3c05-4f84-905b-40f87e6f1066
+
+
 If you observe the wrist joint during the first move you can see a rapid twist due to gimbal lock. This will likely overspeed the robot joint causing it to halt. Adding intermediate points can prevent this.
 
 The preview robot is implemented using the same interface as the actual robot, so the "playback" code doesn't care or even know what type of robot it is playing back into
@@ -137,6 +140,9 @@ This should probably be addressed with an invisible off screen robot used purely
 Here is a shot using this software to control the robot
 
 ![an orbit shot using the tool offset command](./07-implementation/in-practice.mp4)
+
+https://github.com/user-attachments/assets/7325dca0-d2af-4d30-a481-9bf5befac03a
+
 
 ## Status and Next Steps
 
