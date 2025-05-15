@@ -6,7 +6,7 @@
 4. [Boot Disk SD Emulation](./03-stabilizing.md)
 5. [Prototype Software](./04-prototype-requirements.md)
 6. [Software Operations](./05-operating-system.md)
-7. **[Dependencies](./06-framework-and-dependencies.md)**
+7. &gt; **[Dependencies](./06-framework-and-dependencies.md)** &lt;
 8. [Implementation](./07-implementation.md)
 
 ## Dependencies

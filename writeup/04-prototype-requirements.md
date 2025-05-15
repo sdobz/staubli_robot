@@ -4,7 +4,7 @@
 2. [Transport & Rigging](./01-commissioning.md)
 3. [Fabricating Base](./02-fabricating-base.md)
 4. [Boot Disk SD Emulation](./03-stabilizing.md)
-5. **[Prototype Software](./04-prototype-requirements.md)**
+5. &gt; **[Prototype Software](./04-prototype-requirements.md)** &lt;
 6. [Software Operations](./05-operating-system.md)
 7. [Dependencies](./06-framework-and-dependencies.md)
 8. [Implementation](./07-implementation.md)

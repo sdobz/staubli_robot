@@ -3,7 +3,7 @@
 1. [Motivation](./00-context.md)
 2. [Transport & Rigging](./01-commissioning.md)
 3. [Fabricating Base](./02-fabricating-base.md)
-4. **[Boot Disk SD Emulation](./03-stabilizing.md)**
+4. &gt; **[Boot Disk SD Emulation](./03-stabilizing.md)** &lt;
 5. [Prototype Software](./04-prototype-requirements.md)
 6. [Software Operations](./05-operating-system.md)
 7. [Dependencies](./06-framework-and-dependencies.md)

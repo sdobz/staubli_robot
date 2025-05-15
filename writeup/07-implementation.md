@@ -7,7 +7,7 @@
 5. [Prototype Software](./04-prototype-requirements.md)
 6. [Software Operations](./05-operating-system.md)
 7. [Dependencies](./06-framework-and-dependencies.md)
-8. **[Implementation](./07-implementation.md)**
+8. &gt; **[Implementation](./07-implementation.md)** &lt;
 
 The premise of the new control system is to present a visual example of the robots movement before triggering it, and to use familiar and resilient strategies to build it.
 

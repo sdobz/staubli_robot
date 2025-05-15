@@ -1,6 +1,6 @@
 # Chapters
 
-1. **[Motivation](./00-context.md)**
+1. &gt; **[Motivation](./00-context.md)** &lt;
 2. [Transport & Rigging](./01-commissioning.md)
 3. [Fabricating Base](./02-fabricating-base.md)
 4. [Boot Disk SD Emulation](./03-stabilizing.md)
