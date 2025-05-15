@@ -1,3 +1,14 @@
+# Chapters
+
+1. [Motivation](./00-context.md)
+2. [Transport & Rigging](./01-commissioning.md)
+3. [Fabricating Base](./02-fabricating-base.md)
+4. [Boot Disk SD Emulation](./03-stabilizing.md)
+5. [Prototype Software](./04-prototype-requirements.md)
+6. [Software Operations](./05-operating-system.md)
+7. [Dependencies](./06-framework-and-dependencies.md)
+8. **[Implementation](./07-implementation.md)**
+
 The premise of the new control system is to present a visual example of the robots movement before triggering it, and to use familiar and resilient strategies to build it.
 
 There are 5 major features
@@ -8,6 +19,7 @@ There are 5 major features
 5. Playback sequence
 
 ![overview of the robot software](07-implementation/overview.png)
+
 ## Displaying the robot state
 
 When a user visits the robot web interface the browser requests the current state. This is translated into serial commands, which are executed and the results parsed by the web server. The results are combined into a single robot state object, which is "pushed" onto a Robot instance
@@ -147,4 +159,3 @@ This program is enough to serve my needs of basic video capture motion control. 
  - Scenes
 	 - Adding props to the scene for motion planning
 	 - Collision checking
-

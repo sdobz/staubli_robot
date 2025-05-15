@@ -1,3 +1,14 @@
+# Chapters
+
+1. [Motivation](./00-context.md)
+2. [Transport & Rigging](./01-commissioning.md)
+3. [Fabricating Base](./02-fabricating-base.md)
+4. [Boot Disk SD Emulation](./03-stabilizing.md)
+5. **[Prototype Software](./04-prototype-requirements.md)**
+6. [Software Operations](./05-operating-system.md)
+7. [Dependencies](./06-framework-and-dependencies.md)
+8. [Implementation](./07-implementation.md)
+
 # Prototype
 
 Building a prototype is the fastest way I know to build an intuitive understanding of the requirements of a project.
@@ -97,3 +108,5 @@ The requirements evolved over time as I built the abstractions, as always I wish
 	1. Preview or playback on robot
 	2. Visualize result of command
 	3. Run selected command
+
+Next: [Software Operations](./05-operating-system.md)

@@ -1,3 +1,14 @@
+# Chapters
+
+1. [Motivation](./00-context.md)
+2. [Transport & Rigging](./01-commissioning.md)
+3. [Fabricating Base](./02-fabricating-base.md)
+4. [Boot Disk SD Emulation](./03-stabilizing.md)
+5. [Prototype Software](./04-prototype-requirements.md)
+6. [Software Operations](./05-operating-system.md)
+7. **[Dependencies](./06-framework-and-dependencies.md)**
+8. [Implementation](./07-implementation.md)
+
 ## Dependencies
 
 An important and early decision in any software project are foundational dependencies. They are present for so long that they tend to leak abstractions into the rest of the code, and in practice I've found it's easier to lean INTO this rather than try to add extra layers of indirection.
@@ -112,6 +123,9 @@ curl "https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/+esm" --output "$VENDOR_DIR/j
 The **U**nified **R**obot **D**escription **F**ormat is a standard way to describe the kinematics of robots, including joints, constraints, collisions, and visualization. Two projects really helped me out, the [URDFLoader](https://github.com/gkjohnson/urdf-loaders) which takes the path to a urdf file and loads it into a three.js scene, and [closed-chain-ik-js](https://github.com/gkjohnson/closed-chain-ik-js) which uses the same structure to perform inverse kinematics (determine joint angles in order to position the end effector in a certain place)
 
 The publicly available [Staubli TX90](https://github.com/Daniella1/urdf_files_dataset/tree/main/urdf_files/ros-industrial/xacro_generated/staubli/staubli_tx90_support) URDF definition is close enough to be useful, but isn't exactly the same. A few hours in FreeCAD and some reference to the manual allowed me to update it to an exact geometric match and an approximate visual match
+
 ## Result
 
 With a predictable way to include a very small and stable set of dependencies I am free to write code knowing that no matter what happens to any of those projects my code will not break. In the future it doesn't matter if the ecosystem has moved from `webpack` to `vite` to `esbuild`, and it doesn't matter if the author of `left-pad` removes their repository and causes a cascading chain of dependencies to fail to resolve.
+
+Next: [Implementation](./07-implementation.md)

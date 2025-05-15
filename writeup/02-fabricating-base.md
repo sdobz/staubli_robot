@@ -1,3 +1,14 @@
+# Chapters
+
+1. [Motivation](./00-context.md)
+2. [Transport & Rigging](./01-commissioning.md)
+3. **[Fabricating Base](./02-fabricating-base.md)**
+4. [Boot Disk SD Emulation](./03-stabilizing.md)
+5. [Prototype Software](./04-prototype-requirements.md)
+6. [Software Operations](./05-operating-system.md)
+7. [Dependencies](./06-framework-and-dependencies.md)
+8. [Implementation](./07-implementation.md)
+
 
 ## Base Design
 
@@ -59,3 +70,5 @@ Removing the form inspired another moment of joy. From computer to real life wit
 
 ![the concrete painted yellow inside the frame](02-fabricating-base/09-mounted.jpg)
 And here it is painted and mounted. Not shown is the awful process of finishing the concrete with a wire wheel, or trying to spread an entire can of spraypaint as the desiccated concrete slurped down the moisture.
+
+Next: [Boot Disk SD Emulation](./03-stabilizing.md)
