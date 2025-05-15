@@ -35,7 +35,10 @@ I was confident the rafter could support the vertical load, but the horizontal c
 ![dad stabilizing the control as it is lifted](01-commissioning/the-lift.jpg)
 
 
-![the robot slowly moving around](01-commissioning/first-movements.mp4)
+[the robot slowly moving around](01-commissioning/first-movements.mp4)
+
+https://github.com/user-attachments/assets/e50dc4a0-271b-4eff-9987-065219d239a7
+
 Using a leftover VFD and a quick trip to the hardware store for plugs I was able to get power to the robot and perform the first movements. Very slowly. It's just sitting balanced on the ground, spooky!
 
 Next: [Fabricating Base](./02-fabricating-base.md)
