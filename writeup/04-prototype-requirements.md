@@ -69,6 +69,9 @@ Using these commands the following sequence was filmed 2025-1-11:
 
 ![side-by-side video of the robot picking up a pen and placing it in my hand](04-basic-abstraction/side-by-side.small.mp4)
 
+https://github.com/user-attachments/assets/e8f775e8-f3c6-49d3-a50c-a1353270b132
+
+
 https://www.youtube.com/shorts/R6g0adGWjnk
 
 ## Prototype Issues
