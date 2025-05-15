@@ -18,5 +18,30 @@ This repo includes four components:
 7. [Dependencies](./writeup/06-framework-and-dependencies.md)
 8. [Implementation](./writeup/07-implementation.md)
 
+## Software media
+
+Screenshot of the robot control software in browser:
+
 ![screenshot of the software](writeup/07-implementation/overview.png)
+
+Trajectory simulation:
+
+https://github.com/user-attachments/assets/b8d4f3e3-3c05-4f84-905b-40f87e6f1066
+
+## Hardware media
+
+Robot on fabricated base with counterweight:
+
 ![picture of a yellow robot arm on a black fabricated base with a yellow concrete counterweight](writeup/02-fabricating-base/09-mounted.jpg)
+
+Multi step path with human interaction:
+
+https://github.com/user-attachments/assets/e8f775e8-f3c6-49d3-a50c-a1353270b132
+
+
+Playback using tool offset to create an orbit effect:
+
+https://github.com/user-attachments/assets/7325dca0-d2af-4d30-a481-9bf5befac03a
+
+
+
