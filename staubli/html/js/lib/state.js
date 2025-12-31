@@ -10,7 +10,7 @@ export function untrack(fn) {
     return res;
 }
 
-function cleanup(observer) {
+export function cleanup(observer) {
     for (const dep of observer.dependencies) {
         dep.delete(observer);
     }
@@ -46,13 +46,17 @@ export function createEffect(fn) {
         execute() {
             cleanup(effect);
             context.push(effect);
-            fn();
-            context.pop();
+            try {
+                fn();
+            } finally {
+                context.pop();
+            }
         },
         dependencies: new Set()
     }
 
     effect.execute();
+    return () => cleanup(effect);
 }
 
 /**
