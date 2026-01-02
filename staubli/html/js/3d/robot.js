@@ -12,7 +12,7 @@ import {
   Object3D,
 } from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
-import URDFLoader from "urdf-loader/URDFLoader.js";
+import URDFLoader from "urdf-loader";
 import {
   currentInactiveMaterial,
   effectorMaterial,
@@ -21,16 +21,16 @@ import {
   highlightMaterial,
   selectedMaterial,
 } from "./world.js";
-import { PointerURDFDragControls } from "urdf-loader/URDFDragControls.js";
-import { TransformControls } from "three/addons/controls/TransformControls.js";
+import { PointerURDFDragControls } from "urdf-loader/src/URDFDragControls.js";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 import { Kinematics } from "./kinematics.js";
 import { createSignal } from "../lib/state.js";
 
-/** @import { URDFJoint, URDFRobot, URDFLink } from "urdf-loader/URDFClasses"; */
+/** @import { URDFJoint, URDFRobot, URDFLink } from "urdf-loader"; */
 /** @import { Position, JointPosition, EffectorPosition, RobotState, Command, CommandType } from '../robot-types' */
 /** @import { JogState } from "../program/state.js" */
-/** @import { World } from "./world" */
+/** @import { World } from "./world.js" */
 
 /** @typedef {"current" | "current-ghost" | "ghost"} RobotModeEnum */
 

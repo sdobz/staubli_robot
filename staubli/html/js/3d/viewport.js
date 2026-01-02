@@ -1,6 +1,6 @@
 import { Vector3, ArrowHelper } from "three";
 
-import { html } from "../lib/component.js";
+import { html } from "../lib/component.ts";
 import { createEffect, createSignal, untrack } from "../lib/state.js";
 import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot.js";
 import { program, programmerState, jogState } from "../program/state.js";

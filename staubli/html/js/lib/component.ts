@@ -1,66 +1,54 @@
-// A component:
-/*
-Is a function that returns a map of css selector to attrs
-And a template
-That defines a custom element
-
-When attrs are set on the element:
-
-Runs the function
-Selects each key
-Updates attrs for values
-*/
-
 import { createEffect, createSignal } from "./state.js";
 
-/** @type {(strings: TemplateStringsArray) => HTMLTemplateElement} */
-export function html(strings) {
+export function html(strings: TemplateStringsArray): HTMLTemplateElement {
   const templateElement = document.createElement("template");
   templateElement.innerHTML = strings.join("");
   return templateElement;
 }
 
-/**
- * @typedef {Record<string, {
- *   innerHTML?: string,
- *   attributes?: Record<string, string | undefined>,
- *   eventListeners?: Record<string, (e: Event) => void>,
- *   properties?: Record<string, any>
- * }>} AttrMap
- */
+export type AttrMap = Record<
+  string,
+  {
+    innerHTML?: string;
+    attributes?: Record<string, string | undefined>;
+    eventListeners?: Record<string, (e: Event) => void>;
+    properties?: Record<string, any>;
+  }
+>;
 
-/** @type {<S>(setup: {tag: string, opts?: ElementDefinitionOptions, observedAttributes?: string[], template: HTMLTemplateElement, stateFn?: () => S, attrsFn: (state: S, attrs: Record<string, string>, element: HTMLElement) => AttrMap}) => void} */
-export function createComponent({
+export function createComponent<S>({
   tag,
   opts,
   observedAttributes,
   template,
   stateFn,
   attrsFn,
-}) {
+}: {
+  tag: string;
+  opts?: ElementDefinitionOptions;
+  observedAttributes?: string[];
+  template: HTMLTemplateElement;
+  stateFn?: () => S;
+  attrsFn: (state: S | undefined, attrs: Record<string, string>, element: HTMLElement) => AttrMap;
+}): void {
   class Component extends HTMLElement {
     static observedAttributes = observedAttributes;
-    eventListeners = [];
+    eventListeners: Array<{ element: Element; type: string; listener: EventListenerOrEventListenerObject }> = [];
+    attrsSignal!: () => Record<string, string>;
+    setAttrsSignal!: (v: Record<string, string>) => void;
 
     constructor() {
       super();
 
       const state = stateFn ? stateFn() : undefined;
 
-      const [attrs, setAttrs] = createSignal({});
+      const [attrs, setAttrs] = createSignal<Record<string, string>>({});
       this.attrsSignal = attrs;
       this.setAttrsSignal = setAttrs;
 
       const templateContent = template.content;
 
-      // const shadowRoot = this.attachShadow({ mode: "open" });
-      // document.querySelectorAll("link").forEach(linkElement => {
-      //   shadowRoot.appendChild(linkElement.cloneNode());
-      // })
-      // shadowRoot.appendChild(templateContent.cloneNode(true));
-
       this.appendChild(templateContent.cloneNode(true));
-
 
       createEffect(() => {
         const effectAttrs = attrs();
@@ -71,37 +59,37 @@ export function createComponent({
         this.handleAttrMap(attrsMap);
       });
     }
+
     connectedCallback() {
       const attrs = this.getAllAttributes();
       this.setAttrsSignal(attrs);
     }
 
-    disconnectedCallback() {
-    }
+    disconnectedCallback() {}
 
     adoptedCallback() {
       console.log("Custom element moved to new page.");
     }
 
-    attributeChangedCallback(name, oldValue, newValue) {
+    attributeChangedCallback(_name: string, _oldValue: string | null, _newValue: string | null) {
       const attrs = this.getAllAttributes();
       this.setAttrsSignal(attrs);
     }
 
-    getAllAttributes() {
-      const attrs = {};
+    getAllAttributes(): Record<string, string> {
+      const attrs: Record<string, string> = {};
 
       for (const name of this.getAttributeNames()) {
-        attrs[name] = this.getAttribute(name);
+        const v = this.getAttribute(name);
+        if (v !== null) attrs[name] = v;
       }
 
       return attrs;
     }
 
-    /** @type {(attrMap: AttrMap) => void} */
-    handleAttrMap(attrMap) {
+    handleAttrMap(attrMap: AttrMap) {
       for (const { element, type, listener } of this.eventListeners) {
-        element.removeEventListener(type, listener);
+        element.removeEventListener(type, listener as EventListenerOrEventListenerObject);
       }
 
       this.eventListeners = [];
@@ -109,19 +97,18 @@ export function createComponent({
         const elements = this.querySelectorAll(selector);
         const { eventListeners, attributes, properties } = updates;
 
-        for (const element of elements) {
+        for (const element of Array.from(elements)) {
           if (eventListeners) {
             for (const [type, listener] of Object.entries(eventListeners)) {
               this.eventListeners.push({ element, type, listener });
-              element.addEventListener(type, listener);
+              element.addEventListener(type, listener as EventListenerOrEventListenerObject);
             }
           }
 
           if (properties) {
-            for (const [property, propertyValue] of Object.entries(
-              properties
-            )) {
-              element[property] = propertyValue;
+            for (const [property, propertyValue] of Object.entries(properties)) {
+              // @ts-ignore dynamic property assignment
+              (element as any)[property] = propertyValue;
             }
           }
 

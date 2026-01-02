@@ -1,5 +1,5 @@
 import { createSignal } from "../lib/state.js";
-import { createComponent, html } from "../lib/component.js";
+import { createComponent, html } from "../lib/component.ts";
 import {
   jogState,
   patchCommand,

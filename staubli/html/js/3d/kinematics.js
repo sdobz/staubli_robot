@@ -19,7 +19,7 @@ import {
 import { patchCommand, program, programmerState } from "../program/state.js";
 import { MathUtils, Quaternion, Vector3 } from "three";
 
-/** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
+/** @import { URDFJoint, URDFRobot } from "urdf-loader"; */
 /** @import {Object3D} from 'three' */
 /** @import {EffectorPosition, JointPosition} from '../robot-types' */
 /** @import {RobotControl} from './robot.js' */

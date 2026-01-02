@@ -1,7 +1,7 @@
 import { robot, robotApi, setRobot } from "../robot.js";
 import { createEffect } from "../lib/state.js";
 import { program, programmerState, setProgrammerState } from "./state.js";
-import { createComponent, html } from "../lib/component.js";
+import { createComponent, html } from "../lib/component.ts";
 import { RobotPreview } from "../3d/preview.js";
 import { previewRobotRef } from "../3d/viewport.js";
 

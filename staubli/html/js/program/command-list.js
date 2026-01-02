@@ -1,4 +1,4 @@
-import { html, createComponent } from "../lib/component.js";
+import { html, createComponent } from "../lib/component.ts";
 import {
   addCommand,
   program,

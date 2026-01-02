@@ -1,4 +1,4 @@
-import { createComponent, html } from "./lib/component.js";
+import { createComponent, html } from "./lib/component.ts";
 
 import { robot } from "./robot.js";
 

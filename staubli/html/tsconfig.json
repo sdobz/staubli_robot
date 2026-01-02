@@ -3,16 +3,15 @@
     "exclude": ["staubli/html/js/vendor"],
     "compilerOptions": {
         "lib": ["ES2023", "DOM", "dom.iterable"],
+        "allowImportingTsExtensions": true,
+        "moduleResolution": "bundler",
+        "noEmit": true,
         "checkJs": true,
         "baseUrl": ".",
         "target": "es2023",
         "outDir": "dist",
         "paths": {
-            "three": ["js/vendor/three/three.js"],
-            "three/*": ["js/vendor/three/*"],
-            "urdf-loader/*": ["vendor/js/urdf-loader/*"],
-            "closed-chain-ik-js": ["vendor/js/closed-chain-ik-js.js"],
-            "gl-matrix": ["vendor/js/gl-matrix.esm.js"]
+            "linear-solve": ["./js/vendor/gauss-jordan.js"]
         }
     }
 }

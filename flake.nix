@@ -73,6 +73,7 @@
         pkgs.rsync
         pkgs.curl
         pkgs.typescript
+        pkgs.nodejs
         pkgs.git-crypt
       ];
       shellHook = ''
