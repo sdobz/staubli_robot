@@ -8,7 +8,7 @@
         "noEmit": true,
         "checkJs": true,
         "baseUrl": ".",
-        "target": "es2023",
+        "target": "es2022",
         "outDir": "dist",
         "paths": {
             "linear-solve": ["./js/vendor/gauss-jordan.js"]

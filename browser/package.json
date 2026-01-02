@@ -5,10 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "web-dev-server --config web-dev-server.config.mjs",
-    "start:open": "web-dev-server --config web-dev-server.config.mjs --open",
-    "build": "esbuild staubli/html/js --bundle --outdir=dist --format=esm",
-    "lint": "eslint 'staubli/html/**/*.{js,ts}'",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "build": "node build.mjs",
+    "lint": "eslint '**/*.{js,ts}'"
   },
   "dependencies": {
     "@types/three": "^0.182.0",
@@ -21,12 +19,14 @@
     "urdf-loader": "^0.12.6"
   },
   "devDependencies": {
+    "@chialab/esbuild-plugin-html": "^0.19.0",
     "@rollup/plugin-node-resolve": "^15.0.2",
     "@typescript-eslint/eslint-plugin": "^6.8.0",
     "@typescript-eslint/parser": "^6.8.0",
     "@web/dev-server": "^0.1.33",
     "@web/dev-server-esbuild": "^0.3.3",
     "esbuild": "^0.18.20",
+    "esbuild-plugin-copy": "^2.1.1",
     "eslint": "^8.43.0",
     "koa-proxies": "^0.12.4",
     "prettier": "^2.8.8",

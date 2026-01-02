@@ -67,12 +67,12 @@ const mmToM = 1 / 1000;
 /** @type {ToolProperties} */
 const flangeTool = {
   name: "Naked Flange",
-  meshUrl: "effectors/flange.stl",
+  meshUrl: "urdf/effectors/flange.stl",
   scale: mmToM,
 };
 const flangeTool2 = {
   name: "Naked Flange (copy)",
-  meshUrl: "effectors/flange.stl",
+  meshUrl: "urdf/effectors/flange.stl",
   scale: mmToM,
 };
 
