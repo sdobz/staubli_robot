@@ -3,8 +3,8 @@
 /** @import { Command, EffectorPosition, JointPosition, RobotInterface, RobotState } from '../robot-types' */
 /** @import { MotionConstraint } from '../lib/motion-plan.js' */
 
-import { MotionPlan } from "../lib/motion-plan.js";
-import { createSignal } from "../lib/state.js";
+import { MotionPlan } from "../lib/motion-plan";
+import { createSignal } from "../lib/state";
 
 /**
  * @implements {RobotInterface}

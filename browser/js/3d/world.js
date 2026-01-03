@@ -14,7 +14,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls";
 
 /** @import { EffectorPosition } from '../robot.js' */
 /** @import { Object3D } from 'three' */

@@ -1,4 +1,4 @@
-import { createComponent, html } from "../lib/component.ts";
+import { createComponent, html } from "../lib/component";
 import {
   defaultProgramName,
   deleteProgram,
@@ -9,7 +9,7 @@ import {
   programs,
   setProgram,
   setProgrammerState,
-} from "./state.js";
+} from "./state";
 
 createComponent({
   tag: "program-list",

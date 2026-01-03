@@ -1,46 +1,46 @@
-import { getItem, listItems, removeItem, setItem } from "../lib/storage.js";
-import { createSignal } from "../lib/state.js";
-import { bindParam } from "../lib/url.js";
-import { robot } from "../robot.js";
-import { derivedState } from "../3d/viewport.js";
+import { getItem, listItems, removeItem, setItem } from "../lib/storage";
+import { createSignal } from "../lib/state";
+import { bindParam } from "../lib/url";
+import { robot } from "../robot";
+import { derivedState } from "../3d/viewport";
+import {
+  Command,
+  CommandType,
+  EffectorCommand,
+  JointsCommand,
+  SerialCommand,
+  SpeedCommand,
+  ToolCommand,
+} from "../robot-types";
 
-/**
- * @typedef {"translate-effector" | "rotate-effector" | "drag-joint"} JogMode
- */
+export type JogMode = "translate-effector" | "rotate-effector" | "drag-joint";
+export type JogSpace = "local" | "world";
 
-/**
- * @typedef {"local" | "world"} JogSpace
- */
-/**
- * @typedef {Object} JogState
- * @property {JogMode} mode - Currently selected translation mode
- * @property {JogSpace} space
- */
+interface JogState {
+  mode: JogMode;
+  space: JogSpace;
+}
 
-const [jogState, setJogState] = createSignal({
-  mode: /** @type {JogMode} */ ("drag-joint"),
-  space: /** @type {JogSpace} */ ("world"),
+const [jogState, setJogState] = createSignal<JogState>({
+  mode: "drag-joint",
+  space: "world",
 });
 export { jogState, setJogState };
 
-/** @import { Position, JointPosition, EffectorPosition, RobotState, Command, CommandType } from '../robot-types' */
+export type PlaybackEnum = "stopped" | "play" | "preview" | "jog";
+export type EditingEnum = "none" | "sequence" | "item";
 
-/** @typedef {"stopped" | "play" | "preview" | "jog" } PlaybackEnum */
-/** @typedef {"none" | "sequence" | "item" } EditingEnum */
+export interface ProgrammerState {
+  selectedIndex: number;
+  updateSelected: boolean;
+  playback: PlaybackEnum;
+  editing: EditingEnum;
+  commandToAdd: CommandType;
+  loop: boolean;
+  busy: boolean;
+}
 
-/**
- * @typedef {Object} ProgrammerState
- * @property {number} selectedIndex
- * @property {boolean} updateSelected
- * @property {PlaybackEnum} playback
- * @property {EditingEnum} editing
- * @property {CommandType} commandToAdd
- * @property {boolean} loop
- * @property {boolean} busy
- */
-
-/** @type {ProgrammerState} */
-const initialProgrammerState = {
+const initialProgrammerState: ProgrammerState = {
   selectedIndex: 0,
   updateSelected: false,
   playback: "stopped",
@@ -54,36 +54,35 @@ const [programmerState, setProgrammerState] = createSignal(
 );
 export { programmerState, setProgrammerState };
 
-/**
- * @typedef {Object} Program
- * @property {string} [name]
- * @property {string} [id]
- * @property {number} [speed]
- * @property {Command[]} commands
- */
+interface Program {
+  name?: string;
+  id?: string;
+  speed?: number;
+  commands: Command[];
+}
 
-/** @type {Program} */
-const initialProgram = {
+type SavedProgram = Program & { id: string };
+
+function isSaveable(program: Program): program is SavedProgram {
+  return typeof program.id === "string";
+}
+
+const initialProgram: Program = {
   commands: [],
 };
 const [program, _setProgram] = createSignal(initialProgram);
 export { program, setProgram };
 
-/**
- * @typedef {Object} ProgramIndexItem
- * @property {string} name
- * @property {string} id
- */
+interface ProgramIndexItem {
+  name: string;
+  id: string;
+}
 
-/** @type {ProgramIndexItem[]} */
-const initialProgramIndex = listItems("sequence");
+const initialProgramIndex: ProgramIndexItem[] = listItems("sequence");
 const [programs, setPrograms] = createSignal(initialProgramIndex);
 export { programs };
 
-/**
- * @param {Program} program
- */
-function isPopulated(program) {
+function isPopulated(program: Program) {
   return !!program.name || program.commands.length > 0;
 }
 
@@ -99,11 +98,7 @@ function sortProgram({ name: nameA }, { name: nameB }) {
   return nameA < nameB ? -1 : 1;
 }
 
-/**
- *
- * @param {Program} newProgram
- */
-function setProgram(newProgram) {
+function setProgram(newProgram: Program) {
   const currentState = programmerState();
   if (currentState.busy) {
     setProgrammerState({
@@ -113,13 +108,13 @@ function setProgram(newProgram) {
   }
 
   if (isPopulated(newProgram)) {
-    if (!newProgram.id) {
-      newProgram = {
-        ...newProgram,
-        name: newProgram.name || defaultProgramName(),
-        id: Math.random().toString(36).slice(2),
-      };
-    }
+    const savedProgram = isSaveable(newProgram)
+      ? newProgram
+      : {
+          ...newProgram,
+          name: newProgram.name || defaultProgramName(),
+          id: Math.random().toString(36).slice(2),
+        };
 
     // Instantiate urdf
     // For item
@@ -127,12 +122,7 @@ function setProgram(newProgram) {
     //  Derive position
     //  Update derived position
 
-    setItem(
-      "sequence",
-      /** @type {Required<Program>} */ (newProgram),
-      reduceProgram,
-      sortProgram
-    );
+    setItem("sequence", savedProgram, reduceProgram, sortProgram);
     setPrograms(listItems("sequence"));
   }
 
@@ -155,8 +145,7 @@ export function addCommand() {
     return;
   }
 
-  /** @type {Command} */
-  let newCommand;
+  let newCommand: Command;
 
   switch (currentProgrammerState.commandToAdd) {
     case "joints":
@@ -195,7 +184,7 @@ export function addCommand() {
 
   const oldCommands = currentProgram.commands;
   /** @type {Command[]} */
-  const newCommands = [
+  const newCommands: Command[] = [
     ...oldCommands.slice(0, currentIndex + 1),
     newCommand,
     ...oldCommands.slice(currentIndex + 1),
@@ -216,7 +205,7 @@ export function addCommand() {
 /**
  * @param {Partial<Command>} patch
  */
-export function patchCommand(patch) {
+export function patchCommand(patch: Partial<Command>) {
   const currentProgrammerState = programmerState();
   const currentProgram = program();
 
@@ -233,11 +222,10 @@ export function patchCommand(patch) {
     return;
   }
 
-  const newCommand = mergeDeep(currentCommand, patch);
+  const newCommand = mergeDeep(currentCommand, patch) as Command;
 
   const oldCommands = currentProgram.commands;
-  /** @type {Command[]} */
-  const newCommands = [
+  const newCommands: Command[] = [
     ...oldCommands.slice(0, currentIndex),
     newCommand,
     ...oldCommands.slice(currentIndex + 1),
@@ -253,9 +241,8 @@ export function newProgram() {
   setProgram(initialProgram);
 }
 
-export function loadProgram(id) {
-  /** @type {Program | null} */
-  const item = getItem("sequence", id);
+export function loadProgram(id: string) {
+  const item: Program | null = getItem("sequence", id);
   if (!item) {
     return;
   }
@@ -266,8 +253,8 @@ export function loadProgram(id) {
 
 export function deleteProgram() {
   const currentProgram = program();
-  if (currentProgram.id) {
-    removeItem("sequence", /** @type{{id: string}} */ (currentProgram));
+  if (isSaveable(currentProgram)) {
+    removeItem("sequence", currentProgram);
     setPrograms(listItems("sequence"));
   }
   setProgram(initialProgram);
@@ -298,14 +285,11 @@ bindParam(
 /**
  * Performs a deep merge of objects and returns new object. Does not modify
  * objects (immutable) and merges arrays via concatenation.
- *
- * @param {...object} objects - Objects to merge
- * @returns {object} New object with merged key/values
  */
-function mergeDeep(...objects) {
-  const isObject = (obj) => obj && typeof obj === "object";
+function mergeDeep<T>(...objects: T[]): T {
+  const isObject = (obj: any) => obj && typeof obj === "object";
 
-  return objects.reduce((prev, obj) => {
+  return objects.reduce<T>((prev, obj) => {
     Object.keys(obj).forEach((key) => {
       const pVal = prev[key];
       const oVal = obj[key];
@@ -320,5 +304,5 @@ function mergeDeep(...objects) {
     });
 
     return prev;
-  }, {});
+  }, {} as T);
 }

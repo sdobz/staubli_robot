@@ -1,11 +1,6 @@
-import { createEffect } from "./state.js";
+import { createEffect } from "./state";
 
-/**
- * @param {string} param - url query parameter
- * @param {() => string} paramSignal - get url query parameter
- * @param {(set: string) => void} setParamSignal - update url query parameter
- */
-export function bindParam(param, paramSignal, setParamSignal) {
+export function bindParam(param: string, paramSignal: () => string, setParamSignal: (set: string) => void) {
   const initialSignal = paramSignal();
   const initialParam = new URLSearchParams(window.location.search).get(param);
   if (initialSignal !== initialParam) {

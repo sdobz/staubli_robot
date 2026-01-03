@@ -1,4 +1,4 @@
-import { createEffect, createSignal } from "./state.js";
+import { createEffect, createSignal } from "./state";
 
 export function html(strings: TemplateStringsArray): HTMLTemplateElement {
   const templateElement = document.createElement("template");

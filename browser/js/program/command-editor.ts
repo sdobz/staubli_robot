@@ -1,17 +1,18 @@
-import { createSignal } from "../lib/state.js";
-import { createComponent, html } from "../lib/component.ts";
+import { createSignal } from "../lib/state";
+import { createComponent, html } from "../lib/component";
 import {
+  JogMode,
+  JogSpace,
   jogState,
   patchCommand,
   program,
   programmerState,
   setJogState,
-} from "./state.js";
-import { setToolProperties, STOCK_TOOLS } from "../3d/robot.js";
-import { derivedState } from "../3d/viewport.js";
+} from "./state";
+import { setToolProperties, STOCK_TOOLS } from "../3d/robot";
+import { derivedState } from "../3d/viewport";
+import { EffectorPosition, JointPosition } from "js/robot-types";
 
-/** @import { JogMode, JogSpace } from './state.js' */
-/** @import { EffectorPosition, JointPosition } from '../robot-types' */
 
 createComponent({
   tag: "jog-mode-editor",
@@ -36,27 +37,20 @@ createComponent({
     const currentProgran = program();
     const currentCommand = currentProgran.commands[currentState.selectedIndex];
 
-    /**
-     * @param {JogMode} mode
-     */
-    function setMode(mode) {
+
+    function setMode(mode: JogMode) {
       setJogState({
         ...currentJogState,
         mode,
       });
     }
 
-    /**
-     * @param {JogMode} checkMode
-     */
-    function ariaCurrentMode(checkMode) {
+    function ariaCurrentMode(checkMode: JogMode) {
       return currentJogState.mode === checkMode ? "true" : undefined;
     }
 
-    /**
-     * @param {JogMode} forMode
-     */
-    function buildModeAttrs(forMode) {
+
+    function buildModeAttrs(forMode: JogMode) {
       return {
         [`[data-mode='${forMode}']`]: {
           eventListeners: {
@@ -74,27 +68,21 @@ createComponent({
       };
     }
 
-    /**
-     * @param {JogSpace} space
-     */
-    function setSpace(space) {
+
+    function setSpace(space: JogSpace) {
       setJogState({
         ...currentJogState,
         space,
       });
     }
 
-    /**
-     * @param {JogSpace} checkSpace
-     */
-    function ariaCurrentSpace(checkSpace) {
+
+    function ariaCurrentSpace(checkSpace: JogSpace) {
       return currentJogState.space === checkSpace ? "true" : undefined;
     }
 
-    /**
-     * @param {JogSpace} forSpace
-     */
-    function buildSpaceAttrs(forSpace) {
+
+    function buildSpaceAttrs(forSpace: JogSpace) {
       return {
         [`[data-space='${forSpace}']`]: {
           eventListeners: {
@@ -290,8 +278,7 @@ createComponent({
     const robot = derived.robot;
 
     function onChangeEffectorPosition(e) {
-      /** @type {EffectorPosition} */
-      const newEffectorPosition = e.target.value;
+      const newEffectorPosition: EffectorPosition = e.target.value;
 
       robot.kinematics.applyEffectorPosition(newEffectorPosition, robot);
       robot.kinematics.applyJointsFromEffectorPosition(
@@ -304,8 +291,7 @@ createComponent({
     }
 
     function onChangeJointPosition(e) {
-      /** @type {JointPosition} */
-      const newJointPosition = e.target.value;
+      const newJointPosition: JointPosition = e.target.value;
 
       robot.kinematics.applyJointPosition(newJointPosition, robot);
       robot.kinematics.applyEffectorFromJointPosition(
@@ -375,8 +361,7 @@ createComponent({
     const toolOffset = currentCommand.data;
 
     function onChangeToolOffset(e) {
-      /** @type {EffectorPosition} */
-      const data = e.target.value;
+      const data: EffectorPosition = e.target.value;
 
       patchCommand({ type: "tool", data });
     }

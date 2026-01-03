@@ -1,6 +1,6 @@
 import { createComponent, html } from "./lib/component.ts";
 
-import { robot } from "./robot.js";
+import { robot } from "./robot";
 
 createComponent({
   tag: "robot-button",

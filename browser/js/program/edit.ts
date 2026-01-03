@@ -1,11 +1,11 @@
-import { createComponent, html } from "../lib/component.ts";
+import { createComponent, html } from "../lib/component";
 import {
   patchCommand,
   program,
   programmerState,
   setProgram,
   setProgrammerState,
-} from "./state.js";
+} from "./state";
 
 createComponent({
   tag: "program-edit",

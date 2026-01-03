@@ -1,13 +1,12 @@
-import { html, createComponent } from "../lib/component.ts";
+import { html, createComponent } from "../lib/component";
 import {
   addCommand,
   program,
   programmerState,
   setProgram,
   setProgrammerState,
-} from "./state.js";
+} from "./state";
 
-/** @import { JogMode, JogSpace } from './state.js' */
 
 createComponent({
   tag: "command-list",
@@ -41,10 +40,7 @@ createComponent({
     const currentProgram = program();
 
     const isBusy = currentState.busy;
-    /**
-     * @param {Event} e
-     */
-    function onSelectItem(e) {
+    function onSelectItem(e: Event) {
       e.preventDefault();
       if (isBusy) return;
 
@@ -186,11 +182,7 @@ createComponent({
   },
 });
 
-/**
- *
- * @param {HTMLElement} el
- */
-function findIndex(el) {
+function findIndex(el: HTMLElement) {
   if (el.hasAttribute("data-index")) {
     return parseInt(el.getAttribute("data-index") || "-1");
   }

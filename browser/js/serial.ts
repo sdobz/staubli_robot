@@ -1,6 +1,6 @@
 import { createComponent, html } from "./lib/component.ts";
-import { createSignal } from "./lib/state.js";
-import { robot } from "./robot.js";
+import { createSignal } from "./lib/state";
+import { robot } from "./robot";
 
 interface WebsocketMessage {
   mode: "write" | "read" | "readline";

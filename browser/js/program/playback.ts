@@ -1,11 +1,9 @@
-import { robot, robotApi, setRobot } from "../robot.js";
-import { createEffect } from "../lib/state.js";
-import { program, programmerState, setProgrammerState } from "./state.js";
-import { createComponent, html } from "../lib/component.ts";
-import { RobotPreview } from "../3d/preview.js";
-import { previewRobotRef } from "../3d/viewport.js";
-
-/** @import { PlaybackEnum, ProgrammerState } from "./state.js" */
+import { robot, robotApi, setRobot } from "../robot";
+import { createEffect } from "../lib/state";
+import { PlaybackEnum, program, ProgrammerState, programmerState, setProgrammerState } from "./state";
+import { createComponent, html } from "../lib/component";
+import { RobotPreview } from "../3d/preview";
+import { previewRobotRef } from "../3d/viewport";
 
 createEffect(() => {
   const initialProgram = program();
@@ -40,8 +38,7 @@ createEffect(() => {
     return;
   }
 
-  /** @type {ProgrammerState} */
-  const busyState = {
+  const busyState: ProgrammerState = {
     ...initialState,
     busy: true,
   };
@@ -103,10 +100,7 @@ createComponent({
       }
     }
 
-    /**
-     * @param {PlaybackEnum} playback
-     */
-    function makePlaybackHandler(playback) {
+    function makePlaybackHandler(playback: PlaybackEnum) {
       return () => {
         if (isBusy && playback !== "stopped") return;
 

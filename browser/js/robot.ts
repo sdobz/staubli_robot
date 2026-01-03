@@ -1,4 +1,4 @@
-import { createSignal } from "./lib/state.js";
+import { createSignal } from "./lib/state";
 import { EffectorPosition, JointPosition, RobotInterface, RobotState } from './robot-types'
 
 async function get(url: string) {

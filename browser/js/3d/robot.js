@@ -11,7 +11,7 @@ import {
   Vector3,
   Object3D,
 } from "three";
-import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
 import URDFLoader from "urdf-loader";
 import {
   currentInactiveMaterial,
@@ -20,12 +20,12 @@ import {
   ghostMaterial,
   highlightMaterial,
   selectedMaterial,
-} from "./world.js";
-import { PointerURDFDragControls } from "urdf-loader/src/URDFDragControls.js";
-import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
+} from "./world";
+import { PointerURDFDragControls } from "urdf-loader/src/URDFDragControls";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 
-import { Kinematics } from "./kinematics.js";
-import { createSignal } from "../lib/state.js";
+import { Kinematics } from "./kinematics";
+import { createSignal } from "../lib/state";
 
 /** @import { URDFJoint, URDFRobot, URDFLink } from "urdf-loader"; */
 /** @import { Position, JointPosition, EffectorPosition, RobotState, Command, CommandType } from '../robot-types' */

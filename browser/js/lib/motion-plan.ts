@@ -1,21 +1,18 @@
-/**
- * @typedef {Object} MotionConstraint
- * @property {number} maxAcceleration // unit/s/s
- * @property {number} maxVelocity // unit/s
- */
+interface MotionConstraint {
+  maxAcceleration: number;
+  maxVelocity: number;
+}
 
 /**
  * A MotionPlan
  */
 export class MotionPlan {
-  /**
-   *
-   * @param {number} start
-   * @param {number} acceleration
-   * @param {number} accelerateTime
-   * @param {number} coastTime
-   */
-  constructor(start, acceleration, accelerateTime, coastTime) {
+  start: number;
+  acceleration: number;
+  accelerateTime: number;
+  coastTime: number;
+
+  constructor(start: number, acceleration: number, accelerateTime: number, coastTime: number) {
     this.start = start;
     this.acceleration = acceleration;
     this.accelerateTime = accelerateTime;
@@ -24,11 +21,8 @@ export class MotionPlan {
 
   /**
    * Create a plan given the constraints
-   * @param {MotionConstraint} constraints
-   * @param {number} start
-   * @param {number} stop
    */
-  static planConstraints(constraints, start, stop) {
+  static planConstraints(constraints: MotionConstraint, start: number, stop: number) {
     const acceleration =
       start < stop ? constraints.maxAcceleration : -constraints.maxAcceleration;
 
@@ -40,7 +34,7 @@ export class MotionPlan {
     const distanceAfterMaxAcceleration =
       maxAccelerationTime * constraints.maxVelocity;
 
-    let coastTime, accelerateTime;
+    let coastTime: number, accelerateTime: number;
 
     if (distanceAfterMaxAcceleration >= distanceToGo) {
       // A full acceleration period is too long, cut it off
@@ -59,11 +53,8 @@ export class MotionPlan {
 
   /**
    * Create a plan that has the same ramp times but different acceleration amounts
-   * @param {MotionPlan} plan
-   * @param {number} start
-   * @param {number} stop
    */
-  static planSibling(plan, start, stop) {
+  static planSibling(plan: MotionPlan, start: number, stop: number) {
     let distanceToGo = stop - start;
 
     let acceleration =
@@ -78,20 +69,13 @@ export class MotionPlan {
     );
   }
 
-  /**
-   *
-   * @param {MotionConstraint} constraints
-   * @param {number[]} starts
-   * @param {number[]} stops
-   * @returns {MotionPlan[]}
-   */
-  static planSync(constraints, starts, stops) {
+  static planSync(constraints: MotionConstraint, starts: number[], stops: number[]): MotionPlan[] {
     const initialPlans = starts.map((start, i) =>
       MotionPlan.planConstraints(constraints, start, stops[i])
     );
 
     let maxTime = -1;
-    let maxPlan;
+    let maxPlan: MotionPlan;
 
     initialPlans.forEach((plan) => {
       const planTime = plan.totalTime();
@@ -112,7 +96,7 @@ export class MotionPlan {
     return syncPlans;
   }
 
-  position(time) {
+  position(time: number) {
     if (time < this.accelerateTime) {
       const velocity = time * this.acceleration;
       return this.start + (time * velocity) / 2;

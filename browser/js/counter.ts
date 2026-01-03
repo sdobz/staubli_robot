@@ -1,5 +1,5 @@
 import { createComponent, html } from "./lib/component.ts";
-import { createSignal } from "./lib/state.js";
+import { createSignal } from "./lib/state";
 
 const counterTemplate = html` <button>SET button-text</button> `;
 

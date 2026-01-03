@@ -1,12 +1,12 @@
-import "./counter.js";
-import "./robot-button.js";
-import "./3d/viewport.js";
-import "./program/command-editor.js";
-import "./program/command-list.js";
-import "./program/playback.js";
-import "./program/program-list.js";
-import "./program/edit.js";
-import "./serial.js";
-import { robotApi } from "./robot.js";
+import "./counter";
+import "./robot-button";
+import "./3d/viewport";
+import "./program/command-editor";
+import "./program/command-list";
+import "./program/playback";
+import "./program/program-list";
+import "./program/edit";
+import "./serial";
+import { robotApi } from "./robot";
 
 robotApi.load();

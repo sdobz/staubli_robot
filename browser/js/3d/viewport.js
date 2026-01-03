@@ -1,12 +1,12 @@
 import { Vector3, ArrowHelper } from "three";
 
 import { html } from "../lib/component.ts";
-import { createEffect, createSignal, untrack } from "../lib/state.js";
-import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot.js";
-import { program, programmerState, jogState } from "../program/state.js";
-import { World } from "./world.js";
-import { Kinematics } from "./kinematics.js";
-import { robot } from "../robot.js";
+import { createEffect, createSignal, untrack } from "../lib/state";
+import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot";
+import { program, programmerState, jogState } from "../program/state";
+import { World } from "./world";
+import { Kinematics } from "./kinematics";
+import { robot } from "../robot";
 
 /** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
 /** @import { Object3D, Mesh } from 'three' */
