@@ -1,33 +1,23 @@
-/** @import { RobotControl } from "./robot.js" */
-
-/** @import { Command, EffectorPosition, JointPosition, RobotInterface, RobotState } from '../robot-types' */
-/** @import { MotionConstraint } from '../lib/motion-plan.js' */
-
-import { MotionPlan } from "../lib/motion-plan";
+import { RobotState, Command, JointPosition, EffectorPosition, RobotInterface } from "../robot-types";
+import { MotionConstraint, MotionPlan } from "../lib/motion-plan";
 import { createSignal } from "../lib/state";
+import { RobotControl } from "./robot";
 
-/**
- * @implements {RobotInterface}
- */
-export class RobotPreview {
-  /**
-   *
-   * @param {RobotControl} control
-   * @param {RobotState} initialState
-   */
-  constructor(control, initialState) {
+export class RobotPreview implements RobotInterface {
+  control: RobotControl;
+  state: () => RobotState;
+  setState: (value: RobotState) => void;
+  name: string;
+
+  constructor(control: RobotControl, initialState: RobotState) {
     this.control = control;
-    /** @type readonly [() => RobotState, (newState: RobotState) => void] */
-    const [state, setState] = createSignal(initialState);
+    const [state, setState] = createSignal<RobotState>(initialState);
     this.state = state;
     this.setState = setState;
     this.name = "preview";
   }
-  /**
-   *
-   * @param {Command} command
-   */
-  async execute(command) {
+
+  async execute(command: Command) {
     switch (command.type) {
       case "joints":
         await this.#accelJoints(command.data);
@@ -61,11 +51,7 @@ export class RobotPreview {
     }
   }
 
-  /**
-   *
-   * @param {JointPosition} jointPosition
-   */
-  async #accelJoints(jointPosition) {
+  async #accelJoints(jointPosition: JointPosition) {
     const initialState = this.state();
     const initialJoints = initialState.position.joints;
 
@@ -96,11 +82,7 @@ export class RobotPreview {
     });
   }
 
-  /**
-   *
-   * @param {EffectorPosition} effectorPosition
-   */
-  async #accelEffector(effectorPosition) {
+  async #accelEffector(effectorPosition: EffectorPosition) {
     const initialState = this.state();
     const initialEffector = initialState.position.effector;
 
@@ -134,25 +116,15 @@ export class RobotPreview {
     });
   }
 
-  /**
-   *
-   * @param {MotionConstraint} constraints
-   * @param {number[]} starts
-   * @param {number[]} stops
-   * @param {(positions: number[]) => void} callback
-   * @returns
-   */
-  #animatePlans(constraints, starts, stops, callback) {
+  #animatePlans(constraints: MotionConstraint, starts: number[], stops: number[], callback: (positions: number[]) => void) {
     const plans = MotionPlan.planSync(constraints, starts, stops);
     const duration = plans[0].totalTime();
 
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       const startTime = performance.now();
       const finishTime = startTime + duration * 1000;
-      /**
-       * @param {DOMHighResTimeStamp} currentTime
-       */
-      function animate(currentTime) {
+
+      function animate(currentTime: DOMHighResTimeStamp) {
         const planTime = (currentTime - startTime) / 1000;
         const positions = plans.map((plan) => plan.position(planTime));
         callback(positions);
@@ -170,10 +142,7 @@ export class RobotPreview {
   }
 }
 
-/**
- * @param {JointPosition} jointPosition
- */
-function jointPositionToArray(jointPosition) {
+function jointPositionToArray(jointPosition: JointPosition) {
   return [
     jointPosition.j1,
     jointPosition.j2,
@@ -184,12 +153,7 @@ function jointPositionToArray(jointPosition) {
   ];
 }
 
-/**
- *
- * @param {number[]} joints
- * @returns {JointPosition}
- */
-function jointPositionFromArray(joints) {
+function jointPositionFromArray(joints: number[]): JointPosition {
   return {
     j1: joints[0],
     j2: joints[1],
@@ -200,10 +164,7 @@ function jointPositionFromArray(joints) {
   };
 }
 
-/**
- * @param {EffectorPosition} effectorPosition
- */
-function effectorPositionToArray(effectorPosition) {
+function effectorPositionToArray(effectorPosition: EffectorPosition) {
   return [
     effectorPosition.x,
     effectorPosition.y,
@@ -214,12 +175,7 @@ function effectorPositionToArray(effectorPosition) {
   ];
 }
 
-/**
- *
- * @param {number[]} effector
- * @returns {EffectorPosition}
- */
-function effectorPositionFromArray(effector) {
+function effectorPositionFromArray(effector: number[]): EffectorPosition {
   return {
     x: effector[0],
     y: effector[1],

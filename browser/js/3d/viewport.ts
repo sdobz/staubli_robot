@@ -1,45 +1,48 @@
-import { Vector3, ArrowHelper } from "three";
+import { Vector3, ArrowHelper, Mesh } from "three";
 
 import { html } from "../lib/component.ts";
-import { createEffect, createSignal, untrack } from "../lib/state";
-import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot";
-import { program, programmerState, jogState } from "../program/state";
-import { World } from "./world";
-import { Kinematics } from "./kinematics";
-import { robot } from "../robot";
+import { createEffect, createSignal, untrack } from "../lib/state.ts";
+import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot.ts";
+import { program, programmerState, jogState } from "../program/state.ts";
+import { World } from "./world.js";
+import { Kinematics } from "./kinematics.ts";
+import { robot } from "../robot.ts";
+import { Command, RobotState } from "js/robot-types.ts";
+import { URDFRobot } from "urdf-loader";
 
-/** @import { URDFJoint, URDFRobot } from "urdf-loader/URDFClasses"; */
-/** @import { Object3D, Mesh } from 'three' */
+interface DerivedState {
+  command: Command;
+  state: RobotState;
+  robot: RobotControl;
+}
 
-/** @import { JointPosition, EffectorPosition, Command, RobotState } from '../robot-types.d.ts' */
-
-/**
- * @typedef {Object} DerivedState
- * @prop {Command} command
- * @prop {RobotState} state
- * @prop {RobotControl} robot
- */
-
-/** @type {readonly [() => DerivedState[], (set: DerivedState[]) => void]} */
-const [derivedState, setDerivedState] = createSignal([]);
+const [derivedState, setDerivedState] = createSignal<DerivedState[]>([]);
 export { derivedState };
 
 const robot3DTemplate = html` <div id="robot-3d"></div> `;
 
-/** @type {{previewRobot: RobotControl | null}} */
-export const previewRobotRef = {
-  previewRobot: null,
+interface RefObject<T> {
+  current: T;
+}
+
+export const previewRobotRef: RefObject<RobotControl | null> = {
+  current: null,
 };
 
 class Robot3D extends HTMLElement {
+  arrows: ArrowHelper[];
+  world: World;
+  robots: RobotControl[];
+  urdfRoot: URDFRobot | undefined;
+  toolRoot: Mesh | undefined;
+  container: HTMLElement;
+  attached: boolean;
   constructor() {
     super();
 
-    /** @type {ArrowHelper[]} */
     this.arrows = [];
 
     this.world = new World();
-    /** @type {RobotControl[]} */
     this.robots = [];
 
     loadRobot().then((result) => {
@@ -48,17 +51,15 @@ class Robot3D extends HTMLElement {
       this.world.fitCameraToSelection([this.urdfRoot]);
       this.updateRobots();
     });
-    /** @type {Mesh | undefined} */
+
     this.toolRoot = undefined;
 
     const shadowRoot = this.attachShadow({ mode: "open" });
     document.querySelectorAll("link").forEach((linkElement) => {
       shadowRoot.appendChild(linkElement.cloneNode());
     });
-    const templateContents = robot3DTemplate.content.cloneNode(true);
-    this.container = /** @type {HTMLElement} */ (
-      templateContents
-    ).querySelector("#robot-3d");
+    const templateContents = robot3DTemplate.content.cloneNode(true) as HTMLElement;
+    this.container = templateContents.querySelector("#robot-3d");
     this.container.appendChild(this.world.renderer.domElement);
 
     shadowRoot.appendChild(templateContents);
@@ -120,8 +121,8 @@ class Robot3D extends HTMLElement {
     }
 
     const currentRobot = popRobot();
-    if (previewRobotRef.previewRobot !== currentRobot) {
-      previewRobotRef.previewRobot = currentRobot;
+    if (previewRobotRef.current !== currentRobot) {
+      previewRobotRef.current = currentRobot;
     }
     currentRobot.update(
       kinematics,
@@ -134,8 +135,7 @@ class Robot3D extends HTMLElement {
 
     let previousRobot = currentRobot;
     let previousState = currentRobotState;
-    /** @type {DerivedState[]} */
-    let nextDerivedState = [];
+    let nextDerivedState: DerivedState[]= [];
     currentSequence.commands.forEach((currentCommand, index) => {
       let nextState = previousState;
       const robot = popRobot();
@@ -236,12 +236,7 @@ class Robot3D extends HTMLElement {
     this.arrows = [];
   }
 
-  /**
-   *
-   * @param {Vector3} from
-   * @param {Vector3} to
-   */
-  createArrow(from, to) {
+  createArrow(from: Vector3, to: Vector3) {
     const direction = new Vector3(to.x, to.y, to.z);
     direction.sub(from);
     const length = direction.length();

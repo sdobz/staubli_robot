@@ -89,7 +89,7 @@ createComponent({
     const currentState = programmerState();
     const currentSequence = program();
     const currentRobot = robot();
-    const currentPreviewRobot = previewRobotRef.previewRobot;
+    const currentPreviewRobot = previewRobotRef.current;
 
     const isPreview = currentRobot.name === "preview";
     function doTogglePreview() {

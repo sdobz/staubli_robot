@@ -16,7 +16,7 @@ import {
 export type JogMode = "translate-effector" | "rotate-effector" | "drag-joint";
 export type JogSpace = "local" | "world";
 
-interface JogState {
+export interface JogState {
   mode: JogMode;
   space: JogSpace;
 }

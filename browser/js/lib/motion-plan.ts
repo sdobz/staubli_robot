@@ -1,4 +1,4 @@
-interface MotionConstraint {
+export interface MotionConstraint {
   maxAcceleration: number;
   maxVelocity: number;
 }

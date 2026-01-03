@@ -10,9 +10,11 @@ import {
   Quaternion,
   Vector3,
   Object3D,
+  Object3DEventMap,
+  Material,
 } from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
-import URDFLoader from "urdf-loader";
+import URDFLoader, { URDFLink, URDFRobot } from "urdf-loader";
 import {
   currentInactiveMaterial,
   effectorMaterial,
@@ -20,19 +22,17 @@ import {
   ghostMaterial,
   highlightMaterial,
   selectedMaterial,
+  World,
 } from "./world";
 import { PointerURDFDragControls } from "urdf-loader/src/URDFDragControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 
 import { Kinematics } from "./kinematics";
 import { createSignal } from "../lib/state";
+import { CommandType, EffectorPosition } from "../robot-types";
+import { JogState } from "../program/state";
 
-/** @import { URDFJoint, URDFRobot, URDFLink } from "urdf-loader"; */
-/** @import { Position, JointPosition, EffectorPosition, RobotState, Command, CommandType } from '../robot-types' */
-/** @import { JogState } from "../program/state.js" */
-/** @import { World } from "./world.js" */
-
-/** @typedef {"current" | "current-ghost" | "ghost"} RobotModeEnum */
+type RobotModeEnum = "current" | "current-ghost" | "ghost";
 
 // let globalRobotIndex = 0
 
@@ -54,23 +54,20 @@ import { createSignal } from "../lib/state";
 
 const mmToM = 1 / 1000;
 
-/**
- * @typedef {"stl"} LoaderEnum
- */
-/**
- * @typedef {Object} ToolProperties
- * @property {string} name
- * @property {string} meshUrl
- * @property {number} scale
- */
+type LoaderEnum = "stl";
 
-/** @type {ToolProperties} */
-const flangeTool = {
+interface ToolProperties {
+  name: string;
+  meshUrl: string;
+  scale: number;
+}
+
+const flangeTool: ToolProperties = {
   name: "Naked Flange",
   meshUrl: "urdf/effectors/flange.stl",
   scale: mmToM,
 };
-const flangeTool2 = {
+const flangeTool2: ToolProperties = {
   name: "Naked Flange (copy)",
   meshUrl: "urdf/effectors/flange.stl",
   scale: mmToM,
@@ -79,8 +76,8 @@ const flangeTool2 = {
 export const STOCK_TOOLS = [flangeTool, flangeTool2];
 
 // TODO: this seems like a "scene/setup" concern?
-/** @typedef {readonly [() => ToolProperties, (set: ToolProperties) => void]} */
-const [toolProperties, setToolProperties] = createSignal(flangeTool);
+const [toolProperties, setToolProperties] =
+  createSignal<ToolProperties>(flangeTool);
 export { toolProperties, setToolProperties };
 
 const LOADER_EXTENSION_MAP = {
@@ -88,8 +85,8 @@ const LOADER_EXTENSION_MAP = {
 };
 
 export function loadRobot() {
-  return new Promise((resolve, reject) => {
-    let urdfRoot;
+  return new Promise<URDFRobot>((resolve, reject) => {
+    let urdfRoot: URDFRobot;
     // Load robot
     const manager = new LoadingManager();
     const loader = new URDFLoader(manager);
@@ -97,7 +94,6 @@ export function loadRobot() {
       staubli_rx90: "/urdf/staubli_rx90",
     };
     loader.load("/urdf/staubli_rx90/StaubliRX90.urdf", (result) => {
-      /** @type {URDFRobot | undefined} */
       urdfRoot = result;
     });
 
@@ -111,17 +107,14 @@ export function loadRobot() {
   });
 }
 
-/**
- * @param {ToolProperties} properties
- */
-export function loadTool(properties) {
+export function loadTool(properties: ToolProperties) {
   const Loader =
     LOADER_EXTENSION_MAP[properties.meshUrl.split(".").slice(-1)[0]];
   if (!Loader) {
     throw new Error(`Unknown loader for url ${properties.meshUrl}`);
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise<Mesh>((resolve, reject) => {
     const stlLoader = new Loader();
     stlLoader.load(
       properties.meshUrl,
@@ -144,17 +137,21 @@ export function loadTool(properties) {
 }
 
 export class RobotControl {
-  /**
-   *
-   * @param {World} world
-   */
-  constructor(urdfRoot, toolRoot, world) {
+  urdfRoot: URDFRobot;
+  robot: URDFRobot;
+  tool: any;
+  world: World;
+  kinematics: Kinematics;
+  dragControls: PointerURDFDragControls;
+  transformControls: TransformControls;
+  dragging: boolean;
+  offsetControls: any;
+
+  constructor(urdfRoot: URDFRobot, toolRoot: Mesh, world: World) {
     this.urdfRoot = urdfRoot;
-    /**@type {URDFRobot} */
     this.robot = urdfRoot.clone(true);
     // nameRobot(this.robot)
 
-    /**@type {Mesh} */
     this.tool = toolRoot.clone(true);
 
     this.world = world;
@@ -165,15 +162,14 @@ export class RobotControl {
     this.world.scene.add(this.robot);
   }
 
-  /**
-   * @param {Kinematics} kinematics
-   * @param {RobotModeEnum} mode
-   * @param {EffectorPosition} toolOffset
-   * @param {RobotControl} predecessor
-   * @param {CommandType} [commandType]
-   * @param {JogState} [jogState]
-   */
-  update(kinematics, mode, toolOffset, predecessor, commandType, jogState) {
+  update(
+    kinematics: Kinematics,
+    mode: RobotModeEnum,
+    toolOffset?: EffectorPosition,
+    predecessor?: RobotControl,
+    commandType?: CommandType,
+    jogState?: JogState
+  ) {
     this.kinematics = kinematics;
     const isMoveCommand =
       commandType === "effector" || commandType === "joints";
@@ -208,16 +204,23 @@ export class RobotControl {
       c.material = material || effectorMaterial;
     });
 
-    this.robot.traverse((c) => {
-      c.layers.set(layer);
-      if (c.type !== "Mesh") {
-        return;
+    this.robot.traverse(
+      (
+        c: Object3D<Object3DEventMap> & {
+          __unsetMaterial?: Material;
+          material: Material;
+        }
+      ) => {
+        c.layers.set(layer);
+        if (c.type !== "Mesh") {
+          return;
+        }
+        if (!c.__unsetMaterial) {
+          c.__unsetMaterial = c.material;
+        }
+        c.material = material || c.__unsetMaterial;
       }
-      if (!c.__unsetMaterial) {
-        c.__unsetMaterial = c.material;
-      }
-      c.material = material || c.__unsetMaterial;
-    });
+    );
 
     if (dragControlsEnabled) {
       this.#setupURDFControl(toolOffset);
@@ -258,12 +261,11 @@ export class RobotControl {
   }
 
   attachmentPoint() {
-    /** @type {URDFLink}  */
-    let link;
+    let link: URDFLink;
 
     this.robot.traverse((obj) => {
       if (obj.name === "tool0") {
-        link = obj;
+        link = obj as URDFLink;
       }
     });
 
@@ -275,7 +277,7 @@ export class RobotControl {
    * @param {EffectorPosition} toolOffset
    * @returns
    */
-  #setupURDFControl(toolOffset) {
+  #setupURDFControl(toolOffset: EffectorPosition) {
     if (this.dragControls) {
       return;
     }
@@ -362,7 +364,7 @@ export class RobotControl {
    * @param {RobotControl} predecessor
    * @param {EffectorPosition} toolOffset
    */
-  #setupToolControl(predecessor, toolOffset) {
+  #setupToolControl(predecessor: RobotControl, toolOffset: EffectorPosition) {
     if (this.transformControls) {
       return this.transformControls;
     }
@@ -376,7 +378,7 @@ export class RobotControl {
       this.world.render();
     });
     this.transformControls.addEventListener("dragging-changed", (event) => {
-      const isDragging = event.value;
+      const isDragging = !!event.value;
       this.world.orbit.enabled = !isDragging;
 
       this.dragging = isDragging;

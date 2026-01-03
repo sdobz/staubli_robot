@@ -14,16 +14,18 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls";
-
-/** @import { EffectorPosition } from '../robot.js' */
-/** @import { Object3D } from 'three' */
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 const size = new Vector3();
 const center = new Vector3();
 const box = new Box3();
 
 export class World {
+  renderer: WebGLRenderer;
+  camera: PerspectiveCamera;
+  scene: Scene;
+  orbit: OrbitControls;
+
   constructor() {
     let scene, camera, renderer, orbit;
     scene = new Scene();
