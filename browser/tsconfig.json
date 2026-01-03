@@ -1,17 +1,17 @@
 {
-    "include": ["**/*.d.ts", "**/*.js"],
-    "exclude": ["staubli/html/js/vendor"],
-    "compilerOptions": {
-        "lib": ["ES2023", "DOM", "dom.iterable"],
-        "allowImportingTsExtensions": true,
-        "moduleResolution": "bundler",
-        "noEmit": true,
-        "checkJs": true,
-        "baseUrl": ".",
-        "target": "es2022",
-        "outDir": "dist",
-        "paths": {
-            "linear-solve": ["./js/vendor/gauss-jordan.js"]
-        }
-    }
+  "include": ["**/*.ts", "**/*.js"],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "dom.iterable"],
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "noEmit": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "target": "ES2022",
+  }
 }

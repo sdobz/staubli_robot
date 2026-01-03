@@ -2,11 +2,10 @@ import { createComponent, html } from "./lib/component.ts";
 import { createSignal } from "./lib/state.js";
 import { robot } from "./robot.js";
 
-/**
- * @typedef {Object} WebsocketMessage
- * @prop {"write" | "read" | "readline"} mode
- * @prop {string} msg
- */
+interface WebsocketMessage {
+  mode: "write" | "read" | "readline";
+  msg: string;
+}
 
 createComponent({
   tag: "robot-serial",
@@ -26,11 +25,9 @@ createComponent({
   `,
   stateFn: () => {
     const socket = new WebSocket(`ws://${location.hostname}:8765`);
-    /** @type readonly [() => WebsocketMessage[], (set: WebsocketMessage[]) => void] */
-    const [messages, setMessages] = createSignal([]);
+    const [messages, setMessages] = createSignal<WebsocketMessage[]>([]);
     socket.onmessage = (event) => {
-      /** @type {WebsocketMessage} */
-      const payload = JSON.parse(event.data);
+      const payload: WebsocketMessage = JSON.parse(event.data);
 
       setMessages([...messages(), payload]);
     };

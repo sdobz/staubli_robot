@@ -1,21 +1,20 @@
 import { createSignal } from "./lib/state.js";
+import { EffectorPosition, JointPosition, RobotInterface, RobotState } from './robot-types'
 
-/** @import { EffectorPosition, JointPosition, RobotInterface, RobotState } from './robot-types' */
-
-async function get(url) {
+async function get(url: string) {
   return await (await fetch(url)).json();
 }
-async function put(url, data) {
+async function put(url: string, data?: any) {
   return await (await fetch(url, { method: "PUT", body: data !== undefined ? JSON.stringify(data) : undefined })).json();
 }
 
 // Only way to mutate robot state
-/**
- * @implements {RobotInterface}
- */
-class RobotApi {
+class RobotApi implements RobotInterface {
+  state: () => RobotState;
+  setState: (newState: RobotState) => void;
+  name: string;
+
   constructor () {
-    /** @type readonly [() => RobotState | undefined, (newState: RobotState) => void] */
     const [state, setState] = createSignal(undefined)
     this.state = state
     this.setState = setState
@@ -35,7 +34,7 @@ class RobotApi {
   /**
    * @param {Promise<RobotState>} p
    */
-  async #withRobotState(p) {
+  async #withRobotState(p: Promise<RobotState>) {
     // setRobot(undefined);
     const newState = await p;
     this.setState({
@@ -62,8 +61,6 @@ class RobotApi {
   }
 }
 
-/** @type {any} */
 export const robotApi = new RobotApi();
-/** @type {readonly [() => (RobotInterface | null), (robot: RobotInterface | null) => void]} */
-const [robot, setRobot] = createSignal(robotApi);
+const [robot, setRobot] = createSignal<RobotInterface | null>(robotApi);
 export { robot, setRobot };

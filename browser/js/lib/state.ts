@@ -2,7 +2,13 @@
 
 let context = [];
 
-export function untrack(fn) {
+
+interface Observer {
+    execute?: () => void;
+    dependencies: Set<Set<Observer>>;
+}
+
+export function untrack(fn: () => any) {
     const prevContext = context;
     context = [];
     const res = fn();
@@ -10,28 +16,27 @@ export function untrack(fn) {
     return res;
 }
 
-export function cleanup(observer) {
+export function cleanup(observer: Observer) {
     for (const dep of observer.dependencies) {
         dep.delete(observer);
     }
     observer.dependencies.clear();
 }
 
-function subscribe(observer, subscriptions) {
+function subscribe(observer: Observer, subscriptions: Set<Observer>) {
     subscriptions.add(observer);
     observer.dependencies.add(subscriptions);
 }
 
-/** @type {<T>(value: T) => readonly [() => T, (value: T) => void]} */
-export function createSignal(value) {
-    const subscriptions = new Set();
+export function createSignal<T>(value: T): readonly [() => T, (value: T) => void] {
+    const subscriptions = new Set<Observer>();
 
     const read = () => {
         const observer = context[context.length - 1]
         if (observer) subscribe(observer, subscriptions);
         return value;
     }
-    const write = (newValue) => {
+    const write = (newValue: T) => {
         value = newValue;
         for (const observer of [...subscriptions]) {
             observer.execute();
@@ -41,8 +46,8 @@ export function createSignal(value) {
     return [read, write];
 }
 
-export function createEffect(fn) {
-    const effect = {
+export function createEffect(fn: () => void) {
+    const effect: Observer = {
         execute() {
             cleanup(effect);
             context.push(effect);
@@ -59,14 +64,7 @@ export function createEffect(fn) {
     return () => cleanup(effect);
 }
 
-/**
- * Creates a memoized signal that updates whenever the value of `fn` changes.
- *
- * @template T - The return type of the `fn` function.
- * @param {() => T} fn - A function that returns a value of type `T`.
- * @returns {() => T} - A signal function that returns the latest value of `fn`.
- */
-export function createMemo(fn) {
+export function createMemo<T>(fn: () => T): () => T {
     const [signal, setSignal] = createSignal(null);
     createEffect(() => setSignal(fn()));
     return signal;

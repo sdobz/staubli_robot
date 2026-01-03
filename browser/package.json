@@ -6,6 +6,7 @@
   "scripts": {
     "start": "web-dev-server --config web-dev-server.config.mjs",
     "build": "node build.mjs",
+    "check": "tsc -p tsconfig.json",
     "lint": "eslint '**/*.{js,ts}'"
   },
   "dependencies": {
