@@ -21,9 +21,8 @@ import {
 import { patchCommand, program, programmerState } from "../program/state";
 import { MathUtils, Object3D, Quaternion, Vector3 } from "three";
 import { URDFJoint, URDFRobot } from "urdf-loader";
-import { EffectorPosition, JointPosition } from "js/robot-types";
+import { EffectorPosition, JointPosition } from "../robot-types";
 import { RobotControl } from "./robot";
-import { Frame } from "closed-chain-ik-js/src/core/Frame";
 
 const mmToM = 1 / 1000;
 const jointOffset = [-1, 0, -90, 90, 0, 0, 0];

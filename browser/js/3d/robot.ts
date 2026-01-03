@@ -5,15 +5,12 @@
 
 import {
   LoadingManager,
-  MathUtils,
   Mesh,
-  Quaternion,
-  Vector3,
   Object3D,
   Object3DEventMap,
   Material,
 } from "three";
-import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import URDFLoader, { URDFLink, URDFRobot } from "urdf-loader";
 import {
   currentInactiveMaterial,
@@ -24,8 +21,8 @@ import {
   selectedMaterial,
   World,
 } from "./world";
-import { PointerURDFDragControls } from "urdf-loader/src/URDFDragControls";
-import { TransformControls } from "three/examples/jsm/controls/TransformControls";
+import { PointerURDFDragControls } from "urdf-loader/src/URDFDragControls.js";
+import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 import { Kinematics } from "./kinematics";
 import { createSignal } from "../lib/state";
