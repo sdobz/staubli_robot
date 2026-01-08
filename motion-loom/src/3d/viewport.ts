@@ -2,12 +2,12 @@ import { Vector3, ArrowHelper, Mesh } from "three";
 
 import { html } from "../lib/component.ts";
 import { createEffect, createSignal } from "../lib/state.ts";
-import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot.ts";
+import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot.js";
 import { program, programmerState, jogState } from "../program/old/state.js";
 import { World } from "./world.js";
-import { Kinematics } from "./kinematics.ts";
-import { robot } from "../robot.ts";
-import { Command, RobotState } from "../robot-types.ts";
+import { Kinematics } from "./kinematics.js";
+import { robot } from "../robot.js";
+import { Command, RobotState } from "../robot-types.js";
 import { URDFRobot } from "urdf-loader";
 
 interface DerivedState {
