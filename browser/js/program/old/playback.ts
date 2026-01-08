@@ -1,9 +1,15 @@
-import { robot, robotApi, setRobot } from "../robot";
-import { createEffect } from "../lib/state";
-import { PlaybackEnum, program, ProgrammerState, programmerState, setProgrammerState } from "./state";
-import { createComponent, html } from "../lib/component";
-import { RobotPreview } from "../3d/preview";
-import { previewRobotRef } from "../3d/viewport";
+import { robot, robotApi, setRobot } from "../../robot";
+import { createEffect } from "../../lib/state";
+import {
+  PlaybackEnum,
+  program,
+  ProgrammerState,
+  programmerState,
+  setProgrammerState,
+} from "./state";
+import { createComponent, html } from "../../lib/component";
+import { RobotPreview } from "../../3d/preview";
+import { previewRobotRef } from "../../3d/viewport";
 
 createEffect(() => {
   const initialProgram = program();

@@ -18,7 +18,7 @@ import {
   Solver,
   urdfRobotToIKRoot,
 } from "closed-chain-ik-js";
-import { patchCommand, program, programmerState } from "../program/state";
+import { patchCommand, program, programmerState } from "../program/old/state";
 import { MathUtils, Object3D, Quaternion, Vector3 } from "three";
 import { URDFJoint, URDFRobot } from "urdf-loader";
 import { EffectorPosition, JointPosition } from "../robot-types";

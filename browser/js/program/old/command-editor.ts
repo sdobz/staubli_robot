@@ -1,5 +1,5 @@
-import { createSignal } from "../lib/state";
-import { createComponent, html } from "../lib/component";
+import { createSignal } from "../../lib/state";
+import { createComponent, html } from "../../lib/component";
 import {
   JogMode,
   JogSpace,
@@ -9,10 +9,9 @@ import {
   programmerState,
   setJogState,
 } from "./state";
-import { setToolProperties, STOCK_TOOLS } from "../3d/robot";
-import { derivedState } from "../3d/viewport";
+import { setToolProperties, STOCK_TOOLS } from "../../3d/robot";
+import { derivedState } from "../../3d/viewport";
 import { EffectorPosition, JointPosition } from "js/robot-types";
-
 
 createComponent({
   tag: "jog-mode-editor",
@@ -37,7 +36,6 @@ createComponent({
     const currentProgran = program();
     const currentCommand = currentProgran.commands[currentState.selectedIndex];
 
-
     function setMode(mode: JogMode) {
       setJogState({
         ...currentJogState,
@@ -48,7 +46,6 @@ createComponent({
     function ariaCurrentMode(checkMode: JogMode) {
       return currentJogState.mode === checkMode ? "true" : undefined;
     }
-
 
     function buildModeAttrs(forMode: JogMode) {
       return {
@@ -68,7 +65,6 @@ createComponent({
       };
     }
 
-
     function setSpace(space: JogSpace) {
       setJogState({
         ...currentJogState,
@@ -76,11 +72,9 @@ createComponent({
       });
     }
 
-
     function ariaCurrentSpace(checkSpace: JogSpace) {
       return currentJogState.space === checkSpace ? "true" : undefined;
     }
-
 
     function buildSpaceAttrs(forSpace: JogSpace) {
       return {

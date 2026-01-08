@@ -3,7 +3,7 @@ import { Vector3, ArrowHelper, Mesh } from "three";
 import { html } from "../lib/component.ts";
 import { createEffect, createSignal } from "../lib/state.ts";
 import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot.ts";
-import { program, programmerState, jogState } from "../program/state.ts";
+import { program, programmerState, jogState } from "../program/old/state.js";
 import { World } from "./world.js";
 import { Kinematics } from "./kinematics.ts";
 import { robot } from "../robot.ts";
@@ -58,7 +58,9 @@ class Robot3D extends HTMLElement {
     document.querySelectorAll("link").forEach((linkElement) => {
       shadowRoot.appendChild(linkElement.cloneNode());
     });
-    const templateContents = robot3DTemplate.content.cloneNode(true) as HTMLElement;
+    const templateContents = robot3DTemplate.content.cloneNode(
+      true
+    ) as HTMLElement;
     this.container = templateContents.querySelector("#robot-3d");
     this.container.appendChild(this.world.renderer.domElement);
 
@@ -135,7 +137,7 @@ class Robot3D extends HTMLElement {
 
     let previousRobot = currentRobot;
     let previousState = currentRobotState;
-    let nextDerivedState: DerivedState[]= [];
+    let nextDerivedState: DerivedState[] = [];
     currentSequence.commands.forEach((currentCommand, index) => {
       let nextState = previousState;
       const robot = popRobot();

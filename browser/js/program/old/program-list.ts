@@ -1,4 +1,4 @@
-import { createComponent, html } from "../lib/component";
+import { createComponent, html } from "../../lib/component";
 import {
   defaultProgramName,
   deleteProgram,
@@ -52,8 +52,8 @@ createComponent({
       if (!currentSequence.name) {
         setProgram({
           ...currentSequence,
-          name: defaultProgramName()
-        })
+          name: defaultProgramName(),
+        });
       }
 
       setProgrammerState({

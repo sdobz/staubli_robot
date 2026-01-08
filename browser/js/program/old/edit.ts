@@ -1,4 +1,4 @@
-import { createComponent, html } from "../lib/component";
+import { createComponent, html } from "../../lib/component";
 import {
   patchCommand,
   program,

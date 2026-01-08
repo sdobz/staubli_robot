@@ -27,7 +27,7 @@ import { TransformControls } from "three/examples/jsm/controls/TransformControls
 import { Kinematics } from "./kinematics";
 import { createSignal } from "../lib/state";
 import { CommandType, EffectorPosition } from "../robot-types";
-import { JogState } from "../program/state";
+import { JogState } from "../program/old/state";
 
 type RobotModeEnum = "current" | "current-ghost" | "ghost";
 

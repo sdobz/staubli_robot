@@ -3,37 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <title>Staubli control</title>
-    <script type="module" defer src="./js/app.ts"></script>
+    <script type="module" defer src="./js/entrypoint.ts"></script>
     <link rel="stylesheet" href="pico.amber.css" />
     <link rel="stylesheet" href="vendor/css/normalize.css" />
     <link rel="stylesheet" href="style.css" />
   </head>
 
   <body>
-    <div class="grid vh70 overflow-auto">
-      <div class="vertical-stack">
-        <article class="vertical-stack">
-          <h1>Program</h1>
-          <program-list></program-list>
-          <program-edit></program-edit>
-          <playback-control></playback-control>
-          <command-list></command-list>
-          <command-edit></command-edit>
-        </article>
-        <article>
-          <h2>Control</h2>
-          <div role="group">
-            <elbow-button></elbow-button>
-            <robot-button method="flail" label="Flail"></robot-button>
-            <robot-button method="reset" label="Reset"></robot-button>
-          </div>
-        </article>
-      </div>
-      <robot-3d></robot-3d>
-      <div class="vertical-stack">
-        <command-editor></command-editor>
-      </div>
-    </div>
-    <robot-serial></robot-serial>
+    <div id="app"></div>
   </body>
 </html>

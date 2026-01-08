@@ -1,9 +1,17 @@
-import { getItem, listItems, removeItem, setItem } from "../lib/storage";
-import { createStore } from "solid-js/store";
-import { bindParam } from "../lib/url";
-import { robot } from "../robot";
-import { derivedState } from "../3d/viewport";
-import { Command, CommandType } from "../robot-types";
+import { getItem, listItems, removeItem, setItem } from "../../lib/storage";
+import { createSignal } from "../../lib/state";
+import { bindParam } from "../../lib/url";
+import { robot } from "../../robot";
+import { derivedState } from "../../3d/viewport";
+import {
+  Command,
+  CommandType,
+  EffectorCommand,
+  JointsCommand,
+  SerialCommand,
+  SpeedCommand,
+  ToolCommand,
+} from "../../robot-types";
 
 export type JogMode = "translate-effector" | "rotate-effector" | "drag-joint";
 export type JogSpace = "local" | "world";
@@ -13,7 +21,7 @@ export interface JogState {
   space: JogSpace;
 }
 
-const [jogState, setJogState] = createStore<JogState>({
+const [jogState, setJogState] = createSignal<JogState>({
   mode: "drag-joint",
   space: "world",
 });
@@ -41,7 +49,7 @@ const initialProgrammerState: ProgrammerState = {
   loop: false,
   busy: false,
 };
-const [programmerState, setProgrammerState] = createStore<ProgrammerState>(
+const [programmerState, setProgrammerState] = createSignal(
   initialProgrammerState
 );
 export { programmerState, setProgrammerState };
@@ -62,7 +70,7 @@ function isSaveable(program: Program): program is SavedProgram {
 const initialProgram: Program = {
   commands: [],
 };
-const [program, _setProgram] = createStore<Program>(initialProgram);
+const [program, _setProgram] = createSignal(initialProgram);
 export { program, setProgram };
 
 interface ProgramIndexItem {
@@ -71,8 +79,7 @@ interface ProgramIndexItem {
 }
 
 const initialProgramIndex: ProgramIndexItem[] = listItems("sequence");
-const [programs, setPrograms] =
-  createStore<ProgramIndexItem[]>(initialProgramIndex);
+const [programs, setPrograms] = createSignal(initialProgramIndex);
 export { programs };
 
 function isPopulated(program: Program) {
@@ -92,9 +99,12 @@ function sortProgram({ name: nameA }, { name: nameB }) {
 }
 
 function setProgram(newProgram: Program) {
-  const { busy } = programmerState;
-  if (busy) {
-    setProgrammerState("playback", "stopped");
+  const currentState = programmerState();
+  if (currentState.busy) {
+    setProgrammerState({
+      ...currentState,
+      playback: "stopped",
+    });
   }
 
   if (isPopulated(newProgram)) {
@@ -106,6 +116,12 @@ function setProgram(newProgram: Program) {
           id: Math.random().toString(36).slice(2),
         };
 
+    // Instantiate urdf
+    // For item
+    //  Set kinematics to position
+    //  Derive position
+    //  Update derived position
+
     setItem("sequence", savedProgram, reduceProgram, sortProgram);
     setPrograms(listItems("sequence"));
   }
@@ -114,11 +130,11 @@ function setProgram(newProgram: Program) {
 }
 
 export function addCommand() {
-  const { selectedIndex, commandToAdd } = programmerState;
-  const { commands } = program;
+  const currentProgrammerState = programmerState();
+  const currentProgram = program();
 
-  let currentIndex = selectedIndex;
-  const derived = derivedState()[selectedIndex];
+  let currentIndex = currentProgrammerState.selectedIndex;
+  const derived = derivedState()[currentIndex];
   if (!derived) {
     currentIndex = -1;
   }
@@ -131,7 +147,7 @@ export function addCommand() {
 
   let newCommand: Command;
 
-  switch (commandToAdd) {
+  switch (currentProgrammerState.commandToAdd) {
     case "joints":
       newCommand = {
         name: defaultProgramName(),
@@ -161,34 +177,41 @@ export function addCommand() {
       };
       break;
     default:
-      throw new Error(`Unknown command type: ${commandToAdd}`);
+      throw new Error(
+        `Unknown command type: ${currentProgrammerState.commandToAdd}`
+      );
   }
 
-  const newCommands = [
-    ...commands.slice(0, currentIndex + 1),
+  const oldCommands = currentProgram.commands;
+  /** @type {Command[]} */
+  const newCommands: Command[] = [
+    ...oldCommands.slice(0, currentIndex + 1),
     newCommand,
-    ...commands.slice(currentIndex + 1),
+    ...oldCommands.slice(currentIndex + 1),
   ];
 
-  const nextSelectedIndex = currentIndex + 1;
+  const selectedIndex = currentIndex + 1;
 
   setProgram({
-    ...program,
+    ...currentProgram,
     commands: newCommands,
   });
-  setProgrammerState("selectedIndex", nextSelectedIndex);
+  setProgrammerState({
+    ...currentProgrammerState,
+    selectedIndex,
+  });
 }
 
 /**
  * @param {Partial<Command>} patch
  */
 export function patchCommand(patch: Partial<Command>) {
-  const { selectedIndex } = programmerState;
-  const { commands } = program;
+  const currentProgrammerState = programmerState();
+  const currentProgram = program();
 
-  const currentIndex = selectedIndex;
+  const currentIndex = currentProgrammerState.selectedIndex;
 
-  const currentCommand = commands[currentIndex];
+  const currentCommand = currentProgram.commands[currentIndex];
   if (!currentCommand) {
     console.error("No selected command while patching");
     return;
@@ -201,14 +224,15 @@ export function patchCommand(patch: Partial<Command>) {
 
   const newCommand = mergeDeep(currentCommand, patch) as Command;
 
+  const oldCommands = currentProgram.commands;
   const newCommands: Command[] = [
-    ...commands.slice(0, currentIndex),
+    ...oldCommands.slice(0, currentIndex),
     newCommand,
-    ...commands.slice(currentIndex + 1),
+    ...oldCommands.slice(currentIndex + 1),
   ];
 
   setProgram({
-    ...program,
+    ...currentProgram,
     commands: newCommands,
   });
 }
@@ -228,7 +252,7 @@ export function loadProgram(id: string) {
 }
 
 export function deleteProgram() {
-  const currentProgram = program;
+  const currentProgram = program();
   if (isSaveable(currentProgram)) {
     removeItem("sequence", currentProgram);
     setPrograms(listItems("sequence"));
@@ -243,17 +267,17 @@ export function deleteProgram() {
 // then update index
 bindParam(
   "program",
-  () => program.id || "",
+  () => program().id || "",
   (newProgramId) =>
     newProgramId === "" ? setProgram(initialProgram) : loadProgram(newProgramId)
 );
 
 bindParam(
   "index",
-  () => programmerState.selectedIndex.toString(),
+  () => programmerState().selectedIndex.toString(),
   (newIndexStr) =>
     setProgrammerState({
-      ...programmerState,
+      ...programmerState(),
       selectedIndex: parseInt(newIndexStr) || 0,
     })
 );
