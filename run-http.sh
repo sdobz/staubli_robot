@@ -9,7 +9,7 @@ cd "$SCRIPT_DIR"
 
 start_js() {
 	echo "Starting JS dev server (staubli/html)..."
-	(cd "$SCRIPT_DIR/browser" && npm run start)
+	(cd "$SCRIPT_DIR/motion-loom" && npm run start)
 }
 
 start_py() {
