@@ -66,7 +66,7 @@ export interface RobotState {
 }
 
 export interface RobotInterface {
-  state: () => RobotState;
+  state: () => RobotState | undefined;
   name: string;
   execute: (command: Command) => Promise<void>;
 }

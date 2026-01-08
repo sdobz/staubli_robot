@@ -1,4 +1,4 @@
-import { html, createComponent } from "../../lib/component";
+import { html, createComponent } from "../lib/component";
 import {
   addCommand,
   program,

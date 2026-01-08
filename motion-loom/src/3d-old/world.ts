@@ -133,7 +133,7 @@ export const ghostMaterial = new MeshPhongMaterial({
   opacity: 0.2,
   transparent: true,
 });
-const selectedColor = "#AAAAAA"
+const selectedColor = "#AAAAAA";
 export const selectedMaterial = new MeshPhongMaterial({
   shininess: 10,
   color: selectedColor,

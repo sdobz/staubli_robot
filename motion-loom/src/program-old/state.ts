@@ -1,8 +1,8 @@
-import { getItem, listItems, removeItem, setItem } from "../../lib/storage";
-import { createSignal } from "../../lib/state";
-import { bindParam } from "../../lib/url";
-import { robot } from "../../program-old/robot";
-import { derivedState } from "../../3d/viewport";
+import { getItem, listItems, removeItem, setItem } from "../lib/storage";
+import { createSignal } from "../lib/state";
+import { bindParam } from "../lib/url";
+import { robot } from "./robot";
+import { derivedState } from "../3d-old/viewport";
 import {
   Command,
   CommandType,
@@ -11,7 +11,7 @@ import {
   SerialCommand,
   SpeedCommand,
   ToolCommand,
-} from "../../staubli/robot-types";
+} from "../staubli/robot-types";
 
 export type JogMode = "translate-effector" | "rotate-effector" | "drag-joint";
 export type JogSpace = "local" | "world";

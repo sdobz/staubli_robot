@@ -21,12 +21,12 @@ import {
   selectedMaterial,
   World,
 } from "./world";
-import { PointerURDFDragControls } from "urdf-loader/src/URDFDragControls.js";
+import { PointerURDFDragControls } from "urdf-loader/src/URDFDragControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
 
 import { Kinematics } from "./kinematics";
 import { createSignal } from "../lib/state";
-import { CommandType, EffectorPosition } from "../robot-types";
+import { CommandType, EffectorPosition } from "../staubli/robot-types";
 import { JogState } from "../program/old/state";
 
 type RobotModeEnum = "current" | "current-ghost" | "ghost";

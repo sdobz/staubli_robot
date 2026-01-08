@@ -7,8 +7,8 @@ import {
   JogMode,
   JogSpace,
 } from "./state";
-import { setToolProperties, STOCK_TOOLS } from "../3d/robot";
-import { derivedState } from "../3d/viewport";
+import { setToolProperties, STOCK_TOOLS } from "../3d-old/robot";
+import { derivedState } from "../3d-old/viewport";
 
 export function JogModeEditor() {
   function setMode(mode: JogMode) {

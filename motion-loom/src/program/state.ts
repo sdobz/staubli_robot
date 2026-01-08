@@ -1,9 +1,9 @@
 import { getItem, listItems, removeItem, setItem } from "../lib/storage";
 import { createStore } from "solid-js/store";
 import { bindParam } from "../lib/url";
-import { robot } from "../robot";
-import { derivedState } from "../3d/viewport";
-import { Command, CommandType } from "../robot-types";
+import { robot } from "../program-old/robot";
+import { derivedState } from "../3d-old/viewport";
+import { Command, CommandType } from "../staubli/robot-types";
 
 export type JogMode = "translate-effector" | "rotate-effector" | "drag-joint";
 export type JogSpace = "local" | "world";

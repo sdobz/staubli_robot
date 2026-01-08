@@ -1,11 +1,21 @@
-import { createSignal } from "./lib/state";
-import { EffectorPosition, JointPosition, RobotInterface, RobotState } from './robot-types'
+import { createSignal } from "../lib/state";
+import {
+  EffectorPosition,
+  JointPosition,
+  RobotInterface,
+  RobotState,
+} from "../staubli/robot-types";
 
 async function get(url: string) {
   return await (await fetch(url)).json();
 }
 async function put(url: string, data?: any) {
-  return await (await fetch(url, { method: "PUT", body: data !== undefined ? JSON.stringify(data) : undefined })).json();
+  return await (
+    await fetch(url, {
+      method: "PUT",
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+    })
+  ).json();
 }
 
 // Only way to mutate robot state
@@ -14,11 +24,11 @@ class RobotApi implements RobotInterface {
   setState: (newState: RobotState) => void;
   name: string;
 
-  constructor () {
-    const [state, setState] = createSignal(undefined)
-    this.state = state
-    this.setState = setState
-    this.name = "api"
+  constructor() {
+    const [state, setState] = createSignal(undefined);
+    this.state = state;
+    this.setState = setState;
+    this.name = "api";
   }
 
   load() {
@@ -45,7 +55,7 @@ class RobotApi implements RobotInterface {
   }
 
   async execute(command) {
-    await this.#withRobotState(put(`/api/${command.type}`, command.data))
+    await this.#withRobotState(put(`/api/${command.type}`, command.data));
   }
 
   async elbow() {

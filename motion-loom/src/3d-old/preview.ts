@@ -1,4 +1,10 @@
-import { RobotState, Command, JointPosition, EffectorPosition, RobotInterface } from "../robot-types";
+import {
+  RobotState,
+  Command,
+  JointPosition,
+  EffectorPosition,
+  RobotInterface,
+} from "../staubli/robot-types";
 import { MotionConstraint, MotionPlan } from "../lib/motion-plan";
 import { createSignal } from "../lib/state";
 import { RobotControl } from "./robot";
@@ -116,7 +122,12 @@ export class RobotPreview implements RobotInterface {
     });
   }
 
-  #animatePlans(constraints: MotionConstraint, starts: number[], stops: number[], callback: (positions: number[]) => void) {
+  #animatePlans(
+    constraints: MotionConstraint,
+    starts: number[],
+    stops: number[],
+    callback: (positions: number[]) => void
+  ) {
     const plans = MotionPlan.planSync(constraints, starts, stops);
     const duration = plans[0].totalTime();
 

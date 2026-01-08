@@ -3,8 +3,11 @@ import { render } from "solid-js/web";
 import "solid-devtools";
 
 import "./vendor/pico.amber.css";
-import "./vendor/normalize.css";
+import "../node_modules/normalize.css/normalize.css";
+import "./index.css";
 import App from "./App";
+import { robotApi } from "./staubli/robot";
+import { createEffect } from "solid-js";
 
 const root = document.getElementById("root");
 
@@ -15,3 +18,6 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
 }
 
 render(() => <App />, root!);
+createEffect(() => {
+  console.log(robotApi.state());
+});

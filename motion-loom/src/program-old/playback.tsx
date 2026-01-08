@@ -1,4 +1,4 @@
-import { robot, robotApi, setRobot } from "../program-old/robot";
+import { robot, robotApi, setRobot } from "./robot";
 import { createEffect } from "solid-js";
 import { JSX } from "solid-js";
 import {
@@ -8,8 +8,8 @@ import {
   programmerState,
   setProgrammerState,
 } from "./state";
-import { RobotPreview } from "../3d-old/preview";
-import { previewRobotRef } from "../3d-old/viewport";
+import { RobotPreview } from "../3d/preview";
+import { previewRobotRef } from "../3d/viewport";
 
 createEffect(() => {
   const initialProgram = program;

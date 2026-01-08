@@ -18,10 +18,10 @@ import {
   Solver,
   urdfRobotToIKRoot,
 } from "closed-chain-ik-js";
-import { patchCommand, program, programmerState } from "../program/old/state";
+import { patchCommand, program, programmerState } from "../program-old/state";
 import { MathUtils, Object3D, Quaternion, Vector3 } from "three";
 import { URDFJoint, URDFRobot } from "urdf-loader";
-import { EffectorPosition, JointPosition } from "../robot-types";
+import { EffectorPosition, JointPosition } from "../staubli/robot-types";
 import { RobotControl } from "./robot";
 
 const mmToM = 1 / 1000;
@@ -31,10 +31,10 @@ const zeroOffset = new Vector3(0, 0, 0);
 export class Kinematics {
   urdfRoot: URDFRobot;
   baseOffset: Vector3;
-  helper: IKRootsHelper;
-  _ikRoot: Link;
-  _goal: Goal;
-  _solver: Solver;
+  helper?: IKRootsHelper;
+  _ikRoot?: Link;
+  _goal?: Goal;
+  _solver?: Solver;
 
   constructor(urdfRoot: URDFRobot) {
     this.urdfRoot = urdfRoot;
@@ -226,7 +226,7 @@ export class Kinematics {
     return this._ikRoot;
   }
 
-  #solveIK(predecessor, flangePosition) {
+  #solveIK(predecessor: RobotControl, flangePosition: ThreePosition) {
     const ikRoot = this.#ikRoot();
     setIKFromUrdf(ikRoot, predecessor.robot);
 

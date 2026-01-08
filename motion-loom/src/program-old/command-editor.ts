@@ -1,5 +1,5 @@
-import { createSignal } from "../../lib/state";
-import { createComponent, html } from "../../lib/component";
+import { createSignal } from "../lib/state";
+import { createComponent, html } from "../lib/component";
 import {
   JogMode,
   JogSpace,
@@ -9,9 +9,9 @@ import {
   programmerState,
   setJogState,
 } from "./state";
-import { setToolProperties, STOCK_TOOLS } from "../../3d/robot";
-import { derivedState } from "../../3d/viewport";
-import { EffectorPosition, JointPosition } from "js/robot-types";
+import { setToolProperties, STOCK_TOOLS } from "../3d-old/robot";
+import { derivedState } from "../3d-old/viewport";
+import { EffectorPosition, JointPosition } from "../staubli/robot-types";
 
 createComponent({
   tag: "jog-mode-editor",
@@ -145,7 +145,7 @@ createComponent({
       roll: parseFloat(attrs.roll),
     };
 
-    function makeHandler(field) {
+    function makeHandler(field: string) {
       return {
         [`.effector-position-editor-${field}`]: {
           properties: {
@@ -221,7 +221,7 @@ createComponent({
       j6: parseFloat(attrs.j6),
     };
 
-    function makeHandler(field) {
+    function makeHandler(field: string) {
       return {
         [`.joint-position-editor-${field}`]: {
           properties: {
@@ -363,7 +363,7 @@ createComponent({
     function onSelectToolDisplay(e) {
       setToolProperties(STOCK_TOOLS[e.target.value]);
     }
-    const displayIndex = state.selectedDisplayIndex();
+    const displayIndex = state!.selectedDisplayIndex();
 
     const toolDisplayChildren = STOCK_TOOLS.map(
       (tool, i) => `

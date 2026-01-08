@@ -1,5 +1,5 @@
-import { createComponent, html } from "./lib/component.js";
-import { createSignal } from "./lib/state.js";
+import { createComponent, html } from "../lib/component";
+import { createSignal } from "../lib/state";
 import { robot } from "./robot";
 
 interface WebsocketMessage {
