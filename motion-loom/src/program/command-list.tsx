@@ -57,36 +57,32 @@ export function CommandList() {
         </thead>
         <tbody>
           <For each={program.commands}>
-            {(command, idx) => {
-              const i = idx();
-              return (
-                <tr data-index={i}>
-                  <td>
-                    <input
-                      type="radio"
-                      class="command-select"
-                      checked={programmerState.selectedIndex === i}
-                      disabled={programmerState.busy}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        onSelect(i);
-                      }}
-                    />
-                  </td>
-                  <th scope="row">{command.name}</th>
-                  <td>{command.type}</td>
-                  <td>
-                    <button
-                      class="command-delete"
-                      disabled={programmerState.busy}
-                      onClick={() => onDelete(i)}
-                    >
-                      X
-                    </button>
-                  </td>
-                </tr>
-              );
-            }}
+            {(command, idx) => (
+              <tr data-index={idx()}>
+                <td>
+                  <input
+                    type="radio"
+                    class="command-select"
+                    checked={programmerState.selectedIndex === idx()}
+                    disabled={programmerState.busy}
+                    onChange={(e) => {
+                      onSelect(idx());
+                    }}
+                  />
+                </td>
+                <th scope="row">{command.name}</th>
+                <td>{command.type}</td>
+                <td>
+                  <button
+                    class="command-delete"
+                    disabled={programmerState.busy}
+                    onClick={() => onDelete(idx())}
+                  >
+                    X
+                  </button>
+                </td>
+              </tr>
+            )}
           </For>
         </tbody>
       </table>
