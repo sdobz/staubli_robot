@@ -44,9 +44,6 @@ export function CommandList() {
     addCommand();
   }
 
-  createEffect(() => {
-    console.log(program.id, !!program.id);
-  });
   return (
     <section>
       <table class="effector">

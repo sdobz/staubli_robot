@@ -334,6 +334,7 @@ export class RobotControl {
     dragControls.updateJoint = (joint, angle) => {
       this.robot.joints?.[joint.name].setJointValue(angle);
       this.kinematics.applyEffectorFromJointPosition(this, toolOffset);
+      this.kinematics.updateCommand(this);
       this.world.render();
     };
     dragControls.onHover = (joint) => {
