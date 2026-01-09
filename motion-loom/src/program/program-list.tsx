@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { createEffect, For } from "solid-js";
 import {
   defaultProgramName,
   deleteProgram,
@@ -18,8 +18,7 @@ export function ProgramList() {
 
   function onSelectProgram(e: Event) {
     if (state.busy) return;
-    // @ts-ignore
-    const selectedProgramId = e.target.value;
+    const selectedProgramId = (e.target as HTMLSelectElement).value;
     if (!selectedProgramId) {
       newProgram();
       return;
@@ -48,16 +47,11 @@ export function ProgramList() {
         required
         onChange={onSelectProgram}
         disabled={state.busy}
+        value={current.id}
       >
-        <option value="" selected={!current.id}>
-          New
-        </option>
+        <option value="">New</option>
         <For each={list}>
-          {(item) => (
-            <option value={item.id} selected={current.id === item.id}>
-              {item.name}
-            </option>
-          )}
+          {(item) => <option value={item.id}>{item.name}</option>}
         </For>
       </select>
       <div role="group">

@@ -42,13 +42,13 @@ const initialProgrammerState: ProgrammerState = {
   busy: false,
 };
 const [programmerState, setProgrammerState] = createStore<ProgrammerState>(
-  initialProgrammerState
+  cloneDeep(initialProgrammerState)
 );
 export { programmerState, setProgrammerState };
 
 interface Program {
   name?: string;
-  id?: string;
+  id: string;
   speed?: number;
   commands: Command[];
 }
@@ -56,13 +56,14 @@ interface Program {
 type SavedProgram = Program & Required<Pick<Program, "name" | "id">>;
 
 function isSaveable(program: Program): program is SavedProgram {
-  return typeof program.id === "string";
+  return program.id !== "" && !!program.name;
 }
 
 const initialProgram: Program = {
+  id: "",
   commands: [],
 };
-const [program, _setProgram] = createStore<Program>(initialProgram);
+const [program, _setProgram] = createStore<Program>(cloneDeep(initialProgram));
 export { program, setProgram };
 
 interface ProgramIndexItem {
@@ -111,9 +112,10 @@ function setProgram(newProgram: Program) {
 
     setItem("sequence", savedProgram, reduceProgram, sortProgram);
     setPrograms(listItems("sequence"));
+    _setProgram(savedProgram);
+  } else {
+    _setProgram(newProgram);
   }
-
-  _setProgram(newProgram);
 }
 
 export function addCommand() {
@@ -217,7 +219,7 @@ export function patchCommand(patch: Partial<Command>) {
 }
 
 export function newProgram() {
-  setProgram(initialProgram);
+  setProgram(cloneDeep(initialProgram));
 }
 
 export function loadProgram(id: string) {
@@ -226,8 +228,8 @@ export function loadProgram(id: string) {
     return;
   }
 
-  setProgram(item);
-  setProgrammerState(initialProgrammerState);
+  _setProgram(item);
+  setProgrammerState(cloneDeep(initialProgrammerState));
 }
 
 export function deleteProgram() {
@@ -236,7 +238,7 @@ export function deleteProgram() {
     removeItem("sequence", currentProgram);
     setPrograms(listItems("sequence"));
   }
-  setProgram(initialProgram);
+  setProgram(cloneDeep(initialProgram));
 }
 
 // Order on params is important:
@@ -248,7 +250,9 @@ bindParam(
   "program",
   () => program.id || "",
   (newProgramId) =>
-    newProgramId === "" ? setProgram(initialProgram) : loadProgram(newProgramId)
+    newProgramId === ""
+      ? setProgram(cloneDeep(initialProgram))
+      : loadProgram(newProgramId)
 );
 
 bindParam(
@@ -260,6 +264,31 @@ bindParam(
       selectedIndex: parseInt(newIndexStr) || 0,
     })
 );
+
+/**
+ * Creates a deep clone of an object. Does not modify the original object.
+ */
+function cloneDeep<T extends Record<string, any>>(obj: T): T {
+  const isObject = (val: any) => val && typeof val === "object";
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) =>
+      isObject(item) ? cloneDeep(item) : item
+    ) as unknown as T;
+  }
+
+  if (isObject(obj)) {
+    return Object.keys(obj).reduce<T>((result, key) => {
+      const val = (obj as Record<string, any>)[key];
+      (result as Record<string, any>)[key] = isObject(val)
+        ? cloneDeep(val)
+        : val;
+      return result;
+    }, {} as T);
+  }
+
+  return obj;
+}
 
 /**
  * Performs a deep merge of objects and returns new object. Does not modify
