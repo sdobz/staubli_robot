@@ -8,8 +8,8 @@ import {
   setProgrammerState,
 } from "./state";
 import { createComponent, html } from "../lib/component";
-import { RobotPreview } from "../3d-old/preview";
-import { previewRobotRef } from "../3d-old/viewport";
+import { RobotPreview } from "../3d/preview";
+import { previewRobotRef } from "../3d/viewport";
 
 createEffect(() => {
   const initialProgram = program();

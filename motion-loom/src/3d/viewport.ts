@@ -3,10 +3,10 @@ import { Vector3, ArrowHelper, Mesh } from "three";
 import { html } from "../lib/component";
 import { createEffect, createSignal } from "../lib/state";
 import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot";
-import { program, programmerState, jogState } from "../program/old/state";
+import { program, programmerState, jogState } from "../program/state";
 import { World } from "./world";
 import { Kinematics } from "./kinematics";
-import { robot } from "../program-old/robot";
+import { robot } from "../staubli/robot";
 import { Command, RobotState } from "../staubli/robot-types";
 import { URDFRobot } from "urdf-loader";
 
@@ -36,7 +36,6 @@ class Robot3D extends HTMLElement {
   urdfRoot: URDFRobot | undefined;
   toolRoot: Mesh | undefined;
   container: HTMLElement;
-  attached: boolean;
   constructor() {
     super();
 
@@ -61,7 +60,7 @@ class Robot3D extends HTMLElement {
     const templateContents = robot3DTemplate.content.cloneNode(
       true
     ) as HTMLElement;
-    this.container = templateContents.querySelector("#robot-3d");
+    this.container = templateContents.querySelector("#robot-3d")!;
     this.container.appendChild(this.world.renderer.domElement);
 
     shadowRoot.appendChild(templateContents);
@@ -81,7 +80,7 @@ class Robot3D extends HTMLElement {
       const props = toolProperties();
 
       while (this.robots.length > 0) {
-        this.robots.pop().dispose();
+        this.robots.pop()!.dispose();
       }
 
       loadTool(props).then((result) => {
@@ -93,9 +92,9 @@ class Robot3D extends HTMLElement {
 
   updateRobots() {
     const currentRobotState = robot()?.state();
-    const currentSequence = program();
-    const currentProgrammerState = programmerState();
-    const currentJogState = jogState();
+    const currentSequence = program;
+    const currentProgrammerState = programmerState;
+    const currentJogState = jogState;
 
     if (!currentRobotState?.position) {
       return;
@@ -217,7 +216,7 @@ class Robot3D extends HTMLElement {
     });
 
     while (previousRobots.length > 0) {
-      previousRobots.pop().dispose();
+      previousRobots.pop()!.dispose();
     }
 
     setDerivedState(nextDerivedState);
@@ -225,6 +224,9 @@ class Robot3D extends HTMLElement {
   }
 
   #createRobot() {
+    if (!this.urdfRoot || !this.toolRoot) {
+      throw new Error("URDF or tool root not loaded");
+    }
     const newRobot = new RobotControl(this.urdfRoot, this.toolRoot, this.world);
     newRobot.addToScene();
     return newRobot;
@@ -266,7 +268,6 @@ class Robot3D extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this.attached = false;
     //this.dragControls.dispose();
   }
 

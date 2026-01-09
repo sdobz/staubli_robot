@@ -9,8 +9,8 @@ import {
   programmerState,
   setJogState,
 } from "./state";
-import { setToolProperties, STOCK_TOOLS } from "../3d-old/robot";
-import { derivedState } from "../3d-old/viewport";
+import { setToolProperties, STOCK_TOOLS } from "../3d/robot";
+import { derivedState } from "../3d/viewport";
 import { EffectorPosition, JointPosition } from "../staubli/robot-types";
 
 createComponent({

@@ -8,8 +8,8 @@ import {
   programmerState,
   setProgrammerState,
 } from "./state";
-import { RobotPreview } from "../3d-old/preview";
-import { previewRobotRef } from "../3d-old/viewport";
+import { RobotPreview } from "../3d/preview";
+import { previewRobotRef } from "../3d/viewport";
 
 createEffect(() => {
   const initialProgram = program;
@@ -76,7 +76,10 @@ export function PlaybackControl() {
     if (isPreview) {
       setRobot(robotApi);
     } else if (currentPreviewRobot !== null) {
-      setRobot(new RobotPreview(currentPreviewRobot, currentRobot.state()));
+      const previewState = currentRobot?.state();
+      if (previewState) {
+        setRobot(new RobotPreview(currentPreviewRobot, previewState));
+      }
     }
   }
 

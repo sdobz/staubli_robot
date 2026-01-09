@@ -47,8 +47,6 @@ export function CommandList() {
     addCommand();
   }
 
-  const isBusy = () => state.busy;
-
   return (
     <section>
       <table class="effector">
@@ -71,7 +69,7 @@ export function CommandList() {
                       type="radio"
                       class="command-select"
                       checked={state.selectedIndex === i}
-                      disabled={isBusy()}
+                      disabled={state.busy}
                       onClick={(e) => {
                         e.preventDefault();
                         onSelect(i);
@@ -83,7 +81,7 @@ export function CommandList() {
                   <td>
                     <button
                       class="command-delete"
-                      disabled={isBusy()}
+                      disabled={state.busy}
                       onClick={() => onDelete(i)}
                     >
                       X
@@ -98,7 +96,7 @@ export function CommandList() {
       <div class="horizontal-stack">
         <button
           class="command-edit"
-          disabled={isBusy() || !prog.commands[state.selectedIndex]}
+          disabled={state.busy || !prog.commands[state.selectedIndex]}
           onClick={doEditItem}
         >
           Edit
@@ -119,7 +117,7 @@ export function CommandList() {
           </select>
           <button
             class="add-command"
-            disabled={isBusy()}
+            disabled={state.busy}
             onClick={doAddCommand}
           >
             Add
@@ -128,14 +126,4 @@ export function CommandList() {
       </div>
     </section>
   );
-}
-
-function findIndex(el: HTMLElement) {
-  if (el.hasAttribute("data-index")) {
-    return parseInt(el.getAttribute("data-index") || "-1");
-  }
-  if (el.parentElement) {
-    return findIndex(el.parentElement);
-  }
-  return -1;
 }

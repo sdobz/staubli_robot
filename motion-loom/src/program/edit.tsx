@@ -11,12 +11,11 @@ export function ProgramEdit() {
   const prog = program;
 
   function doCloseEditing() {
-    setProgrammerState({ ...state, editing: undefined });
+    setProgrammerState("editing", "none");
   }
 
   function onChangeName(e: Event) {
-    // @ts-ignore
-    setProgram({ ...prog, name: e.target.value });
+    setProgram({ ...prog, name: (e.target as HTMLInputElement).value });
   }
 
   return (
@@ -25,11 +24,10 @@ export function ProgramEdit() {
       open={state.editing === "sequence"}
       onClick={doCloseEditing}
     >
-      <article onClick={(e) => e.stopPropagation()}>
+      <article>
         <header>
           <button
             aria-label="Close"
-            rel="prev"
             class="program-edit-close"
             onClick={doCloseEditing}
           ></button>
@@ -62,8 +60,10 @@ export function CommandEdit() {
   }
 
   function onChangeName(e: Event) {
-    // @ts-ignore
-    patchCommand({ name: e.target.value, type: currentCommand.type });
+    patchCommand({
+      name: (e.target as HTMLInputElement).value,
+      type: currentCommand.type,
+    });
   }
 
   return (
@@ -76,7 +76,6 @@ export function CommandEdit() {
         <header>
           <button
             aria-label="Close"
-            rel="prev"
             class="command-edit-close"
             onClick={doCloseEditing}
           ></button>

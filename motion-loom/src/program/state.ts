@@ -1,8 +1,8 @@
 import { getItem, listItems, removeItem, setItem } from "../lib/storage";
 import { createStore } from "solid-js/store";
 import { bindParam } from "../lib/url";
-import { robot } from "../program-old/robot";
-import { derivedState } from "../3d-old/viewport";
+import { robot } from "../staubli/robot";
+import { derivedState } from "../3d/viewport";
 import { Command, CommandType } from "../staubli/robot-types";
 
 export type JogMode = "translate-effector" | "rotate-effector" | "drag-joint";
@@ -53,7 +53,7 @@ interface Program {
   commands: Command[];
 }
 
-type SavedProgram = Program & { id: string };
+type SavedProgram = Program & Required<Pick<Program, "name" | "id">>;
 
 function isSaveable(program: Program): program is SavedProgram {
   return typeof program.id === "string";
@@ -83,11 +83,14 @@ export function defaultProgramName() {
   return new Date().toISOString();
 }
 
-function reduceProgram({ id, name }) {
+function reduceProgram({ id, name }: SavedProgram) {
   return { id, name };
 }
 
-function sortProgram({ name: nameA }, { name: nameB }) {
+function sortProgram(
+  { name: nameA }: SavedProgram,
+  { name: nameB }: SavedProgram
+) {
   return nameA < nameB ? -1 : 1;
 }
 
@@ -122,7 +125,7 @@ export function addCommand() {
   if (!derived) {
     currentIndex = -1;
   }
-  const deriveFromState = derived?.state || robot().state();
+  const deriveFromState = derived?.state || robot()?.state();
 
   if (!deriveFromState) {
     console.error("Add command without position");
@@ -262,20 +265,20 @@ bindParam(
  * Performs a deep merge of objects and returns new object. Does not modify
  * objects (immutable) and merges arrays via concatenation.
  */
-function mergeDeep<T>(...objects: T[]): T {
+function mergeDeep<T extends Record<string, any>>(...objects: T[]): T {
   const isObject = (obj: any) => obj && typeof obj === "object";
 
   return objects.reduce<T>((prev, obj) => {
     Object.keys(obj).forEach((key) => {
-      const pVal = prev[key];
-      const oVal = obj[key];
+      const pVal = (prev as Record<string, any>)[key];
+      const oVal = (obj as Record<string, any>)[key];
 
       if (Array.isArray(pVal) && Array.isArray(oVal)) {
-        prev[key] = pVal.concat(...oVal);
+        (prev as Record<string, any>)[key] = pVal.concat(...oVal);
       } else if (isObject(pVal) && isObject(oVal)) {
-        prev[key] = mergeDeep(pVal, oVal);
+        (prev as Record<string, any>)[key] = mergeDeep(pVal, oVal);
       } else {
-        prev[key] = oVal;
+        (prev as Record<string, any>)[key] = oVal;
       }
     });
 

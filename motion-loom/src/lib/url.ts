@@ -1,17 +1,21 @@
 import { createEffect } from "./state";
 
-export function bindParam(param: string, paramSignal: () => string, setParamSignal: (set: string) => void) {
+export function bindParam(
+  param: string,
+  paramSignal: () => string,
+  setParamSignal: (set: string) => void
+) {
   const initialSignal = paramSignal();
   const initialParam = new URLSearchParams(window.location.search).get(param);
   if (initialSignal !== initialParam) {
-    setParamSignal(initialParam);
+    setParamSignal(initialParam || "");
   }
 
   window.addEventListener("popstate", (event) => {
     const popSignal = paramSignal();
     const popParam = new URLSearchParams(window.location.search).get(param);
     if (popSignal !== popParam) {
-      setParamSignal(popParam);
+      setParamSignal(popParam || "");
     }
   });
 

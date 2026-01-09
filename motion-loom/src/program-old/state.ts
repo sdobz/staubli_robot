@@ -2,7 +2,7 @@ import { getItem, listItems, removeItem, setItem } from "../lib/storage";
 import { createSignal } from "../lib/state";
 import { bindParam } from "../lib/url";
 import { robot } from "./robot";
-import { derivedState } from "../3d-old/viewport";
+import { derivedState } from "../3d/viewport";
 import {
   Command,
   CommandType,
