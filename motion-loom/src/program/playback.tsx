@@ -66,17 +66,13 @@ createEffect(() => {
 });
 
 export function PlaybackControl() {
-  const currentState = programmerState;
-  const currentSequence = program;
-  const currentRobot = robot();
-  const currentPreviewRobot = previewRobotRef.current;
-
-  const isPreview = currentRobot?.name === "preview";
+  const isPreview = () => robot()?.name === "preview";
   function doTogglePreview() {
-    if (isPreview) {
+    const currentPreviewRobot = previewRobotRef.current;
+    if (isPreview()) {
       setRobot(robotApi);
     } else if (currentPreviewRobot !== null) {
-      const previewState = currentRobot?.state();
+      const previewState = robot()?.state();
       if (previewState) {
         setRobot(new RobotPreview(currentPreviewRobot, previewState));
       }
@@ -85,8 +81,8 @@ export function PlaybackControl() {
 
   function makePlaybackHandler(playback: PlaybackEnum) {
     return () => {
-      if (currentState.busy && playback !== "stopped") return;
-      setProgrammerState({ ...currentState, playback });
+      if (programmerState.busy && playback !== "stopped") return;
+      setProgrammerState({ ...programmerState, playback });
     };
   }
 
@@ -94,7 +90,7 @@ export function PlaybackControl() {
   const doStop = makePlaybackHandler("stopped");
   const doJog = makePlaybackHandler("jog");
 
-  const isEmpty = currentSequence.commands.length === 0;
+  const isEmpty = () => program.commands.length === 0;
 
   return (
     <div class="horizontal-stack">
@@ -103,8 +99,8 @@ export function PlaybackControl() {
           type="checkbox"
           name="preview"
           class="sequence-preview"
-          checked={isPreview}
-          disabled={currentState.busy}
+          checked={isPreview()}
+          disabled={programmerState.busy}
           onChange={doTogglePreview}
         />
         Preview
@@ -113,9 +109,9 @@ export function PlaybackControl() {
         <button
           class="sequence-jog"
           disabled={
-            isEmpty ||
-            currentState.busy ||
-            !currentSequence.commands[currentState.selectedIndex]
+            isEmpty() ||
+            programmerState.busy ||
+            !program.commands[programmerState.selectedIndex]
           }
           onClick={doJog}
         >
@@ -123,14 +119,14 @@ export function PlaybackControl() {
         </button>
         <button
           class="sequence-play"
-          disabled={isEmpty || currentState.busy}
+          disabled={isEmpty() || programmerState.busy}
           onClick={doPlay}
         >
           play
         </button>
         <button
           class="sequence-stop"
-          disabled={isEmpty || currentState.playback === "stopped"}
+          disabled={isEmpty() || programmerState.playback === "stopped"}
           onClick={doStop}
         >
           stop

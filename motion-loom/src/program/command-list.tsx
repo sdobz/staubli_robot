@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { createEffect, For } from "solid-js";
 import {
   addCommand,
   program,
@@ -8,45 +8,45 @@ import {
 } from "./state";
 
 export function CommandList() {
-  const state = programmerState;
-  const prog = program;
-
   function onSelect(index: number) {
-    if (state.busy) return;
+    if (programmerState.busy) return;
     setProgrammerState("selectedIndex", index);
   }
 
   function onDelete(index: number) {
-    if (state.busy) return;
-    const newCommands = prog.commands.filter((_, i) => i !== index);
-    let nextSelectedIndex = state.selectedIndex;
+    if (programmerState.busy) return;
+    const newCommands = program.commands.filter((_, i) => i !== index);
+    let nextSelectedIndex = programmerState.selectedIndex;
     if (index < nextSelectedIndex) nextSelectedIndex -= 1;
     if (nextSelectedIndex >= newCommands.length)
       nextSelectedIndex = newCommands.length - 1;
-    if (nextSelectedIndex !== state.selectedIndex)
+    if (nextSelectedIndex !== programmerState.selectedIndex)
       setProgrammerState("selectedIndex", nextSelectedIndex);
 
-    setProgram({ ...prog, commands: newCommands });
+    setProgram({ ...program, commands: newCommands });
   }
 
   function doEditItem() {
-    if (state.busy) return;
-    setProgrammerState({ ...state, editing: "item" });
+    if (programmerState.busy) return;
+    setProgrammerState({ ...programmerState, editing: "item" });
   }
 
   function onSelectCommandToAdd(e: Event) {
-    if (state.busy) return;
+    if (programmerState.busy) return;
     // @ts-ignore
     const commandToAdd = e.target.value;
     if (!commandToAdd) return;
-    setProgrammerState({ ...state, commandToAdd });
+    setProgrammerState({ ...programmerState, commandToAdd });
   }
 
   function doAddCommand() {
-    if (state.busy) return;
+    if (programmerState.busy) return;
     addCommand();
   }
 
+  createEffect(() => {
+    console.log(program.id, !!program.id);
+  });
   return (
     <section>
       <table class="effector">
@@ -59,7 +59,7 @@ export function CommandList() {
           </tr>
         </thead>
         <tbody>
-          <For each={prog.commands}>
+          <For each={program.commands}>
             {(command, idx) => {
               const i = idx();
               return (
@@ -68,8 +68,8 @@ export function CommandList() {
                     <input
                       type="radio"
                       class="command-select"
-                      checked={state.selectedIndex === i}
-                      disabled={state.busy}
+                      checked={programmerState.selectedIndex === i}
+                      disabled={programmerState.busy}
                       onClick={(e) => {
                         e.preventDefault();
                         onSelect(i);
@@ -81,7 +81,7 @@ export function CommandList() {
                   <td>
                     <button
                       class="command-delete"
-                      disabled={state.busy}
+                      disabled={programmerState.busy}
                       onClick={() => onDelete(i)}
                     >
                       X
@@ -96,7 +96,11 @@ export function CommandList() {
       <div class="horizontal-stack">
         <button
           class="command-edit"
-          disabled={state.busy || !prog.commands[state.selectedIndex]}
+          disabled={
+            programmerState.busy ||
+            !program.commands[programmerState.selectedIndex] ||
+            !program.name
+          }
           onClick={doEditItem}
         >
           Edit
@@ -117,7 +121,7 @@ export function CommandList() {
           </select>
           <button
             class="add-command"
-            disabled={state.busy}
+            disabled={programmerState.busy}
             onClick={doAddCommand}
           >
             Add

@@ -9,7 +9,16 @@ import {
 } from "./state";
 import { setToolProperties, STOCK_TOOLS } from "../3d/robot";
 import { derivedState } from "../3d/viewport";
-import { EffectorPosition, JointPosition } from "../staubli/robot-types";
+import {
+  EffectorPosition,
+  JointPosition,
+  Command,
+  EffectorCommand,
+  JointsCommand,
+  ToolCommand,
+  SpeedCommand,
+} from "../staubli/robot-types";
+import { createMemo, Match, Show, Switch } from "solid-js";
 
 export function JogModeEditor() {
   function setMode(mode: JogMode) {
@@ -20,7 +29,9 @@ export function JogModeEditor() {
     setJogState("space", space);
   }
 
-  const currentCommand = program.commands[programmerState.selectedIndex];
+  const currentCommand = createMemo(
+    () => program.commands[programmerState.selectedIndex]
+  );
 
   return (
     <article class="vertical-stack">
@@ -48,7 +59,7 @@ export function JogModeEditor() {
           data-mode="drag-joint"
           onClick={() => setMode("drag-joint")}
           aria-current={jogState.mode === "drag-joint" ? "true" : undefined}
-          disabled={currentCommand?.type === "tool"}
+          disabled={currentCommand()?.type === "tool"}
         >
           Joint
         </button>
@@ -216,58 +227,67 @@ export function JointPositionEditor(props: {
   );
 }
 
-export function RobotPositionEditor() {
-  const state = programmerState;
-  const derived = derivedState()[state.selectedIndex];
-  if (!derived) return <div />;
-
-  const effectorPosition = derived.state.position.effector;
-  const jointPosition = derived.state.position.joints;
-  const robotObj = derived.robot;
-
-  function onChangeEffectorPosition(newEffectorPosition: EffectorPosition) {
-    robotObj.kinematics.applyEffectorPosition(newEffectorPosition, robotObj);
-    robotObj.kinematics.applyJointsFromEffectorPosition(
-      robotObj,
-      newEffectorPosition,
-      derived.state.tool_offset,
-      robotObj
-    );
-    robotObj.kinematics.updateCommand(robotObj);
-  }
-
-  function onChangeJointPosition(newJointPosition: JointPosition) {
-    robotObj.kinematics.applyJointPosition(newJointPosition, robotObj);
-    robotObj.kinematics.applyEffectorFromJointPosition(
-      robotObj,
-      derived.state.tool_offset
-    );
-    robotObj.kinematics.updateCommand(robotObj);
-  }
+export function RobotPositionEditor(props: {
+  command: Command & ({ type: "effector" } | { type: "joints" });
+}) {
+  const derived = createMemo(
+    () => derivedState()[programmerState.selectedIndex]
+  );
 
   return (
-    <article class="vertical-stack">
-      <h2>Robot Position Editor</h2>
-      <JogModeEditor />
-      <EffectorPositionEditor
-        position={effectorPosition}
-        onChange={onChangeEffectorPosition}
-      />
-      <JointPositionEditor
-        position={jointPosition}
-        onChange={onChangeJointPosition}
-      />
-    </article>
+    <Show when={derived()} fallback={<div />}>
+      {(derivedData) => {
+        const effectorPosition = derivedData().state.position.effector;
+        const jointPosition = derivedData().state.position.joints;
+        const robotObj = derivedData().robot;
+
+        function onChangeEffectorPosition(
+          newEffectorPosition: EffectorPosition
+        ) {
+          robotObj.kinematics.applyEffectorPosition(
+            newEffectorPosition,
+            robotObj
+          );
+          robotObj.kinematics.applyJointsFromEffectorPosition(
+            robotObj,
+            newEffectorPosition,
+            derivedData().state.tool_offset,
+            robotObj
+          );
+          robotObj.kinematics.updateCommand(robotObj);
+        }
+
+        function onChangeJointPosition(newJointPosition: JointPosition) {
+          robotObj.kinematics.applyJointPosition(newJointPosition, robotObj);
+          robotObj.kinematics.applyEffectorFromJointPosition(
+            robotObj,
+            derivedData().state.tool_offset
+          );
+          robotObj.kinematics.updateCommand(robotObj);
+        }
+
+        return (
+          <article class="vertical-stack">
+            <h2>Robot Position Editor</h2>
+            <JogModeEditor />
+            <EffectorPositionEditor
+              position={effectorPosition}
+              onChange={onChangeEffectorPosition}
+            />
+            <JointPositionEditor
+              position={jointPosition}
+              onChange={onChangeJointPosition}
+            />
+          </article>
+        );
+      }}
+    </Show>
   );
 }
 
-export function ToolOffsetEditor() {
-  const state = programmerState;
-  const prog = program;
-  const currentCommand = prog.commands[state.selectedIndex];
-  if (currentCommand?.type !== "tool") return <div />;
-  const toolOffset = currentCommand.data;
-
+export function ToolOffsetEditor(props: {
+  command: Command & { type: "tool" };
+}) {
   function onChangeToolOffset(newToolOffset: EffectorPosition) {
     patchCommand({ type: "tool", data: newToolOffset });
   }
@@ -293,19 +313,14 @@ export function ToolOffsetEditor() {
         ))}
       </select>
       <EffectorPositionEditor
-        position={toolOffset}
+        position={props.command.data}
         onChange={onChangeToolOffset}
       />
     </article>
   );
 }
 
-export function SpeedEditor() {
-  const state = programmerState;
-  const prog = program;
-  const currentCommand = prog.commands[state.selectedIndex];
-  if (!currentCommand || currentCommand.type !== "speed") return <div />;
-
+export function SpeedEditor(props: { command: Command & { type: "speed" } }) {
   function onChange(e: any) {
     const value = e.target.value;
     const floatValue = parseFloat(value);
@@ -320,7 +335,7 @@ export function SpeedEditor() {
         Speed
         <input
           class="speed-editor-input"
-          value={String(currentCommand.data.speed)}
+          value={String(props.command.data.speed)}
           onChange={onChange}
         />
       </label>
@@ -329,23 +344,34 @@ export function SpeedEditor() {
 }
 
 export function CommandEditor() {
-  const state = programmerState;
-  const prog = program;
-  const currentCommandType = prog.commands[state.selectedIndex]?.type;
+  const currentCommand = createMemo(
+    () => program.commands[programmerState.selectedIndex]
+  );
 
-  switch (currentCommandType) {
-    case "effector":
-    case "joints":
-      return <RobotPositionEditor />;
-    case "tool":
-      return <ToolOffsetEditor />;
-    case "speed":
-      return <SpeedEditor />;
-    default:
-      return (
+  return (
+    <Switch
+      fallback={
         <article class="vertical-stack">
           <h2>Select Command</h2>
         </article>
-      );
-  }
+      }
+    >
+      <Match
+        when={
+          currentCommand()?.type === "effector" ||
+          currentCommand()?.type === "joints"
+        }
+      >
+        <RobotPositionEditor
+          command={currentCommand() as EffectorCommand & JointsCommand}
+        />
+      </Match>
+      <Match when={currentCommand()?.type === "tool"}>
+        <ToolOffsetEditor command={currentCommand() as ToolCommand} />
+      </Match>
+      <Match when={currentCommand()?.type === "speed"}>
+        <SpeedEditor command={currentCommand() as SpeedCommand} />
+      </Match>
+    </Switch>
+  );
 }

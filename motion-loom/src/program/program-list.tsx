@@ -12,12 +12,8 @@ import {
 } from "./state";
 
 export function ProgramList() {
-  const state = programmerState;
-  const current = program;
-  const list = programs;
-
   function onSelectProgram(e: Event) {
-    if (state.busy) return;
+    if (programmerState.busy) return;
     const selectedProgramId = (e.target as HTMLSelectElement).value;
     if (!selectedProgramId) {
       newProgram();
@@ -27,16 +23,16 @@ export function ProgramList() {
   }
 
   function doDeleteProgram() {
-    if (state.busy) return;
+    if (programmerState.busy) return;
     deleteProgram();
   }
 
   function doEditSequence() {
-    if (state.busy) return;
-    if (!current.name) {
-      setProgram({ ...current, name: defaultProgramName() });
+    if (programmerState.busy) return;
+    if (!program.name) {
+      setProgram({ ...program, name: defaultProgramName() });
     }
-    setProgrammerState({ ...state, editing: "sequence" });
+    setProgrammerState({ ...programmerState, editing: "sequence" });
   }
 
   return (
@@ -46,25 +42,25 @@ export function ProgramList() {
         aria-label="Load Jog Sequence"
         required
         onChange={onSelectProgram}
-        disabled={state.busy}
-        value={current.id}
+        disabled={programmerState.busy}
+        value={program.id}
       >
         <option value="">New</option>
-        <For each={list}>
+        <For each={programs}>
           {(item) => <option value={item.id}>{item.name}</option>}
         </For>
       </select>
       <div role="group">
         <button
           class="sequence-edit"
-          disabled={state.busy}
+          disabled={programmerState.busy}
           onClick={doEditSequence}
         >
           Edit
         </button>
         <button
           class="sequence-delete"
-          disabled={state.busy}
+          disabled={programmerState.busy}
           onClick={doDeleteProgram}
         >
           Delete
