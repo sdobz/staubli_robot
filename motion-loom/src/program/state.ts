@@ -89,8 +89,8 @@ function reduceProgram({ id, name }: SavedProgram) {
 }
 
 function sortProgram(
-  { name: nameA }: SavedProgram,
-  { name: nameB }: SavedProgram
+  { name: nameA }: { name: string },
+  { name: nameB }: { name: string }
 ) {
   return nameA < nameB ? -1 : 1;
 }

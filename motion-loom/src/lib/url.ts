@@ -1,4 +1,4 @@
-import { createEffect } from "./state";
+import { createEffect } from "solid-js";
 
 export function bindParam(
   param: string,

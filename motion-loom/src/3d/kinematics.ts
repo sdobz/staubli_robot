@@ -38,7 +38,7 @@ export class Kinematics {
 
   constructor(urdfRoot: URDFRobot) {
     this.urdfRoot = urdfRoot;
-    this.baseOffset = urdfRoot.joints["base_link-base"].position;
+    this.baseOffset = urdfRoot.joints["base_link-base"]?.position || new Vector3(0, 0, 0);
   }
 
   applyJointsFromEffectorPosition(
@@ -97,9 +97,9 @@ export class Kinematics {
     const robotJoints: Record<string, URDFJoint> = renderTarget.robot.joints;
     for (let i = 1; i <= 6; i++) {
       const joint = robotJoints[`joint_${i}`];
-      const jointPositionAngle = jointPosition[`j${i}`];
-      joint.setJointValue(
-        MathUtils.degToRad(jointPositionAngle - jointOffset[i])
+      const jointPositionAngle = jointPosition[`j${i}` as keyof JointPosition];
+      joint?.setJointValue(
+        MathUtils.degToRad(jointPositionAngle - (jointOffset[i] || 0))
       );
     }
 
@@ -177,11 +177,11 @@ export class Kinematics {
 
     for (let i = 1; i <= 6; i++) {
       const robotJointName = `joint_${i}`;
-      const positionJointName = `j${i}`;
+      const positionJointName = `j${i}` as keyof JointPosition;
 
-      const angle = renderSource.robot.joints[robotJointName].angle;
+      const angle = renderSource.robot.joints[robotJointName]?.angle || 0;
       jointPosition[positionJointName] =
-        MathUtils.radToDeg(angle) + jointOffset[i];
+        MathUtils.radToDeg(angle) + (jointOffset[i] || 0);
     }
 
     return jointPosition;
@@ -260,14 +260,16 @@ export class Kinematics {
       //   const delta = window.performance.now() - startTime;
       //   totalTime += delta;
 
+      // TODO: SOLVE_STATUS is an ambient const enum - consider importing numeric values directly
+      // CONVERGED = 0, DIVERGED = 1, STALLED = 2
       isConverged =
-        results.filter((r) => r === SOLVE_STATUS.CONVERGED).length ===
+        results.filter((r) => r === 0 as any).length ===
         results.length;
       const isAllDiverged =
-        results.filter((r) => r === SOLVE_STATUS.DIVERGED).length ===
+        results.filter((r) => r === 1 as any).length ===
         results.length;
       const isAllStalled =
-        results.filter((r) => r === SOLVE_STATUS.STALLED).length ===
+        results.filter((r) => r === 2 as any).length ===
         results.length;
 
       if (isConverged || isAllDiverged || isAllStalled) {

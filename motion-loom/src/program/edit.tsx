@@ -58,9 +58,11 @@ export function CommandEdit() {
   }
 
   function onChangeName(e: Event) {
+    const cmd = currentCommand();
+    if (!cmd) return;
     patchCommand({
       name: (e.target as HTMLInputElement).value,
-      type: currentCommand().type,
+      type: cmd.type,
     });
   }
 

@@ -7,23 +7,25 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "check": "tsc --noEmit"
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^25.0.3",
+    "prettier": "^2.8.8",
     "solid-devtools": "^0.34.3",
     "typescript": "^5.7.2",
     "vite": "^7.1.4",
-    "vite-plugin-solid": "^2.11.8",
-    "prettier": "^2.8.8"
+    "vite-plugin-solid": "^2.11.8"
   },
   "dependencies": {
-    "solid-js": "^1.9.5",
     "@types/three": "^0.182.0",
     "closed-chain-ik-js": "github:gkjohnson/closed-chain-ik-js",
     "gl-matrix": "3.4.3",
     "linear-solve": "github:sdobz/linear-solve",
     "normalize.css": "8.0.1",
+    "solid-js": "^1.9.5",
     "svd-js": "1.1.1",
     "three": "0.182.0",
     "urdf-loader": "^0.12.6"

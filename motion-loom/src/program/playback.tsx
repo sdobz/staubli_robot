@@ -1,6 +1,5 @@
-import { robot, robotApi, setRobot } from "../program-old/robot";
+import { robot, robotApi, setRobot } from "../staubli/robot";
 import { createEffect } from "solid-js";
-import { JSX } from "solid-js";
 import {
   PlaybackEnum,
   program,

@@ -11,7 +11,7 @@ import {
   Material,
 } from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
-import URDFLoader, { URDFLink, URDFRobot } from "urdf-loader";
+import URDFLoader, { URDFJoint, URDFLink, URDFRobot } from "urdf-loader";
 import {
   currentInactiveMaterial,
   effectorMaterial,
@@ -105,11 +105,11 @@ export function loadRobot() {
 }
 
 export function loadTool(properties: ToolProperties) {
-  const Loader =
-    LOADER_EXTENSION_MAP[properties.meshUrl.split(".").slice(-1)[0]];
-  if (!Loader) {
+  const extension = properties.meshUrl.split(".").slice(-1)[0];
+  if (!extension || !extensionSupported(extension)) {
     throw new Error(`Unknown loader for url ${properties.meshUrl}`);
   }
+  const Loader = LOADER_EXTENSION_MAP[extension];
 
   return new Promise<Mesh>((resolve, reject) => {
     const stlLoader = new Loader();
@@ -136,13 +136,13 @@ export function loadTool(properties: ToolProperties) {
 export class RobotControl {
   urdfRoot: URDFRobot;
   robot: URDFRobot;
-  tool: any;
+  tool: Mesh;
   world: World;
-  kinematics: Kinematics;
-  dragControls: PointerURDFDragControls;
-  transformControls: TransformControls;
-  dragging: boolean;
-  offsetControls: any;
+  kinematics!: Kinematics;
+  dragControls?: PointerURDFDragControls;
+  transformControls?: TransformControls;
+  dragging: boolean = false;
+  offsetControls?: TransformControls;
 
   constructor(urdfRoot: URDFRobot, toolRoot: Mesh, world: World) {
     this.urdfRoot = urdfRoot;
@@ -193,11 +193,11 @@ export class RobotControl {
 
     const layer =
       material && mode !== "current-ghost" && material.opacity === 1 ? 0 : 1;
-    this.tool.traverse((c) => {
-      c.layers.set(layer);
-      if (c.type !== "Mesh") {
+    this.tool.traverse((c: Object3D) => {
+      if (!isMesh(c)) {
         return;
       }
+      c.layers.set(layer);
       c.material = material || effectorMaterial;
     });
 
@@ -205,13 +205,13 @@ export class RobotControl {
       (
         c: Object3D<Object3DEventMap> & {
           __unsetMaterial?: Material;
-          material: Material;
+          material?: Material;
         }
       ) => {
-        c.layers.set(layer);
-        if (c.type !== "Mesh") {
+        if (!isMesh(c)) {
           return;
         }
+        c.layers.set(layer);
         if (!c.__unsetMaterial) {
           c.__unsetMaterial = c.material;
         }
@@ -220,7 +220,7 @@ export class RobotControl {
     );
 
     if (dragControlsEnabled) {
-      this.#setupURDFControl(toolOffset);
+      this.#setupURDFControl(toolOffset!);
     } else {
       this.#removeURDFControl();
     }
@@ -230,7 +230,7 @@ export class RobotControl {
       (jogState?.mode === "rotate-effector" ||
         jogState?.mode === "translate-effector");
 
-    if (effectorControlEnabled) {
+    if (effectorControlEnabled && toolOffset && predecessor) {
       const controls = this.#setupToolControl(predecessor, toolOffset);
       controls.setSpace(jogState.space);
       if (jogState.mode === "rotate-effector") {
@@ -243,7 +243,7 @@ export class RobotControl {
       this.#removeToolControl();
     }
 
-    if (offsetControlEnabled) {
+    if (offsetControlEnabled && jogState) {
       const controls = this.#setupOffsetControl();
       controls.setSpace(jogState.space);
       if (jogState.mode === "rotate-effector") {
@@ -258,7 +258,7 @@ export class RobotControl {
   }
 
   attachmentPoint() {
-    let link: URDFLink;
+    let link: URDFLink | undefined;
 
     this.robot.traverse((obj) => {
       if (obj.name === "tool0") {
@@ -266,7 +266,7 @@ export class RobotControl {
       }
     });
 
-    return link;
+    return link!;
   }
 
   /**
@@ -279,16 +279,16 @@ export class RobotControl {
       return;
     }
 
-    const isJoint = (j) => {
+    const isJoint = (j: any) => {
       return j.isURDFJoint && j.jointType !== "fixed";
     };
 
     // Highlight the link geometry under a joint
-    const highlightLinkGeometry = (m, revert) => {
-      const traverse = (c) => {
+    const highlightLinkGeometry = (m: Object3D, revert: boolean) => {
+      const traverse = (c: Object3D) => {
         // Set or revert the highlight color
-        if (c.type === "Mesh") {
-          if (revert) {
+        if (isMesh(c)) {
+          if (revert && c.__origMaterial) {
             c.material = c.__origMaterial;
             delete c.__origMaterial;
           } else {
@@ -300,12 +300,11 @@ export class RobotControl {
         // Look into the children and stop if the next child is
         // another joint
         if (c === m || !isJoint(c)) {
-          for (let i = 0; i < c.children.length; i++) {
-            const child = c.children[i];
-            if (!child.isURDFCollider) {
-              traverse(c.children[i]);
+          c.children.forEach((child) => {
+            if (!("isURDFCollider" in child) || !child.isURDFCollider) {
+              traverse(child);
             }
-          }
+          });
         }
       };
 
@@ -332,7 +331,10 @@ export class RobotControl {
       });
     };
     dragControls.updateJoint = (joint, angle) => {
-      this.robot.joints?.[joint.name].setJointValue(angle);
+      const joints = this.robot.joints;
+      if (joints && joints[joint.name]) {
+        joints[joint.name]!.setJointValue(angle);
+      }
       this.kinematics.applyEffectorFromJointPosition(this, toolOffset);
       this.kinematics.updateCommand(this);
       this.world.render();
@@ -353,8 +355,8 @@ export class RobotControl {
     if (!this.dragControls) {
       return;
     }
-    this.dragControls?.dispose();
-    delete this.dragControls;
+    this.dragControls.dispose();
+    this.dragControls = undefined;
   }
 
   /**
@@ -450,4 +452,14 @@ export class RobotControl {
     // this.robot.dispose();
     // this.tool.dispose();
   }
+}
+
+function isMesh(
+  obj: Object3D
+): obj is Mesh & { __origMaterial?: Material | Material[] } {
+  return obj.type === "Mesh";
+}
+
+function extensionSupported(extension: string): extension is LoaderEnum {
+  return Object.keys(LOADER_EXTENSION_MAP).includes(extension);
 }

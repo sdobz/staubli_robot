@@ -129,7 +129,7 @@ export class RobotPreview implements RobotInterface {
     callback: (positions: number[]) => void
   ) {
     const plans = MotionPlan.planSync(constraints, starts, stops);
-    const duration = plans[0].totalTime();
+    const duration = plans[0]?.totalTime() || 0;
 
     return new Promise<void>((resolve, reject) => {
       const startTime = performance.now();
@@ -166,12 +166,12 @@ function jointPositionToArray(jointPosition: JointPosition) {
 
 function jointPositionFromArray(joints: number[]): JointPosition {
   return {
-    j1: joints[0],
-    j2: joints[1],
-    j3: joints[2],
-    j4: joints[3],
-    j5: joints[4],
-    j6: joints[5],
+    j1: joints[0]!,
+    j2: joints[1]!,
+    j3: joints[2]!,
+    j4: joints[3]!,
+    j5: joints[4]!,
+    j6: joints[5]!,
   };
 }
 
@@ -188,11 +188,11 @@ function effectorPositionToArray(effectorPosition: EffectorPosition) {
 
 function effectorPositionFromArray(effector: number[]): EffectorPosition {
   return {
-    x: effector[0],
-    y: effector[1],
-    z: effector[2],
-    yaw: effector[3],
-    pitch: effector[4],
-    roll: effector[5],
+    x: effector[0]!,
+    y: effector[1]!,
+    z: effector[2]!,
+    yaw: effector[3]!,
+    pitch: effector[4]!,
+    roll: effector[5]!,
   };
 }

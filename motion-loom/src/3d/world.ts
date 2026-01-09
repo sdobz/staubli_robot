@@ -5,6 +5,7 @@ import {
   DirectionalLight,
   Mesh,
   MeshPhongMaterial,
+  Object3D,
   PCFSoftShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
@@ -39,7 +40,9 @@ export class World {
     camera.up.set(0, 0, 1);
 
     renderer = new WebGLRenderer({ antialias: true });
-    renderer.outputEncoding = SRGBColorSpace;
+    // Note: outputEncoding is deprecated in newer Three.js versions
+    // @ts-ignore - using colorSpace instead of deprecated outputEncoding
+    renderer.outputColorSpace = SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = PCFSoftShadowMap;
 
@@ -75,7 +78,7 @@ export class World {
   }
 
   // https://codepen.io/discoverthreejs/full/vwVeZB
-  fitCameraToSelection(selection, fitOffset = 1.2) {
+  fitCameraToSelection(selection: Object3D[], fitOffset = 1.2) {
     const controls = this.orbit,
       camera = this.camera;
     box.makeEmpty();

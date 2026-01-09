@@ -71,7 +71,7 @@ export class MotionPlan {
 
   static planSync(constraints: MotionConstraint, starts: number[], stops: number[]): MotionPlan[] {
     const initialPlans = starts.map((start, i) =>
-      MotionPlan.planConstraints(constraints, start, stops[i])
+      MotionPlan.planConstraints(constraints, start, stops[i]!)
     );
 
     let maxTime = -1;
@@ -91,7 +91,7 @@ export class MotionPlan {
         return maxPlan;
       }
 
-      return MotionPlan.planSibling(maxPlan, starts[i], stops[i]);
+      return MotionPlan.planSibling(maxPlan, starts[i]!, stops[i]!);
     });
     return syncPlans;
   }
