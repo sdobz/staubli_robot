@@ -1,4 +1,5 @@
 {
     "javascript.inlayHints.parameterTypes.enabled": true,
     "javascript.inlayHints.functionLikeReturnTypes.enabled": true,
+    "editor.formatOnSave": true,
 }
