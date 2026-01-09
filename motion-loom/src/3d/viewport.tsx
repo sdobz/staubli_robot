@@ -1,7 +1,5 @@
 import { Vector3, ArrowHelper, Mesh } from "three";
-
-import { html } from "../lib/component";
-import { createEffect, createSignal } from "../lib/state";
+import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { loadRobot, loadTool, RobotControl, toolProperties } from "./robot";
 import { program, programmerState, jogState } from "../program/state";
 import { World } from "./world";
@@ -19,8 +17,6 @@ interface DerivedState {
 const [derivedState, setDerivedState] = createSignal<DerivedState[]>([]);
 export { derivedState };
 
-const robot3DTemplate = html` <div id="robot-3d"></div> `;
-
 interface RefObject<T> {
   current: T;
 }
@@ -29,68 +25,32 @@ export const previewRobotRef: RefObject<RobotControl | null> = {
   current: null,
 };
 
-class Robot3D extends HTMLElement {
-  arrows: ArrowHelper[];
-  world: World;
-  robots: RobotControl[];
-  urdfRoot: URDFRobot | undefined;
-  toolRoot: Mesh | undefined;
-  container: HTMLElement;
-  constructor() {
-    super();
+export const Robot3D = () => {
+  let container!: HTMLDivElement;
+  const world = new World();
+  let robots: RobotControl[] = [];
+  let urdfRoot: URDFRobot | undefined;
+  let toolRoot: Mesh | undefined;
 
-    this.arrows = [];
+  const onResize = () => {
+    if (!container) return;
+    world.renderer.setSize(container.clientWidth, container.clientHeight);
+    world.renderer.setPixelRatio(window.devicePixelRatio);
+    world.camera.aspect = container.clientWidth / container.clientHeight;
+    world.camera.updateProjectionMatrix();
+    world.render();
+  };
 
-    this.world = new World();
-    this.robots = [];
+  const createRobot = () => {
+    if (!urdfRoot || !toolRoot) {
+      throw new Error("URDF or tool root not loaded");
+    }
+    const newRobot = new RobotControl(urdfRoot, toolRoot, world);
+    newRobot.addToScene();
+    return newRobot;
+  };
 
-    loadRobot().then((result) => {
-      this.urdfRoot = result;
-
-      this.world.fitCameraToSelection([this.urdfRoot]);
-      this.updateRobots();
-    });
-
-    this.toolRoot = undefined;
-
-    const shadowRoot = this.attachShadow({ mode: "open" });
-    document.querySelectorAll("link").forEach((linkElement) => {
-      shadowRoot.appendChild(linkElement.cloneNode());
-    });
-    const templateContents = robot3DTemplate.content.cloneNode(
-      true
-    ) as HTMLElement;
-    this.container = templateContents.querySelector("#robot-3d")!;
-    this.container.appendChild(this.world.renderer.domElement);
-
-    shadowRoot.appendChild(templateContents);
-
-    this.onResize();
-    this.bindState();
-    window.addEventListener("resize", this.onResize.bind(this));
-  }
-
-  bindState() {
-    createEffect(() => {
-      // todo: what happens if this happens in the middle of a drag?
-      this.updateRobots();
-    });
-
-    createEffect(() => {
-      const props = toolProperties();
-
-      while (this.robots.length > 0) {
-        this.robots.pop()!.dispose();
-      }
-
-      loadTool(props).then((result) => {
-        this.toolRoot = result;
-        this.updateRobots();
-      });
-    });
-  }
-
-  updateRobots() {
+  const updateRobots = () => {
     const currentRobotState = robot()?.state();
     const currentSequence = program;
     const currentProgrammerState = programmerState;
@@ -100,20 +60,19 @@ class Robot3D extends HTMLElement {
       return;
     }
 
-    if (!this.urdfRoot || !this.toolRoot) {
+    if (!urdfRoot || !toolRoot) {
       return;
     }
 
-    const previousRobots = this.robots;
-    this.robots = [];
+    const previousRobots = robots;
+    robots = [];
     const popRobot = () => {
-      const nextRobot = previousRobots.shift() || this.#createRobot();
-
-      this.robots.push(nextRobot);
+      const nextRobot = previousRobots.shift() || createRobot();
+      robots.push(nextRobot);
       return nextRobot;
     };
 
-    const kinematics = new Kinematics(this.urdfRoot);
+    const kinematics = new Kinematics(urdfRoot);
 
     const currentPosition = currentRobotState.position;
     if (!currentPosition.effector || !currentPosition.joints) {
@@ -220,60 +179,45 @@ class Robot3D extends HTMLElement {
     }
 
     setDerivedState(nextDerivedState);
-    this.world.render();
-  }
+    world.render();
+  };
 
-  #createRobot() {
-    if (!this.urdfRoot || !this.toolRoot) {
-      throw new Error("URDF or tool root not loaded");
-    }
-    const newRobot = new RobotControl(this.urdfRoot, this.toolRoot, this.world);
-    newRobot.addToScene();
-    return newRobot;
-  }
+  onMount(() => {
+    container.appendChild(world.renderer.domElement);
+    window.addEventListener("resize", onResize);
 
-  purgeArrows() {
-    this.arrows.forEach((arrow) => {
-      this.world.scene.remove(arrow);
-      arrow.dispose();
+    loadRobot().then((result) => {
+      urdfRoot = result;
+      world.fitCameraToSelection([urdfRoot]);
+      updateRobots();
     });
-    this.arrows = [];
-  }
 
-  createArrow(from: Vector3, to: Vector3) {
-    const direction = new Vector3(to.x, to.y, to.z);
-    direction.sub(from);
-    const length = direction.length();
-    direction.normalize();
+    onResize();
+    world.render();
+  });
 
-    const arrow = new ArrowHelper(direction, from, length, 0xffffff);
-    this.arrows.push(arrow);
-    this.world.scene.add(arrow);
-  }
+  onCleanup(() => {
+    window.removeEventListener("resize", onResize);
+    // any other cleanup
+  });
 
-  onResize() {
-    this.world.renderer.setSize(
-      this.container.clientWidth,
-      this.container.clientHeight
-    );
-    this.world.renderer.setPixelRatio(window.devicePixelRatio);
-    this.world.camera.aspect =
-      this.container.clientWidth / this.container.clientHeight;
-    this.world.camera.updateProjectionMatrix();
-    this.world.render();
-  }
+  createEffect(() => {
+    // todo: what happens if this happens in the middle of a drag?
+    updateRobots();
+  });
 
-  connectedCallback() {
-    this.world.render();
-  }
+  createEffect(() => {
+    const props = toolProperties();
 
-  disconnectedCallback() {
-    //this.dragControls.dispose();
-  }
+    while (robots.length > 0) {
+      robots.pop()!.dispose();
+    }
 
-  adoptedCallback() {
-    console.log("Custom element moved to new page.");
-  }
-}
+    loadTool(props).then((result) => {
+      toolRoot = result;
+      updateRobots();
+    });
+  });
 
-customElements.define("robot-3d", Robot3D);
+  return <div id="robot-3d" ref={container}></div>;
+};

@@ -6,8 +6,8 @@ import {
   RobotInterface,
 } from "../staubli/robot-types";
 import { MotionConstraint, MotionPlan } from "../lib/motion-plan";
-import { createSignal } from "../lib/state";
 import { RobotControl } from "./robot";
+import { createSignal } from "solid-js";
 
 export class RobotPreview implements RobotInterface {
   control: RobotControl;

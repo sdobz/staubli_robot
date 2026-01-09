@@ -18,7 +18,7 @@ import {
   Solver,
   urdfRobotToIKRoot,
 } from "closed-chain-ik-js";
-import { patchCommand, program, programmerState } from "../program-old/state";
+import { patchCommand, program, programmerState } from "../program/state";
 import { MathUtils, Object3D, Quaternion, Vector3 } from "three";
 import { URDFJoint, URDFRobot } from "urdf-loader";
 import { EffectorPosition, JointPosition } from "../staubli/robot-types";
@@ -188,8 +188,8 @@ export class Kinematics {
   }
 
   updateCommand(renderSource: RobotControl) {
-    const currentProgrammerState = programmerState();
-    const currentProgram = program();
+    const currentProgrammerState = programmerState;
+    const currentProgram = program;
     const currentCommandType =
       currentProgram.commands[currentProgrammerState.selectedIndex]?.type;
     if (!currentCommandType) {
@@ -208,7 +208,7 @@ export class Kinematics {
     }
   }
 
-  drawHelper(scene) {
+  drawHelper(scene: Object3D) {
     if (this.helper) {
       scene.remove(this.helper);
       delete this.helper;
