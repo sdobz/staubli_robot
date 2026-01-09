@@ -4,8 +4,11 @@ import type { Component } from "solid-js";
 // import styles from "./App.module.css";
 import { ElbowButton, RobotButton } from "./staubli/robot-button";
 import { ProgramList } from "./program/program-list";
-import { ProgramEdit } from "./program/edit";
+import { CommandEdit, ProgramEdit } from "./program/edit";
 import { PlaybackControl } from "./program/playback";
+import { CommandList } from "./program/command-list";
+import { CommandEditor } from "./program/command-editor";
+import { RobotSerial } from "./serial";
 
 // import "./counter";
 // import "./robot-button";
@@ -48,32 +51,33 @@ import { PlaybackControl } from "./program/playback";
 
 const App: Component = () => {
   return (
-    <div class="grid vh70 overflow-auto">
-      <div class="vertical-stack">
-        <article class="vertical-stack">
-          <h1>Program</h1>
-          <ProgramList />
-          <ProgramEdit />
-          <PlaybackControl />
-          {/*
-           <command-list></command-list>
-           <command-edit></command-edit> */}
-        </article>
-        <article>
-          <h2>Control</h2>
-          <div role="group">
-            <ElbowButton />
-            <RobotButton method="flail">Flail</RobotButton>
-            <RobotButton method="reset">Reset</RobotButton>
-          </div>
-        </article>
-      </div>
-      {/*   <robot-3d></robot-3d>
+    <main>
+      <div class="grid vh70 overflow-auto">
         <div class="vertical-stack">
-          <command-editor></command-editor>
-        </div> */}
-    </div>
-    //  <robot-serial></robot-serial>
+          <article class="vertical-stack">
+            <h1>Program</h1>
+            <ProgramList />
+            <ProgramEdit />
+            <PlaybackControl />
+            <CommandList />
+            <CommandEdit />
+          </article>
+          <article>
+            <h2>Control</h2>
+            <div role="group">
+              <ElbowButton />
+              <RobotButton method="flail">Flail</RobotButton>
+              <RobotButton method="reset">Reset</RobotButton>
+            </div>
+          </article>
+        </div>
+        <robot-3d></robot-3d>
+        <div class="vertical-stack">
+          <CommandEditor />
+        </div>
+      </div>
+      <RobotSerial />
+    </main>
   );
 };
 

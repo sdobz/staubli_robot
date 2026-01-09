@@ -9,6 +9,7 @@ import {
 } from "./state";
 import { setToolProperties, STOCK_TOOLS } from "../3d/robot";
 import { derivedState } from "../3d/viewport";
+import { EffectorPosition, JointPosition } from "../staubli/robot-types";
 
 export function JogModeEditor() {
   function setMode(mode: JogMode) {
@@ -73,6 +74,148 @@ export function JogModeEditor() {
   );
 }
 
+export function EffectorPositionEditor(props: {
+  position: EffectorPosition;
+  onChange: (position: EffectorPosition) => void;
+}) {
+  function handleChange(field: string, value: string) {
+    const floatValue = parseFloat(value);
+    if (isNaN(floatValue)) return;
+    props.onChange({
+      ...props.position,
+      [field]: floatValue,
+    } as EffectorPosition);
+  }
+
+  return (
+    <div class="vertical-stack">
+      <div class="horizontal-stack">
+        <label class="horizontal-label">
+          X
+          <input
+            class="effector-position-editor-x"
+            value={props.position.x.toFixed(3)}
+            onChange={(e) => handleChange("x", e.currentTarget.value)}
+          />
+        </label>
+        <label class="horizontal-label">
+          Y
+          <input
+            class="effector-position-editor-y"
+            value={props.position.y.toFixed(3)}
+            onChange={(e) => handleChange("y", e.currentTarget.value)}
+          />
+        </label>
+        <label class="horizontal-label">
+          Z
+          <input
+            class="effector-position-editor-z"
+            value={props.position.z.toFixed(3)}
+            onChange={(e) => handleChange("z", e.currentTarget.value)}
+          />
+        </label>
+      </div>
+      <div class="horizontal-stack">
+        <label class="horizontal-label">
+          Y
+          <input
+            class="effector-position-editor-yaw"
+            value={props.position.yaw.toFixed(3)}
+            onChange={(e) => handleChange("yaw", e.currentTarget.value)}
+          />
+        </label>
+        <label class="horizontal-label">
+          P
+          <input
+            class="effector-position-editor-pitch"
+            value={props.position.pitch.toFixed(3)}
+            onChange={(e) => handleChange("pitch", e.currentTarget.value)}
+          />
+        </label>
+        <label class="horizontal-label">
+          R
+          <input
+            class="effector-position-editor-roll"
+            value={props.position.roll.toFixed(3)}
+            onChange={(e) => handleChange("roll", e.currentTarget.value)}
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+export function JointPositionEditor(props: {
+  position: JointPosition;
+  onChange: (position: JointPosition) => void;
+}) {
+  function handleChange(field: string, value: string) {
+    const floatValue = parseFloat(value);
+    if (isNaN(floatValue)) return;
+    props.onChange({
+      ...props.position,
+      [field]: floatValue,
+    } as JointPosition);
+  }
+
+  return (
+    <div class="vertical-stack">
+      <div class="horizontal-stack">
+        <label class="horizontal-label">
+          J1
+          <input
+            class="joint-position-editor-j1"
+            value={props.position.j1.toFixed(3)}
+            onChange={(e) => handleChange("j1", e.currentTarget.value)}
+          />
+        </label>
+        <label class="horizontal-label">
+          J2
+          <input
+            class="joint-position-editor-j2"
+            value={props.position.j2.toFixed(3)}
+            onChange={(e) => handleChange("j2", e.currentTarget.value)}
+          />
+        </label>
+        <label class="horizontal-label">
+          J3
+          <input
+            class="joint-position-editor-j3"
+            value={props.position.j3.toFixed(3)}
+            onChange={(e) => handleChange("j3", e.currentTarget.value)}
+          />
+        </label>
+      </div>
+      <div class="horizontal-stack">
+        <label class="horizontal-label">
+          J4
+          <input
+            class="joint-position-editor-j4"
+            value={props.position.j4.toFixed(3)}
+            onChange={(e) => handleChange("j4", e.currentTarget.value)}
+          />
+        </label>
+        <label class="horizontal-label">
+          J5
+          <input
+            class="joint-position-editor-j5"
+            value={props.position.j5.toFixed(3)}
+            onChange={(e) => handleChange("j5", e.currentTarget.value)}
+          />
+        </label>
+        <label class="horizontal-label">
+          J6
+          <input
+            class="joint-position-editor-j6"
+            value={props.position.j6.toFixed(3)}
+            onChange={(e) => handleChange("j6", e.currentTarget.value)}
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
 export function RobotPositionEditor() {
   const state = programmerState;
   const derived = derivedState()[state.selectedIndex];
@@ -82,8 +225,7 @@ export function RobotPositionEditor() {
   const jointPosition = derived.state.position.joints;
   const robotObj = derived.robot;
 
-  function onChangeEffectorPosition(e: any) {
-    const newEffectorPosition = e.detail || e.target.value;
+  function onChangeEffectorPosition(newEffectorPosition: EffectorPosition) {
     robotObj.kinematics.applyEffectorPosition(newEffectorPosition, robotObj);
     robotObj.kinematics.applyJointsFromEffectorPosition(
       robotObj,
@@ -94,8 +236,7 @@ export function RobotPositionEditor() {
     robotObj.kinematics.updateCommand(robotObj);
   }
 
-  function onChangeJointPosition(e: any) {
-    const newJointPosition = e.detail || e.target.value;
+  function onChangeJointPosition(newJointPosition: JointPosition) {
     robotObj.kinematics.applyJointPosition(newJointPosition, robotObj);
     robotObj.kinematics.applyEffectorFromJointPosition(
       robotObj,
@@ -108,17 +249,14 @@ export function RobotPositionEditor() {
     <article class="vertical-stack">
       <h2>Robot Position Editor</h2>
       <JogModeEditor />
-      <div class="effector-editor">
-        {/* simplified: show effector fields */}
-        <div>X: {effectorPosition.x.toFixed(3)}</div>
-        <div>Y: {effectorPosition.y.toFixed(3)}</div>
-        <div>Z: {effectorPosition.z.toFixed(3)}</div>
-      </div>
-      <div class="joint-editor">
-        <div>J1: {jointPosition.j1.toFixed(3)}</div>
-        <div>J2: {jointPosition.j2.toFixed(3)}</div>
-        <div>J3: {jointPosition.j3.toFixed(3)}</div>
-      </div>
+      <EffectorPositionEditor
+        position={effectorPosition}
+        onChange={onChangeEffectorPosition}
+      />
+      <JointPositionEditor
+        position={jointPosition}
+        onChange={onChangeJointPosition}
+      />
     </article>
   );
 }
@@ -130,9 +268,8 @@ export function ToolOffsetEditor() {
   if (currentCommand?.type !== "tool") return <div />;
   const toolOffset = currentCommand.data;
 
-  function onChangeToolOffset(e: any) {
-    const data = e.detail || e.target.value;
-    patchCommand({ type: "tool", data });
+  function onChangeToolOffset(newToolOffset: EffectorPosition) {
+    patchCommand({ type: "tool", data: newToolOffset });
   }
 
   function onSelectToolDisplay(e: any) {
@@ -155,10 +292,10 @@ export function ToolOffsetEditor() {
           </option>
         ))}
       </select>
-      <div>
-        X: {toolOffset.x.toFixed(3)} Y: {toolOffset.y.toFixed(3)} Z:{" "}
-        {toolOffset.z.toFixed(3)}
-      </div>
+      <EffectorPositionEditor
+        position={toolOffset}
+        onChange={onChangeToolOffset}
+      />
     </article>
   );
 }
